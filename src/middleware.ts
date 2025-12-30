@@ -1,0 +1,70 @@
+/**
+ * Middleware de Next.js para proteger rutas
+ */
+
+import { withAuth } from 'next-auth/middleware'
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+
+export default withAuth(
+  function middleware(req) {
+    const token = req.nextauth.token
+    const path = req.nextUrl.pathname
+
+    // Si no hay token, redirigir a login
+    if (!token) {
+      return NextResponse.redirect(new URL('/login', req.url))
+    }
+
+    // Verificar permisos según ruta
+    const role = token.role
+
+    // Rutas solo para DUENO
+    if (path.startsWith('/usuarios') || path.startsWith('/config')) {
+      if (role !== 'DUENO') {
+        return NextResponse.redirect(new URL('/dashboard', req.url))
+      }
+    }
+
+    // Rutas para ENCARGADO y DUENO (no LAVADOR)
+    if (
+      path.startsWith('/caja') ||
+      path.startsWith('/comisiones') ||
+      path.startsWith('/reportes') ||
+      path.startsWith('/catalogos')
+    ) {
+      if (role === 'LAVADOR') {
+        return NextResponse.redirect(new URL('/tablero', req.url))
+      }
+    }
+    
+    // Rutas que LAVADOR no puede editar OTs (solo puede crearlas)
+    if (path.startsWith('/ots/') && path !== '/ots/nueva' && path.match(/\/ots\/[^/]+\/editar/)) {
+      if (role === 'LAVADOR') {
+        return NextResponse.redirect(new URL('/tablero', req.url))
+      }
+    }
+
+    return NextResponse.next()
+  },
+  {
+    callbacks: {
+      authorized: ({ token }) => !!token,
+    },
+  }
+)
+
+export const config = {
+  matcher: [
+    '/dashboard/:path*',
+    '/tablero/:path*',
+    '/ots/:path*',
+    '/caja/:path*',
+    '/comisiones/:path*',
+    '/reportes/:path*',
+    '/catalogos/:path*',
+    '/usuarios/:path*',
+    '/config/:path*',
+  ],
+}
+

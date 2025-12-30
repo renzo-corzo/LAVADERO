@@ -1,0 +1,7 @@
+# Ignorar archivos de base de datos local
+*.db
+*.db-shm
+*.db-wal
+dev.db
+dev.db-journal
+

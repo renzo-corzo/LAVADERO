@@ -1,0 +1,14 @@
+{
+  "name": "Lavadero Sistema",
+  "short_name": "Lavadero",
+  "description": "Sistema de gestión para lavadero de autos",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0070f3",
+  "orientation": "portrait-primary",
+  "icons": [],
+  "categories": ["business", "productivity"],
+  "screenshots": []
+}
+

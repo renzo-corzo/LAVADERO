@@ -1,0 +1,335 @@
+// Schema de Base de Datos - Sistema Lavadero de Autos
+// Generado basado en src/types/index.ts
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // PostgreSQL (cambiar a "sqlite" solo si se convierte enums a String)
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserRole {
+  DUENO
+  ENCARGADO
+  LAVADOR
+}
+
+enum OTEstado {
+  EN_COLA
+  EN_PROCESO
+  LISTO
+  ENTREGADO
+  CANCELADO
+}
+
+enum TipoVehiculo {
+  chico
+  mediano
+  camioneta
+}
+
+enum MedioPago {
+  EFECTIVO
+  TRANSFERENCIA
+}
+
+enum ComisionEstado {
+  PENDIENTE
+  LIQUIDADA
+}
+
+enum ComisionModelo {
+  POR_ITEM
+  POR_OT
+}
+
+// ============================================
+// MODELOS
+// ============================================
+
+model Usuario {
+  id        String   @id @default(cuid())
+  nombre    String
+  usuario   String   @unique // login username
+  password  String   // hash de contraseña
+  rol       UserRole
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  otsCreadas          OrdenTrabajo[]       @relation("OTCreador")
+  otsAsignadas        OrdenTrabajoEmpleado[]
+  pagosRegistrados    Pago[]
+  cierresRealizados   CierreCaja[]
+  comisiones          Comision[]
+  comisionesLiquidadas LiquidacionComision[] @relation("LiquidacionEmpleado")
+  liquidacionesRealizadas  LiquidacionComision[] @relation("LiquidacionUsuario")
+  configComisiones    ConfigComision[]
+  estadosCambiados    EstadoHistorial[]
+  auditoriaLogs       AuditoriaLog[]
+
+  @@map("usuarios")
+}
+
+model Servicio {
+  id              String        @id @default(cuid())
+  nombre          String        @unique
+  precio          Float
+  duracionEstimada Int?         // en minutos
+  tipoVehiculo    TipoVehiculo?
+  activo          Boolean       @default(true)
+  descripcion     String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relaciones
+  ots             OrdenTrabajo[]
+
+  @@map("servicios")
+}
+
+model Extra {
+  id              String        @id @default(cuid())
+  nombre          String        @unique
+  precio          Float
+  duracionEstimada Int?         // en minutos
+  activo          Boolean       @default(true)
+  descripcion     String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relaciones
+  ots             OrdenTrabajoExtra[]
+
+  @@map("extras")
+}
+
+model OrdenTrabajo {
+  id                  String      @id @default(cuid())
+  fechaIngreso        DateTime    @default(now())
+  patente             String      // Obligatorio ahora
+  tipoVehiculo        TipoVehiculo? // Opcional ahora
+  descripcionVehiculo String?
+  nombreCliente       String?     // Nuevo: nombre del cliente (temporalmente opcional para migración)
+  telefonoCliente     String?     // Nuevo: teléfono del cliente (temporalmente opcional para migración)
+  horarioDeseado      DateTime?   // Nuevo: horario en que quiere tenerlo listo
+  servicioId          String
+  observaciones       String?
+  estado              OTEstado    @default(EN_COLA)
+  total               Float
+  precioAjustado      Float? // si se ajusta manualmente
+  justificacionPrecio String?
+  usuarioCreadorId    String
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  // Relaciones
+  servicio            Servicio            @relation(fields: [servicioId], references: [id])
+  usuarioCreador      Usuario             @relation("OTCreador", fields: [usuarioCreadorId], references: [id])
+  empleados           OrdenTrabajoEmpleado[]
+  extras              OrdenTrabajoExtra[]
+  estadosHistorial    EstadoHistorial[]
+  pagos               Pago[]
+  comisiones          Comision[]
+  cierres             CierreCajaOT[]
+  
+  @@index([estado])
+  @@index([fechaIngreso])
+  @@index([usuarioCreadorId])
+  @@map("ordenes_trabajo")
+}
+
+// Tabla de relación muchos a muchos: OT - Empleados
+model OrdenTrabajoEmpleado {
+  id            String        @id @default(cuid())
+  ordenTrabajoId String
+  empleadoId    String
+
+  ordenTrabajo  OrdenTrabajo  @relation(fields: [ordenTrabajoId], references: [id], onDelete: Cascade)
+  empleado      Usuario       @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+
+  @@unique([ordenTrabajoId, empleadoId])
+  @@map("orden_trabajo_empleados")
+}
+
+// Tabla de relación muchos a muchos: OT - Extras
+model OrdenTrabajoExtra {
+  id            String        @id @default(cuid())
+  ordenTrabajoId String
+  extraId       String
+
+  ordenTrabajo  OrdenTrabajo  @relation(fields: [ordenTrabajoId], references: [id], onDelete: Cascade)
+  extra         Extra         @relation(fields: [extraId], references: [id], onDelete: Cascade)
+
+  @@unique([ordenTrabajoId, extraId])
+  @@map("orden_trabajo_extras")
+}
+
+model EstadoHistorial {
+  id            String      @id @default(cuid())
+  ordenTrabajoId String
+  estadoAnterior OTEstado
+  estadoNuevo    OTEstado
+  usuarioId     String
+  fechaHora     DateTime    @default(now())
+
+  // Relaciones
+  ordenTrabajo  OrdenTrabajo @relation(fields: [ordenTrabajoId], references: [id], onDelete: Cascade)
+  usuario       Usuario      @relation(fields: [usuarioId], references: [id])
+
+  @@index([ordenTrabajoId])
+  @@index([fechaHora])
+  @@map("estado_historial")
+}
+
+model Pago {
+  id            String      @id @default(cuid())
+  ordenTrabajoId String
+  monto         Float
+  medioPago     MedioPago
+  referencia    String?     // para transferencias (CBU, alias, número de operación)
+  fechaHora     DateTime    @default(now())
+  usuarioId     String
+  createdAt     DateTime    @default(now())
+
+  // Relaciones
+  ordenTrabajo  OrdenTrabajo @relation(fields: [ordenTrabajoId], references: [id], onDelete: Cascade)
+  usuario       Usuario      @relation(fields: [usuarioId], references: [id])
+
+  @@index([ordenTrabajoId])
+  @@index([fechaHora])
+  @@index([medioPago])
+  @@map("pagos")
+}
+
+model CierreCaja {
+  id                String      @id @default(cuid())
+  fechaDesde        DateTime
+  fechaHasta        DateTime
+  fechaCierre       DateTime    @default(now())
+  totalEfectivo     Float
+  totalTransferencia Float
+  totalGeneral      Float
+  observaciones     String?
+  usuarioId         String
+  createdAt         DateTime    @default(now())
+
+  // Relaciones
+  usuario           Usuario     @relation(fields: [usuarioId], references: [id])
+  ots               CierreCajaOT[]
+
+  @@index([fechaCierre])
+  @@index([usuarioId])
+  @@map("cierres_caja")
+}
+
+// Tabla de relación muchos a muchos: Cierre de Caja - OTs
+model CierreCajaOT {
+  id            String      @id @default(cuid())
+  cierreCajaId  String
+  ordenTrabajoId String
+
+  cierreCaja    CierreCaja  @relation(fields: [cierreCajaId], references: [id], onDelete: Cascade)
+  ordenTrabajo  OrdenTrabajo @relation(fields: [ordenTrabajoId], references: [id], onDelete: Cascade)
+
+  @@unique([cierreCajaId, ordenTrabajoId])
+  @@map("cierre_caja_ots")
+}
+
+model Comision {
+  id                    String          @id @default(cuid())
+  ordenTrabajoId        String
+  empleadoId            String
+  monto                 Float
+  porcentaje            Float // porcentaje aplicado
+  estado                ComisionEstado  @default(PENDIENTE)
+  fechaGeneracion       DateTime        @default(now())
+  fechaLiquidacion      DateTime?
+  usuarioLiquidacionId  String?
+  createdAt             DateTime        @default(now())
+
+  // Relaciones
+  ordenTrabajo          OrdenTrabajo    @relation(fields: [ordenTrabajoId], references: [id], onDelete: Cascade)
+  empleado              Usuario         @relation(fields: [empleadoId], references: [id])
+  liquidaciones         LiquidacionComisionComision[]
+
+  @@index([empleadoId])
+  @@index([estado])
+  @@index([fechaGeneracion])
+  @@map("comisiones")
+}
+
+model ConfigComision {
+  id                    String          @id @default(cuid())
+  empleadoId            String          @unique
+  modelo                ComisionModelo  @default(POR_ITEM)
+  porcentaje            Float // porcentaje base
+  porcentajePorServicio String?           // { servicioId: porcentaje } - para modelo POR_ITEM
+  activo                Boolean         @default(true)
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  // Relaciones
+  empleado              Usuario         @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+
+  @@map("config_comisiones")
+}
+
+model LiquidacionComision {
+  id            String      @id @default(cuid())
+  empleadoId    String
+  fechaDesde    DateTime
+  fechaHasta    DateTime
+  fechaLiquidacion DateTime @default(now())
+  montoTotal    Float
+  usuarioId     String
+  createdAt     DateTime    @default(now())
+
+  // Relaciones
+  empleado      Usuario     @relation("LiquidacionEmpleado", fields: [empleadoId], references: [id])
+  usuario       Usuario     @relation("LiquidacionUsuario", fields: [usuarioId], references: [id])
+  comisiones    LiquidacionComisionComision[]
+
+  @@index([empleadoId])
+  @@index([fechaLiquidacion])
+  @@map("liquidaciones_comision")
+}
+
+// Tabla de relación muchos a muchos: Liquidación - Comisiones
+model LiquidacionComisionComision {
+  id                  String              @id @default(cuid())
+  liquidacionId       String
+  comisionId          String
+
+  liquidacion         LiquidacionComision @relation(fields: [liquidacionId], references: [id], onDelete: Cascade)
+  comision            Comision            @relation(fields: [comisionId], references: [id], onDelete: Cascade)
+
+  @@unique([liquidacionId, comisionId])
+  @@map("liquidacion_comision_comisiones")
+}
+
+model AuditoriaLog {
+  id            String   @id @default(cuid())
+  fechaHora     DateTime @default(now())
+  usuarioId     String
+  accion        String   // ejemplo: "OT_CREATED", "OT_STATE_CHANGED", "PAYMENT_REGISTERED"
+  entidad       String   // ejemplo: "OrdenTrabajo", "Pago", "CierreCaja"
+  entidadId     String?  // ID de la entidad afectada
+  datos         String     // datos adicionales en formato JSON
+
+  // Relaciones
+  usuario       Usuario  @relation(fields: [usuarioId], references: [id])
+
+  @@index([fechaHora])
+  @@index([usuarioId])
+  @@index([entidad, entidadId])
+  @@map("auditoria_logs")
+}
+
