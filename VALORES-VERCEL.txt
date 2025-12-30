@@ -1,0 +1,44 @@
+═══════════════════════════════════════════════════════════════
+  VARIABLES DE ENTORNO PARA VERCEL
+═══════════════════════════════════════════════════════════════
+
+1. DATABASE_URL
+   ────────────────────────────────────────────────────────────
+   postgresql://neondb_owner:npg_sl9Ojm1GPdWy@ep-nameless-frost-ad20aun9-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require
+   
+   ✅ Aplicar a: Production, Preview, Development
+
+
+2. NEXTAUTH_SECRET
+   ────────────────────────────────────────────────────────────
+   DHGKPNctpon0xWuwLEl3ivrCJgYU9TRj
+   
+   ✅ Aplicar a: Production, Preview, Development
+
+
+3. NEXTAUTH_URL
+   ────────────────────────────────────────────────────────────
+   PRIMERO (durante setup):
+   http://localhost:3000
+   ✅ Aplicar a: Development
+   
+   DESPUÉS (cuando tengas la URL de Vercel):
+   https://tu-proyecto.vercel.app
+   ✅ Aplicar a: Production, Preview, Development
+
+
+═══════════════════════════════════════════════════════════════
+  PASOS EN VERCEL
+═══════════════════════════════════════════════════════════════
+
+1. Ve a https://vercel.com
+2. Importa el proyecto desde GitHub: renzo-corzo/LAVADERO
+3. En "Environment Variables", agrega las 3 variables de arriba
+4. Click en "Deploy"
+5. Espera 2-3 minutos
+6. Copia la URL que te da Vercel (ej: https://lavadero-xxx.vercel.app)
+7. Actualiza NEXTAUTH_URL con esa URL
+8. Redeploy
+
+═══════════════════════════════════════════════════════════════
+
