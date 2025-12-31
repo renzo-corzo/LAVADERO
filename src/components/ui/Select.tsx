@@ -4,10 +4,11 @@
 
 import React from 'react'
 
-export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+export interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'placeholder'> {
   label?: string
   error?: string
   options: { value: string; label: string }[]
+  placeholder?: string // Placeholder se renderiza como opción deshabilitada
 }
 
 export function Select({ label, error, options = [], className = '', ...props }: SelectProps) {
