@@ -74,12 +74,17 @@ export interface OrdenTrabajo {
   observaciones?: string
   estado: OTEstado
   total: number
+  precio: number // Alias de total, agregado por la API para facilitar uso en frontend
   precioAjustado?: number // si se ajusta manualmente
   justificacionPrecio?: string
   usuarioCreadorId: string
   usuarioCreador: Usuario
   createdAt: Date
   updatedAt: Date
+  // Campos calculados agregados por la API
+  totalPagado?: number
+  pendiente?: number
+  estaPagada?: boolean
 }
 
 // Historial de cambios de estado
