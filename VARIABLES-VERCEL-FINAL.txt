@@ -1,0 +1,62 @@
+═══════════════════════════════════════════════════════════════
+  VARIABLES DE ENTORNO PARA VERCEL - RESUMEN FINAL
+═══════════════════════════════════════════════════════════════
+
+REPOSITORIO GITHUB:
+https://github.com/renzo-corzo/LAVADERO
+
+URL DE PRODUCCIÓN:
+https://lavadero-one.vercel.app
+
+═══════════════════════════════════════════════════════════════
+
+1. DATABASE_URL
+   ────────────────────────────────────────────────────────────
+   postgresql://neondb_owner:npg_sl9Ojm1GPdWy@ep-nameless-frost-ad20aun9-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require
+   
+   ✅ Aplicar a: Production, Preview, Development
+
+
+2. NEXTAUTH_SECRET
+   ────────────────────────────────────────────────────────────
+   DHGKPNctpon0xWuwLEl3ivrCJgYU9TRj
+   
+   ✅ Aplicar a: Production, Preview, Development
+
+
+3. NEXTAUTH_URL
+   ────────────────────────────────────────────────────────────
+   https://lavadero-one.vercel.app
+   
+   ✅ Aplicar a: Production, Preview
+
+   (Para Development puede ser: http://localhost:3000)
+
+═══════════════════════════════════════════════════════════════
+  CREDENCIALES DE LOGIN
+═══════════════════════════════════════════════════════════════
+
+Usuario: admin
+Contraseña: admin123
+Rol: DUEÑO
+
+Usuario: encargado
+Contraseña: encargado123
+Rol: ENCARGADO
+
+Usuario: lavador
+Contraseña: lavador123
+Rol: LAVADOR
+
+═══════════════════════════════════════════════════════════════
+  PASOS EN VERCEL
+═══════════════════════════════════════════════════════════════
+
+1. Ve a: https://vercel.com
+2. Selecciona tu proyecto: lavadero
+3. Settings → Environment Variables
+4. Verifica que las 3 variables estén configuradas correctamente
+5. Si cambias algo → Deployments → Redeploy
+
+═══════════════════════════════════════════════════════════════
+

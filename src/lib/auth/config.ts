@@ -19,9 +19,16 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         try {
           console.log('🔐 [AUTH] Intento de login para usuario:', credentials?.usuario)
-          console.log('🔐 [AUTH] DATABASE_URL configurada:', !!process.env.DATABASE_URL)
+          console.log('🔐 [AUTH] DATABASE_URL existe:', !!process.env.DATABASE_URL)
+          console.log('🔐 [AUTH] DATABASE_URL primer carácter:', process.env.DATABASE_URL?.[0] || 'VACÍA')
+          console.log('🔐 [AUTH] DATABASE_URL primeros 20 chars:', process.env.DATABASE_URL?.substring(0, 20) || 'VACÍA')
           console.log('🔐 [AUTH] NEXTAUTH_SECRET configurado:', !!process.env.NEXTAUTH_SECRET)
           console.log('🔐 [AUTH] NEXTAUTH_URL:', process.env.NEXTAUTH_URL)
+          
+          if (!process.env.DATABASE_URL || !process.env.DATABASE_URL.startsWith('postgresql://') && !process.env.DATABASE_URL.startsWith('postgres://')) {
+            console.error('❌ [AUTH] DATABASE_URL inválida o vacía. Valor actual:', process.env.DATABASE_URL || 'VACÍA')
+            throw new Error('DATABASE_URL no configurada correctamente en Vercel')
+          }
 
           if (!credentials?.usuario || !credentials?.password) {
             console.log('❌ [AUTH] Credenciales faltantes')
