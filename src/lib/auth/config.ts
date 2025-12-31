@@ -17,32 +17,49 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Contraseña', type: 'password' },
       },
       async authorize(credentials) {
-        if (!credentials?.usuario || !credentials?.password) {
+        try {
+          console.log('🔐 [AUTH] Intento de login para usuario:', credentials?.usuario)
+          console.log('🔐 [AUTH] DATABASE_URL configurada:', !!process.env.DATABASE_URL)
+          console.log('🔐 [AUTH] NEXTAUTH_SECRET configurado:', !!process.env.NEXTAUTH_SECRET)
+          console.log('🔐 [AUTH] NEXTAUTH_URL:', process.env.NEXTAUTH_URL)
+
+          if (!credentials?.usuario || !credentials?.password) {
+            console.log('❌ [AUTH] Credenciales faltantes')
+            return null
+          }
+
+          const user = await prisma.usuario.findUnique({
+            where: {
+              usuario: credentials.usuario,
+            },
+          })
+
+          console.log('👤 [AUTH] Usuario encontrado:', user ? `Sí (${user.nombre}, activo: ${user.activo})` : 'No')
+
+          if (!user || !user.activo) {
+            console.log('❌ [AUTH] Usuario no encontrado o inactivo')
+            return null
+          }
+
+          // Verificar contraseña
+          const isValidPassword = await compare(credentials.password, user.password)
+          console.log('🔑 [AUTH] Contraseña válida:', isValidPassword)
+
+          if (!isValidPassword) {
+            console.log('❌ [AUTH] Contraseña incorrecta')
+            return null
+          }
+
+          console.log('✅ [AUTH] Login exitoso para:', user.usuario)
+          return {
+            id: user.id,
+            name: user.nombre,
+            email: null, // No tenemos email en el modelo
+            role: user.rol,
+          }
+        } catch (error) {
+          console.error('❌ [AUTH] Error en authorize:', error)
           return null
-        }
-
-        const user = await prisma.usuario.findUnique({
-          where: {
-            usuario: credentials.usuario,
-          },
-        })
-
-        if (!user || !user.activo) {
-          return null
-        }
-
-        // Verificar contraseña
-        const isValidPassword = await compare(credentials.password, user.password)
-
-        if (!isValidPassword) {
-          return null
-        }
-
-        return {
-          id: user.id,
-          name: user.nombre,
-          email: null, // No tenemos email en el modelo
-          role: user.rol,
         }
       },
     }),
