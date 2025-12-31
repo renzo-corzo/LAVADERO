@@ -47,7 +47,7 @@ export function Header() {
               {(session?.user.role === 'ENCARGADO' || session?.user.role === 'DUENO') && (
                 <>
                   <Link
-                    href="/catalogos/servicios"
+                    href="/catalogos"
                     className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
                   >
                     Catálogos
