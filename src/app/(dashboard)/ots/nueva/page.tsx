@@ -131,6 +131,8 @@ export default function NuevaOTPage() {
             usuario: '',
             rol: 'LAVADOR',
             activo: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
           }])
         }
       }
@@ -144,6 +146,8 @@ export default function NuevaOTPage() {
           usuario: '',
           rol: 'LAVADOR',
           activo: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
         }])
       }
     } finally {
