@@ -628,7 +628,7 @@ export default function NuevaOTPage() {
                         Selecciona un horario disponible
                       </h4>
                       <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 max-h-96 overflow-y-auto p-2 bg-gray-50 rounded">
-                        {horariosDelDia.bloques.map((bloque) => {
+                        {horariosDelDia?.bloques.map((bloque) => {
                           const isSelected = formData.horarioDeseado === bloque.hora
                           return (
                             <button
