@@ -36,7 +36,7 @@ export function Header() {
               >
                 Tablero
               </Link>
-              {(session?.user.role === 'ENCARGADO' || session?.user.role === 'DUENO' || session?.user.role === 'LAVADOR') && (
+              {(session?.user.role === 'ENCARGADO' || session?.user.role === 'DUENO') && (
                 <Link
                   href="/ots/nueva"
                   className="bg-blue-600 text-white hover:bg-blue-700 px-3 py-2 rounded-md text-sm font-medium"
@@ -51,6 +51,12 @@ export function Header() {
                     className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
                   >
                     Catálogos
+                  </Link>
+                  <Link
+                    href="/clientes"
+                    className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                  >
+                    Clientes
                   </Link>
                   <Link
                     href="/caja"

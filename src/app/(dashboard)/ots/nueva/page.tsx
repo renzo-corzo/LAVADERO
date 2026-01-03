@@ -14,7 +14,7 @@ import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { Card } from '@/components/ui/Card'
 import { formatCurrency } from '@/lib/utils'
-import type { Servicio, Extra, Usuario } from '@/types'
+import type { Servicio, Extra, Usuario, Cliente } from '@/types'
 
 export default function NuevaOTPage() {
   const router = useRouter()
@@ -23,7 +23,6 @@ export default function NuevaOTPage() {
   // LAVADOR ahora puede crear OTs (pero no puede editar ni cancelar)
   const [loading, setLoading] = useState(false)
   const [loadingCatalogos, setLoadingCatalogos] = useState(true)
-  const [loadingEmpleados, setLoadingEmpleados] = useState(true)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [validandoHorario, setValidandoHorario] = useState(false)
   const [disponibilidad, setDisponibilidad] = useState<{
@@ -42,9 +41,13 @@ export default function NuevaOTPage() {
 
   const [servicios, setServicios] = useState<Servicio[]>([])
   const [extras, setExtras] = useState<Extra[]>([])
-  const [empleados, setEmpleados] = useState<Usuario[]>([])
+  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null)
+  const [loadingClientes, setLoadingClientes] = useState(false)
 
   const [formData, setFormData] = useState({
+    tipoCliente: 'WALK_IN' as 'FIJO' | 'WALK_IN',
+    clienteId: '',
     servicioId: '',
     extrasIds: [] as string[],
     patente: '',
@@ -53,7 +56,6 @@ export default function NuevaOTPage() {
     nombreCliente: '',
     telefonoCliente: '',
     horarioDeseado: '',
-    empleadosIds: [] as string[],
     observaciones: '',
     precioAjustado: '',
     justificacionPrecio: '',
@@ -63,11 +65,57 @@ export default function NuevaOTPage() {
     cargarCatalogos()
   }, [])
 
+  // Cargar datos del cliente cuando se selecciona
   useEffect(() => {
-    if (session) {
-      cargarEmpleados()
+    if (formData.clienteId && clientes.length > 0) {
+      const cliente = clientes.find((c) => c.id === formData.clienteId)
+      setClienteSeleccionado(cliente || null)
+      if (cliente) {
+        // Si es cliente fijo, prellenar nombre y teléfono
+        setFormData((prev) => ({
+          ...prev,
+          nombreCliente: cliente.nombre,
+          telefonoCliente: cliente.telefono || '',
+        }))
+      }
+    } else {
+      setClienteSeleccionado(null)
+    }
+  }, [formData.clienteId, clientes])
+
+  // Limpiar campos cuando cambia el tipo de cliente
+  useEffect(() => {
+    if (formData.tipoCliente === 'WALK_IN') {
+      setFormData((prev) => ({
+        ...prev,
+        clienteId: '',
+        nombreCliente: '',
+        telefonoCliente: '',
+      }))
+      setClienteSeleccionado(null)
+    }
+  }, [formData.tipoCliente])
+
+  useEffect(() => {
+    if (session && (session.user.role === 'DUENO' || session.user.role === 'ENCARGADO')) {
+      cargarClientes()
     }
   }, [session])
+
+  const cargarClientes = async () => {
+    try {
+      setLoadingClientes(true)
+      const response = await fetch('/api/clientes?tipo=CONCESIONARIA&activo=true')
+      if (response.ok) {
+        const data = await response.json()
+        setClientes(data.clientes || [])
+      }
+    } catch (error) {
+      console.error('Error al cargar clientes:', error)
+    } finally {
+      setLoadingClientes(false)
+    }
+  }
 
   const cargarCatalogos = async () => {
     try {
@@ -85,75 +133,6 @@ export default function NuevaOTPage() {
     }
   }
 
-  const cargarEmpleados = async () => {
-    try {
-      setLoadingEmpleados(true)
-      
-      // Si es LAVADOR, primero intentar cargar solo LAVADORes
-      // Si es ENCARGADO/DUENO, cargar todos los usuarios y filtrar empleados
-      let response
-      if (session?.user.role === 'LAVADOR') {
-        response = await fetch('/api/usuarios?rol=LAVADOR')
-      } else {
-        response = await fetch('/api/usuarios')
-      }
-      
-      if (response.ok) {
-        const data = await response.json()
-        
-        // Filtrar solo empleados (LAVADOR y ENCARGADO), excluir DUENO
-        const empleadosFiltrados = data.filter((u: any) => 
-          (u.rol === 'LAVADOR' || u.rol === 'ENCARGADO') && u.activo !== false
-        )
-        
-        // Si es LAVADOR y no se encuentra a sí mismo, agregarlo
-        if (session?.user.role === 'LAVADOR') {
-          const estaEnLista = empleadosFiltrados.find((e: any) => e.id === session.user.id)
-          if (!estaEnLista) {
-            empleadosFiltrados.push({
-              id: session.user.id,
-              nombre: session.user.name,
-              usuario: '',
-              rol: 'LAVADOR',
-              activo: true,
-            })
-          }
-        }
-        
-        setEmpleados(empleadosFiltrados)
-      } else {
-        console.error('Error al cargar empleados:', response.status)
-        // Si falla y es LAVADOR, al menos agregarse a sí mismo
-        if (session?.user.role === 'LAVADOR' && session.user.id) {
-          setEmpleados([{
-            id: session.user.id,
-            nombre: session.user.name || 'Yo',
-            usuario: '',
-            rol: 'LAVADOR',
-            activo: true,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          }])
-        }
-      }
-    } catch (error) {
-      console.error('Error al cargar empleados:', error)
-      // Si falla y es LAVADOR, al menos agregarse a sí mismo
-      if (session?.user.role === 'LAVADOR' && session.user.id) {
-        setEmpleados([{
-          id: session.user.id,
-          nombre: session.user.name || 'Yo',
-          usuario: '',
-          rol: 'LAVADOR',
-          activo: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        }])
-      }
-    } finally {
-      setLoadingEmpleados(false)
-    }
-  }
 
   // Calcular total automáticamente
   const calcularTotal = () => {
@@ -167,6 +146,12 @@ export default function NuevaOTPage() {
         total += Number(extra.precio)
       }
     })
+
+    // Aplicar descuento del cliente si hay uno seleccionado
+    if (formData.tipoCliente === 'FIJO' && clienteSeleccionado && clienteSeleccionado.descuentoPorcentaje) {
+      const descuento = (total * clienteSeleccionado.descuentoPorcentaje) / 100
+      total = total - descuento
+    }
 
     // Si hay precio ajustado, usar ese
     if (formData.precioAjustado && parseFloat(formData.precioAjustado) > 0) {
@@ -319,11 +304,6 @@ export default function NuevaOTPage() {
       newErrors.servicioId = 'El servicio es obligatorio'
     }
     // tipoVehiculo ahora es opcional, no se valida
-    // Para LAVADOR, si no selecciona empleados, se asignará automáticamente a sí mismo
-    // Para ENCARGADO/DUENO, debe seleccionar al menos un empleado
-    if ((session?.user.role === 'ENCARGADO' || session?.user.role === 'DUENO') && formData.empleadosIds.length === 0) {
-      newErrors.empleadosIds = 'Debe asignar al menos un empleado'
-    }
     if (formData.precioAjustado && !formData.justificacionPrecio) {
       newErrors.justificacionPrecio = 'Justificación requerida para precio ajustado'
     }
@@ -344,6 +324,7 @@ export default function NuevaOTPage() {
         body: JSON.stringify({
           ...formData,
           tipoVehiculo: formData.tipoVehiculo || null,
+          clienteId: formData.tipoCliente === 'FIJO' && formData.clienteId ? formData.clienteId : null,
           precioAjustado: formData.precioAjustado ? parseFloat(formData.precioAjustado) : null,
           justificacionPrecio: formData.justificacionPrecio || null,
           // Combinar fecha actual con la hora seleccionada
@@ -365,7 +346,10 @@ export default function NuevaOTPage() {
         }, 500)
       } else {
         const data = await response.json()
-        setErrors({ submit: data.error || 'Error al crear orden de trabajo' })
+        console.error('[nueva-ot] Error del servidor:', data)
+        const errorMessage = data.details?.message || data.error || 'Error al crear orden de trabajo'
+        setErrors({ submit: errorMessage })
+        alert(`Error: ${errorMessage}${data.details?.meta ? '\n\nDetalles: ' + JSON.stringify(data.details.meta) : ''}`)
       }
     } catch (error) {
       setErrors({ submit: 'Error al crear orden de trabajo' })
@@ -383,14 +367,6 @@ export default function NuevaOTPage() {
     })
   }
 
-  const toggleEmpleado = (empleadoId: string) => {
-    setFormData({
-      ...formData,
-      empleadosIds: formData.empleadosIds.includes(empleadoId)
-        ? formData.empleadosIds.filter((id) => id !== empleadoId)
-        : [...formData.empleadosIds, empleadoId],
-    })
-  }
 
   const total = calcularTotal()
 
@@ -405,9 +381,9 @@ export default function NuevaOTPage() {
         </div>
       )}
       {/* Debug: mostrar estados de carga si están activos por mucho tiempo */}
-      {(loadingCatalogos || loadingEmpleados) && !loading && (
+      {loadingCatalogos && !loading && (
         <div className="fixed top-4 right-4 bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-2 rounded z-40 text-sm">
-          Cargando: {loadingCatalogos ? 'Catálogos ' : ''}{loadingEmpleados ? 'Empleados' : ''}
+          Cargando catálogos...
         </div>
       )}
       <div className="mb-6">
@@ -456,6 +432,49 @@ export default function NuevaOTPage() {
                   placeholder="Ej: Auto rojo, modelo..."
                 />
 
+                {/* Selector de tipo de cliente - solo para DUEÑO y ENCARGADO */}
+                {(session?.user.role === 'DUENO' || session?.user.role === 'ENCARGADO') && (
+                  <div>
+                    <Select
+                      label="Tipo de Cliente *"
+                      id="tipoCliente"
+                      value={formData.tipoCliente}
+                      onChange={(e) => setFormData({ ...formData, tipoCliente: e.target.value as 'FIJO' | 'WALK_IN' })}
+                      options={[
+                        { value: 'WALK_IN', label: '👤 Cliente Walk-in (Por orden de llegada)' },
+                        { value: 'FIJO', label: '🏢 Cliente Fijo (Concesionaria)' },
+                      ]}
+                      required
+                    />
+                  </div>
+                )}
+
+                {/* Selector de cliente fijo - solo si es tipo FIJO y es DUEÑO/ENCARGADO */}
+                {(session?.user.role === 'DUENO' || session?.user.role === 'ENCARGADO') && formData.tipoCliente === 'FIJO' && (
+                  <div>
+                    <Select
+                      label="Cliente (Concesionaria) *"
+                      id="clienteId"
+                      value={formData.clienteId}
+                      onChange={(e) => setFormData({ ...formData, clienteId: e.target.value })}
+                      options={[
+                        { value: '', label: 'Seleccionar cliente...' },
+                        ...clientes.map((c) => ({
+                          value: c.id,
+                          label: `${c.nombre}${c.descuentoPorcentaje ? ` (${c.descuentoPorcentaje}% desc.)` : ''}`,
+                        })),
+                      ]}
+                      required
+                      disabled={loadingClientes}
+                    />
+                    {clienteSeleccionado && clienteSeleccionado.descuentoPorcentaje && (
+                      <p className="text-sm text-green-600 mt-1">
+                        ✓ Se aplicará un descuento del {clienteSeleccionado.descuentoPorcentaje}%
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
                     label="Nombre del Cliente *"
@@ -465,6 +484,7 @@ export default function NuevaOTPage() {
                     onChange={(e) => setFormData({ ...formData, nombreCliente: e.target.value })}
                     placeholder="Juan Pérez"
                     error={errors.nombreCliente}
+                    disabled={formData.tipoCliente === 'FIJO' && formData.clienteId !== ''}
                   />
 
                   <Input
@@ -476,6 +496,7 @@ export default function NuevaOTPage() {
                     onChange={(e) => setFormData({ ...formData, telefonoCliente: e.target.value })}
                     placeholder="+54 9 11 1234-5678"
                     error={errors.telefonoCliente}
+                    disabled={formData.tipoCliente === 'FIJO' && formData.clienteId !== ''}
                   />
                 </div>
 
@@ -754,50 +775,6 @@ export default function NuevaOTPage() {
           <div className="space-y-6">
             <Card title="Resumen">
               <div className="space-y-4">
-                {/* Para LAVADOR: campo opcional (se auto-asigna si no selecciona) */}
-                {/* Para ENCARGADO/DUENO: campo obligatorio */}
-                {session?.user.role !== 'LAVADOR' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Empleados Asignados *
-                    </label>
-                    {errors.empleadosIds && (
-                      <p className="text-sm text-red-600 mb-2">{errors.empleadosIds}</p>
-                    )}
-                    {loadingEmpleados ? (
-                      <p className="text-sm text-gray-500">Cargando empleados...</p>
-                    ) : empleados.length === 0 ? (
-                      <p className="text-sm text-red-600">No hay empleados disponibles</p>
-                    ) : (
-                      <div className="space-y-2 max-h-48 overflow-y-auto">
-                        {empleados.map((empleado) => (
-                          <label
-                            key={empleado.id}
-                            className="flex items-center p-2 border rounded hover:bg-gray-50 cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={formData.empleadosIds.includes(empleado.id)}
-                              onChange={() => toggleEmpleado(empleado.id)}
-                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            />
-                            <span className="ml-2 text-sm">{empleado.nombre}</span>
-                            {empleado.id === session?.user.id && (
-                              <span className="ml-2 text-xs text-gray-500">(Tú)</span>
-                            )}
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-                {session?.user.role === 'LAVADOR' && (
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded">
-                    <p className="text-sm text-blue-800">
-                      <strong>Nota:</strong> Esta orden se asignará automáticamente a ti. Si necesitas asignarla a otros empleados, puedes editarla después (solo ENCARGADO/DUENO puede editar).
-                    </p>
-                  </div>
-                )}
 
                 <div className="border-t pt-4">
                   <div className="flex justify-between items-center mb-2">

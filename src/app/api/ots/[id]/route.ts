@@ -21,8 +21,8 @@ export async function GET(
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    // Verificar permisos: ENCARGADO/DUENO tienen ot:view, LAVADOR tiene ot:view:assigned
-    if (!hasPermission(session.user.role, 'ot:view') && !hasPermission(session.user.role, 'ot:view:assigned')) {
+    // Solo ENCARGADO y DUENO pueden ver OTs
+    if (!hasPermission(session.user.role, 'ot:view')) {
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
     }
 
@@ -33,16 +33,6 @@ export async function GET(
         extras: {
           include: {
             extra: true,
-          },
-        },
-        empleados: {
-          include: {
-            empleado: {
-              select: {
-                id: true,
-                nombre: true,
-              },
-            },
           },
         },
         usuarioCreador: {
@@ -72,18 +62,6 @@ export async function GET(
       )
     }
 
-    // Si es LAVADOR, verificar que está asignado
-    if (session.user.role === 'LAVADOR') {
-      const estaAsignado = ot.empleados.some(
-        (e) => e.empleado.id === session.user.id
-      )
-      if (!estaAsignado) {
-        return NextResponse.json(
-          { error: 'Sin permisos para ver esta OT' },
-          { status: 403 }
-        )
-      }
-    }
 
     // Obtener pagos para calcular estado de pago
     const pagos = await prisma.pago.findMany({
@@ -97,7 +75,6 @@ export async function GET(
     const otFormateada = {
       ...ot,
       extras: ot.extras.map((e) => e.extra),
-      empleados: ot.empleados.map((e) => e.empleado),
       precio: Number(ot.total),
       totalPagado,
       pendiente,
@@ -162,14 +139,13 @@ export async function PUT(
       nombreCliente,
       telefonoCliente,
       horarioDeseado,
-      empleadosIds,
       observaciones,
       precioAjustado,
       justificacionPrecio,
     } = body
 
     // Validaciones
-    if (!servicioId || !patente || !nombreCliente || !telefonoCliente || !horarioDeseado || !empleadosIds || empleadosIds.length === 0) {
+    if (!servicioId || !patente || !nombreCliente || !telefonoCliente || !horarioDeseado) {
       return NextResponse.json(
         { error: 'Servicio, patente, nombre del cliente, teléfono, horario deseado y al menos un empleado son obligatorios' },
         { status: 400 }
@@ -234,9 +210,6 @@ export async function PUT(
     // Actualizar OT con transacción
     const ot = await prisma.$transaction(async (tx) => {
       // Eliminar relaciones existentes
-      await tx.ordenTrabajoEmpleado.deleteMany({
-        where: { ordenTrabajoId: params.id },
-      })
       await tx.ordenTrabajoExtra.deleteMany({
         where: { ordenTrabajoId: params.id },
       })
@@ -256,11 +229,6 @@ export async function PUT(
           total,
           precioAjustado: precioAjustado ? parseFloat(precioAjustado) : null,
           justificacionPrecio: justificacionPrecio || null,
-          empleados: {
-            create: empleadosIds.map((empleadoId: string) => ({
-              empleadoId,
-            })),
-          },
           extras: {
             create: extrasIds.map((extraId: string) => ({
               extraId,
@@ -272,16 +240,6 @@ export async function PUT(
           extras: {
             include: {
               extra: true,
-            },
-          },
-          empleados: {
-            include: {
-              empleado: {
-                select: {
-                  id: true,
-                  nombre: true,
-                },
-              },
             },
           },
         },
@@ -316,7 +274,6 @@ export async function PUT(
     const otFormateada = {
       ...ot,
       extras: ot.extras.map((e) => e.extra),
-      empleados: ot.empleados.map((e) => e.empleado),
       precio: Number(ot.total),
       totalPagado,
       pendiente,

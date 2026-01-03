@@ -38,8 +38,8 @@ export default withAuth(
       }
     }
     
-    // Rutas que LAVADOR no puede editar OTs (solo puede crearlas)
-    if (path.startsWith('/ots/') && path !== '/ots/nueva' && path.match(/\/ots\/[^/]+\/editar/)) {
+    // LAVADOR no puede crear ni editar OTs (solo ENCARGADO y DUENO)
+    if (path.startsWith('/ots/nueva') || (path.startsWith('/ots/') && path.match(/\/ots\/[^/]+\/editar/))) {
       if (role === 'LAVADOR') {
         return NextResponse.redirect(new URL('/tablero', req.url))
       }

@@ -19,6 +19,24 @@ export type MedioPago = 'EFECTIVO' | 'TRANSFERENCIA'
 // Estado de comisión
 export type ComisionEstado = 'PENDIENTE' | 'LIQUIDADA'
 
+// Tipo de cliente
+export type TipoCliente = 'CONCESIONARIA' | 'WALK_IN'
+
+// Cliente
+export interface Cliente {
+  id: string
+  nombre: string
+  tipo: TipoCliente
+  telefono?: string
+  email?: string
+  descuentoPorcentaje?: number // Porcentaje de descuento (ej: 10 para 10% off)
+  prioridad: number // Mayor número = mayor prioridad
+  activo: boolean
+  observaciones?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
 // Usuario
 export interface Usuario {
   id: string
@@ -65,6 +83,8 @@ export interface OrdenTrabajo {
   nombreCliente?: string // Nuevo: nombre del cliente (opcional en BD temporalmente para migración)
   telefonoCliente?: string // Nuevo: teléfono del cliente (opcional en BD temporalmente para migración)
   horarioDeseado?: Date // Nuevo: horario en que quiere tenerlo listo
+  clienteId?: string // Cliente fijo (concesionaria), null para walk-in
+  cliente?: Cliente // Cliente relacionado
   servicioId: string
   servicio: Servicio
   extrasIds: string[]

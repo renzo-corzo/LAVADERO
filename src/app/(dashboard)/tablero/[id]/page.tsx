@@ -233,20 +233,6 @@ export default function OTDetallePage() {
             </div>
           </Card>
 
-          {/* Empleados */}
-          <Card>
-            <h2 className="text-lg font-bold mb-4">Empleados Asignados</h2>
-            <div className="flex flex-wrap gap-2">
-              {ot.empleados?.map((empleado: any) => (
-                <span
-                  key={empleado.id}
-                  className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm"
-                >
-                  {empleado.nombre}
-                </span>
-              ))}
-            </div>
-          </Card>
 
           {/* Observaciones */}
           {ot.observaciones && (

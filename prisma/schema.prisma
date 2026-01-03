@@ -49,6 +49,11 @@ enum ComisionModelo {
   POR_OT
 }
 
+enum TipoCliente {
+  CONCESIONARIA
+  WALK_IN
+}
+
 // ============================================
 // MODELOS
 // ============================================
@@ -111,6 +116,28 @@ model Extra {
   @@map("extras")
 }
 
+model Cliente {
+  id                  String      @id @default(cuid())
+  nombre              String      @unique
+  tipo                TipoCliente @default(WALK_IN)
+  telefono            String?
+  email               String?
+  descuentoPorcentaje Float?      // Porcentaje de descuento (ej: 10 para 10% off)
+  prioridad           Int         @default(0) // Mayor número = mayor prioridad
+  activo              Boolean     @default(true)
+  observaciones       String?     // Notas sobre el cliente
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  // Relaciones
+  ordenesTrabajo      OrdenTrabajo[]
+
+  @@index([tipo])
+  @@index([activo])
+  @@index([prioridad])
+  @@map("clientes")
+}
+
 model OrdenTrabajo {
   id                  String      @id @default(cuid())
   fechaIngreso        DateTime    @default(now())
@@ -120,6 +147,7 @@ model OrdenTrabajo {
   nombreCliente       String?     // Nuevo: nombre del cliente (temporalmente opcional para migración)
   telefonoCliente     String?     // Nuevo: teléfono del cliente (temporalmente opcional para migración)
   horarioDeseado      DateTime?   // Nuevo: horario en que quiere tenerlo listo
+  clienteId           String?     // Cliente fijo (concesionaria), null para walk-in
   servicioId          String
   observaciones       String?
   estado              OTEstado    @default(EN_COLA)
@@ -131,6 +159,7 @@ model OrdenTrabajo {
   updatedAt           DateTime    @updatedAt
 
   // Relaciones
+  cliente             Cliente?            @relation(fields: [clienteId], references: [id])
   servicio            Servicio            @relation(fields: [servicioId], references: [id])
   usuarioCreador      Usuario             @relation("OTCreador", fields: [usuarioCreadorId], references: [id])
   empleados           OrdenTrabajoEmpleado[]
@@ -143,6 +172,7 @@ model OrdenTrabajo {
   @@index([estado])
   @@index([fechaIngreso])
   @@index([usuarioCreadorId])
+  @@index([clienteId])
   @@map("ordenes_trabajo")
 }
 

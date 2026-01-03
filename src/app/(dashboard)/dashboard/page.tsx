@@ -89,8 +89,8 @@ export default function DashboardPage() {
         <p className="text-gray-600 mt-1">Vista general del sistema - {formatDate(new Date())}</p>
       </div>
 
-      {/* Accesos Rápidos - Disponible para ENCARGADO, DUENO y LAVADOR */}
-      {(session?.user.role === 'ENCARGADO' || session?.user.role === 'DUENO' || session?.user.role === 'LAVADOR') && (
+      {/* Accesos Rápidos - Disponible para ENCARGADO y DUENO */}
+      {(session?.user.role === 'ENCARGADO' || session?.user.role === 'DUENO') && (
         <div className="mb-6">
           <Link href="/ots/nueva">
             <Button variant="primary" size="lg">

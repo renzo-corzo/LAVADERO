@@ -31,7 +31,6 @@ export default function TableroPage() {
     ENTREGADO: [],
   })
   const [loading, setLoading] = useState(true)
-  const [filtroEmpleado, setFiltroEmpleado] = useState<string>('')
   const [filtroFecha, setFiltroFecha] = useState<string>(() => {
     const hoy = new Date()
     const year = hoy.getFullYear()
@@ -39,12 +38,9 @@ export default function TableroPage() {
     const day = String(hoy.getDate()).padStart(2, '0')
     return `${year}-${month}-${day}`
   })
-  const [empleados, setEmpleados] = useState<any[]>([])
-
   useEffect(() => {
-    cargarEmpleados()
     cargarOTs()
-  }, [filtroEmpleado, filtroFecha])
+  }, [filtroFecha])
 
   // Recargar si viene el parámetro recargar en la URL (después de crear OT)
   useEffect(() => {
@@ -58,17 +54,6 @@ export default function TableroPage() {
     }
   }, [])
 
-  const cargarEmpleados = async () => {
-    try {
-      const response = await fetch('/api/usuarios')
-      if (response.ok) {
-        const data = await response.json()
-        setEmpleados(data)
-      }
-    } catch (error) {
-      console.error('Error al cargar empleados:', error)
-    }
-  }
 
   const cargarOTs = async () => {
     try {
@@ -76,9 +61,6 @@ export default function TableroPage() {
       const params = new URLSearchParams()
       if (filtroFecha) {
         params.append('fecha', filtroFecha)
-      }
-      if (filtroEmpleado) {
-        params.append('empleadoId', filtroEmpleado)
       }
 
       // Agregar cache-busting para asegurar datos frescos
@@ -202,21 +184,6 @@ export default function TableroPage() {
         )}
       </div>
 
-      <div className="flex flex-wrap gap-1 mb-2">
-        {ot.empleados?.slice(0, 2).map((empleado: any) => (
-          <span
-            key={empleado.id}
-            className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded"
-          >
-            {empleado.nombre}
-          </span>
-        ))}
-        {ot.empleados && ot.empleados.length > 2 && (
-          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-            +{ot.empleados.length - 2}
-          </span>
-        )}
-      </div>
 
       <div className="flex flex-col sm:flex-row gap-2 mt-2">
         {ot.estado === 'EN_COLA' && (
@@ -327,23 +294,6 @@ export default function TableroPage() {
               className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Empleado
-            </label>
-            <select
-              value={filtroEmpleado}
-              onChange={(e) => setFiltroEmpleado(e.target.value)}
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Todos</option>
-              {empleados.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
           <div className="flex items-end">
             <Button
               variant="secondary"
@@ -353,7 +303,6 @@ export default function TableroPage() {
                 const month = String(hoy.getMonth() + 1).padStart(2, '0')
                 const day = String(hoy.getDate()).padStart(2, '0')
                 setFiltroFecha(`${year}-${month}-${day}`)
-                setFiltroEmpleado('')
               }}
             >
               Limpiar Filtros

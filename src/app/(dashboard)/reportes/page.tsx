@@ -9,18 +9,52 @@ import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Select'
 import { formatCurrency } from '@/lib/utils'
 import { obtenerFechaLocal } from '@/lib/utils-fechas'
+import { useSession } from 'next-auth/react'
 
 type TipoReporte = 'ventas' | 'comisiones' | 'metricas' | null
 
+interface Cliente {
+  id: string
+  nombre: string
+  tipo: 'WALK_IN' | 'CONCESIONARIA'
+}
+
 export default function ReportesPage() {
+  const { data: session } = useSession()
   const [tipoReporte, setTipoReporte] = useState<TipoReporte>(null)
   const hoy = new Date()
   const haceUnMes = new Date()
   haceUnMes.setMonth(haceUnMes.getMonth() - 1)
   const [fechaDesde, setFechaDesde] = useState<string>(obtenerFechaLocal(haceUnMes))
   const [fechaHasta, setFechaHasta] = useState<string>(obtenerFechaLocal(hoy))
+  const [clienteId, setClienteId] = useState<string>('')
+  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [loadingClientes, setLoadingClientes] = useState(false)
+
+  // Cargar clientes
+  useEffect(() => {
+    if (session) {
+      cargarClientes()
+    }
+  }, [session])
+
+  const cargarClientes = async () => {
+    try {
+      setLoadingClientes(true)
+      const response = await fetch('/api/clientes?activo=true')
+      if (response.ok) {
+        const data = await response.json()
+        setClientes(data.clientes || [])
+      }
+    } catch (error) {
+      console.error('Error al cargar clientes:', error)
+    } finally {
+      setLoadingClientes(false)
+    }
+  }
 
   const handleVerReporte = (tipo: TipoReporte) => {
     if (!fechaDesde || !fechaHasta) {
@@ -38,10 +72,10 @@ export default function ReportesPage() {
         <p className="text-gray-600 mt-1">Analiza el rendimiento del negocio</p>
       </div>
 
-      {/* Selector de período */}
+      {/* Selector de período y filtros */}
       <Card className="mb-6">
-        <h2 className="text-lg font-bold mb-4">Seleccionar Período</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <h2 className="text-lg font-bold mb-4">Filtros del Reporte</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Desde</label>
             <Input
@@ -58,18 +92,35 @@ export default function ReportesPage() {
               onChange={(e) => setFechaHasta(e.target.value)}
             />
           </div>
+          <div>
+            <Select
+              label="Cliente (opcional)"
+              value={clienteId}
+              onChange={(e) => setClienteId(e.target.value)}
+              placeholder="Todos los clientes"
+              options={[
+                { value: '', label: 'Todos los clientes' },
+                ...clientes.map((c) => ({
+                  value: c.id,
+                  label: `${c.nombre} ${c.tipo === 'CONCESIONARIA' ? '(Concesionaria)' : ''}`,
+                })),
+              ]}
+              disabled={loadingClientes}
+            />
+          </div>
           <div className="flex items-end">
             <Button
-              variant="primary"
+              variant="secondary"
               onClick={() => {
                 const hoy = new Date()
                 const haceUnMes = new Date()
                 haceUnMes.setMonth(haceUnMes.getMonth() - 1)
                 setFechaDesde(obtenerFechaLocal(haceUnMes))
                 setFechaHasta(obtenerFechaLocal(hoy))
+                setClienteId('')
               }}
             >
-              Último Mes
+              Resetear Filtros
             </Button>
           </div>
         </div>
@@ -128,7 +179,7 @@ export default function ReportesPage() {
                   ✕ Cerrar
                 </Button>
               </div>
-              <ReporteVentas fechaDesde={fechaDesde} fechaHasta={fechaHasta} />
+              <ReporteVentas fechaDesde={fechaDesde} fechaHasta={fechaHasta} clienteId={clienteId || undefined} />
             </Card>
           )}
 
@@ -140,7 +191,7 @@ export default function ReportesPage() {
                   ✕ Cerrar
                 </Button>
               </div>
-              <ReporteComisiones fechaDesde={fechaDesde} fechaHasta={fechaHasta} />
+              <ReporteComisiones fechaDesde={fechaDesde} fechaHasta={fechaHasta} clienteId={clienteId || undefined} />
             </Card>
           )}
 
@@ -152,7 +203,7 @@ export default function ReportesPage() {
                   ✕ Cerrar
                 </Button>
               </div>
-              <ReporteMetricas fechaDesde={fechaDesde} fechaHasta={fechaHasta} />
+              <ReporteMetricas fechaDesde={fechaDesde} fechaHasta={fechaHasta} clienteId={clienteId || undefined} />
             </Card>
           )}
         </div>
@@ -162,26 +213,35 @@ export default function ReportesPage() {
 }
 
 // Componente de Reporte de Ventas
-function ReporteVentas({ fechaDesde, fechaHasta }: { fechaDesde: string; fechaHasta: string }) {
+function ReporteVentas({ fechaDesde, fechaHasta, clienteId }: { fechaDesde: string; fechaHasta: string; clienteId?: string }) {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<any>(null)
 
   useEffect(() => {
     cargarDatos()
-  }, [fechaDesde, fechaHasta])
+  }, [fechaDesde, fechaHasta, clienteId])
 
   const cargarDatos = async () => {
     try {
       setLoading(true)
-      const response = await fetch(
-        `/api/reportes/ventas?fechaDesde=${fechaDesde}&fechaHasta=${fechaHasta}`
-      )
+      let url = `/api/reportes/ventas?fechaDesde=${fechaDesde}&fechaHasta=${fechaHasta}`
+      if (clienteId) {
+        url += `&clienteId=${clienteId}`
+      }
+      console.log('[ReporteVentas] Cargando datos desde:', url)
+      const response = await fetch(url)
       if (response.ok) {
         const reporteData = await response.json()
+        console.log('[ReporteVentas] Datos recibidos:', reporteData)
         setData(reporteData)
+      } else {
+        const errorData = await response.json()
+        console.error('[ReporteVentas] Error en respuesta:', errorData)
+        alert(`Error al cargar el reporte: ${errorData.error || 'Error desconocido'}`)
       }
     } catch (error) {
       console.error('Error al cargar reporte de ventas:', error)
+      alert('Error al cargar el reporte. Revisa la consola para más detalles.')
     } finally {
       setLoading(false)
     }
@@ -195,8 +255,40 @@ function ReporteVentas({ fechaDesde, fechaHasta }: { fechaDesde: string; fechaHa
     return <div className="text-center py-8 text-gray-500">Error al cargar el reporte</div>
   }
 
+  // Mensaje informativo si no hay datos
+  const noHayDatos = data.resumen.cantidadOTs === 0
+
   return (
     <div>
+      {/* Información del filtro aplicado */}
+      {data.clienteFiltro && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+          <p className="text-sm text-blue-800">
+            <strong>Filtro aplicado:</strong> Cliente: {data.clienteFiltro.nombre} ({data.clienteFiltro.tipo})
+          </p>
+        </div>
+      )}
+
+      {/* Mensaje si no hay datos */}
+      {noHayDatos && (
+        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+          <p className="text-sm text-yellow-800">
+            <strong>⚠️ No se encontraron datos para el período seleccionado.</strong>
+          </p>
+          <p className="text-xs text-yellow-700 mt-2">
+            El reporte solo incluye Órdenes de Trabajo que:
+          </p>
+          <ul className="text-xs text-yellow-700 mt-1 ml-4 list-disc">
+            <li>Están en estado <strong>ENTREGADO</strong></li>
+            <li>Están <strong>completamente pagadas</strong> (el total de pagos ≥ total de la OT)</li>
+            <li>Fueron ingresadas en el rango de fechas seleccionado</li>
+          </ul>
+          <p className="text-xs text-yellow-700 mt-2">
+            Verifica que tengas OTs entregadas y pagadas en el período seleccionado.
+          </p>
+        </div>
+      )}
+      
       {/* Resumen */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card>
@@ -351,23 +443,27 @@ function ReporteVentas({ fechaDesde, fechaHasta }: { fechaDesde: string; fechaHa
 function ReporteComisiones({
   fechaDesde,
   fechaHasta,
+  clienteId,
 }: {
   fechaDesde: string
   fechaHasta: string
+  clienteId?: string
 }) {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<any>(null)
 
   useEffect(() => {
     cargarDatos()
-  }, [fechaDesde, fechaHasta])
+  }, [fechaDesde, fechaHasta, clienteId])
 
   const cargarDatos = async () => {
     try {
       setLoading(true)
-      const response = await fetch(
-        `/api/reportes/comisiones?fechaDesde=${fechaDesde}&fechaHasta=${fechaHasta}`
-      )
+      let url = `/api/reportes/comisiones?fechaDesde=${fechaDesde}&fechaHasta=${fechaHasta}`
+      if (clienteId) {
+        url += `&clienteId=${clienteId}`
+      }
+      const response = await fetch(url)
       if (response.ok) {
         const reporteData = await response.json()
         setData(reporteData)
@@ -483,23 +579,27 @@ function ReporteComisiones({
 function ReporteMetricas({
   fechaDesde,
   fechaHasta,
+  clienteId,
 }: {
   fechaDesde: string
   fechaHasta: string
+  clienteId?: string
 }) {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<any>(null)
 
   useEffect(() => {
     cargarDatos()
-  }, [fechaDesde, fechaHasta])
+  }, [fechaDesde, fechaHasta, clienteId])
 
   const cargarDatos = async () => {
     try {
       setLoading(true)
-      const response = await fetch(
-        `/api/reportes/metricas?fechaDesde=${fechaDesde}&fechaHasta=${fechaHasta}`
-      )
+      let url = `/api/reportes/metricas?fechaDesde=${fechaDesde}&fechaHasta=${fechaHasta}`
+      if (clienteId) {
+        url += `&clienteId=${clienteId}`
+      }
+      const response = await fetch(url)
       if (response.ok) {
         const reporteData = await response.json()
         setData(reporteData)

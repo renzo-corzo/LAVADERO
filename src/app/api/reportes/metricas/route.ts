@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { crearFechaLocal } from '@/lib/utils-fechas'
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,6 +24,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const fechaDesde = searchParams.get('fechaDesde')
     const fechaHasta = searchParams.get('fechaHasta')
+    const clienteId = searchParams.get('clienteId') // Filtro por cliente
 
     if (!fechaDesde || !fechaHasta) {
       return NextResponse.json(
@@ -31,21 +33,39 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const desde = new Date(fechaDesde)
-    const hasta = new Date(fechaHasta)
-    hasta.setHours(23, 59, 59, 999)
+    // Normalizar fechas para evitar problemas de timezone
+    const desdeLocal = crearFechaLocal(fechaDesde)
+    desdeLocal.setHours(0, 0, 0, 0)
+    
+    const hastaLocal = crearFechaLocal(fechaHasta)
+    hastaLocal.setHours(23, 59, 59, 999)
+
+    // Construir filtro de where
+    const where: any = {
+      fechaIngreso: {
+        gte: desdeLocal,
+        lte: hastaLocal,
+      },
+    }
+
+    // Agregar filtro por cliente si se especifica
+    if (clienteId) {
+      where.clienteId = clienteId
+    }
 
     // Obtener OTs del período
     const ots = await prisma.ordenTrabajo.findMany({
-      where: {
-        fechaIngreso: {
-          gte: desde,
-          lte: hasta,
-        },
-      },
+      where,
       include: {
         estadosHistorial: {
           orderBy: { fechaHora: 'asc' },
+        },
+        cliente: {
+          select: {
+            id: true,
+            nombre: true,
+            tipo: true,
+          },
         },
       },
     })

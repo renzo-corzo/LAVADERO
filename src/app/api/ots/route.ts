@@ -17,37 +17,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    // Permitir acceso a LAVADOR para ver sus OTs asignadas
-    // y a ENCARGADO/DUENO para ver todas
-    if (!hasPermission(session.user.role, 'ot:view') && !hasPermission(session.user.role, 'ot:view:assigned')) {
+    // Solo ENCARGADO y DUENO pueden ver OTs
+    if (!hasPermission(session.user.role, 'ot:view')) {
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
     }
 
     const searchParams = request.nextUrl.searchParams
     const estado = searchParams.get('estado')
-    const empleadoId = searchParams.get('empleadoId')
     const fecha = searchParams.get('fecha') // formato: YYYY-MM-DD
 
-    // Si es LAVADOR, solo mostrar sus OTs asignadas
     const where: any = {}
-    if (session.user.role === 'LAVADOR') {
-      where.empleados = {
-        some: {
-          empleadoId: session.user.id,
-        },
-      }
-    }
 
     if (estado) {
       where.estado = estado
-    }
-
-    if (empleadoId && session.user.role !== 'LAVADOR') {
-      where.empleados = {
-        some: {
-          empleadoId,
-        },
-      }
     }
 
     if (fecha) {
@@ -69,16 +51,6 @@ export async function GET(request: NextRequest) {
         extras: {
           include: {
             extra: true,
-          },
-        },
-        empleados: {
-          include: {
-            empleado: {
-              select: {
-                id: true,
-                nombre: true,
-              },
-            },
           },
         },
         usuarioCreador: {
@@ -121,7 +93,6 @@ export async function GET(request: NextRequest) {
       return {
         ...ot,
         extras: ot.extras.map((e) => e.extra),
-        empleados: ot.empleados.map((e) => e.empleado),
         precio: Number(ot.total),
         totalPagado,
         pendiente,
@@ -155,7 +126,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    console.log('Body recibido:', JSON.stringify(body, null, 2))
+    console.log('[API OTs POST] Body recibido:', JSON.stringify(body, null, 2))
+    console.log('[API OTs POST] Session user:', { id: session.user.id, role: session.user.role })
     const {
       servicioId,
       extrasIds = [],
@@ -165,7 +137,7 @@ export async function POST(request: NextRequest) {
       nombreCliente,
       telefonoCliente,
       horarioDeseado,
-      empleadosIds,
+      clienteId,
       observaciones,
       precioAjustado,
       justificacionPrecio,
@@ -179,19 +151,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Si es LAVADOR y no tiene empleados asignados, asignarse a sí mismo
-    let empleadosIdsFinales = empleadosIds || []
-    if (session.user.role === 'LAVADOR' && empleadosIdsFinales.length === 0) {
-      empleadosIdsFinales = [session.user.id]
-    }
-
-    // Para ENCARGADO/DUENO, validar que tenga al menos un empleado
-    if ((session.user.role === 'ENCARGADO' || session.user.role === 'DUENO') && empleadosIdsFinales.length === 0) {
-      return NextResponse.json(
-        { error: 'Debe asignar al menos un empleado' },
-        { status: 400 }
-      )
-    }
+    // Ya no se asignan empleados a las OTs
     
     // Validar que patente no esté vacío
     if (!patente || typeof patente !== 'string' || !patente.trim()) {
@@ -245,13 +205,41 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Validar y obtener cliente si se proporciona
+    let cliente: any = null
+    if (clienteId) {
+      cliente = await prisma.cliente.findUnique({
+        where: { id: clienteId },
+      })
+
+      if (!cliente || !cliente.activo) {
+        return NextResponse.json(
+          { error: 'Cliente no encontrado o inactivo' },
+          { status: 400 }
+        )
+      }
+
+      if (cliente.tipo !== 'CONCESIONARIA') {
+        return NextResponse.json(
+          { error: 'El cliente seleccionado no es una concesionaria' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Calcular total
     let total = Number(servicio.precio)
     extras.forEach((extra) => {
       total += Number(extra.precio)
     })
 
-    // Si hay precio ajustado, usar ese
+    // Aplicar descuento del cliente si hay uno seleccionado
+    if (cliente && cliente.descuentoPorcentaje) {
+      const descuento = (total * cliente.descuentoPorcentaje) / 100
+      total = total - descuento
+    }
+
+    // Si hay precio ajustado, usar ese (sobrescribe el descuento)
     if (precioAjustado !== undefined && precioAjustado !== null) {
       total = parseFloat(precioAjustado)
       if (!justificacionPrecio) {
@@ -263,7 +251,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Crear OT con transacción
+    console.log('[API OTs POST] Iniciando creación de OT...')
     const ot = await prisma.$transaction(async (tx) => {
+      console.log('[API OTs POST] Creando OT en BD...')
       const nuevaOT = await tx.ordenTrabajo.create({
         data: {
           fechaIngreso: new Date(),
@@ -285,6 +275,7 @@ export async function POST(request: NextRequest) {
               return null
             }
           })() : null,
+          clienteId: clienteId || null,
           servicioId,
           observaciones: observaciones || null,
           estado: 'EN_COLA',
@@ -292,11 +283,6 @@ export async function POST(request: NextRequest) {
           precioAjustado: precioAjustado ? parseFloat(precioAjustado) : null,
           justificacionPrecio: justificacionPrecio || null,
           usuarioCreadorId: session.user.id,
-          empleados: {
-            create: empleadosIdsFinales.map((empleadoId: string) => ({
-              empleadoId,
-            })),
-          },
           extras: {
             create: extrasIds.map((extraId: string) => ({
               extraId,
@@ -308,16 +294,6 @@ export async function POST(request: NextRequest) {
           extras: {
             include: {
               extra: true,
-            },
-          },
-          empleados: {
-            include: {
-              empleado: {
-                select: {
-                  id: true,
-                  nombre: true,
-                },
-              },
             },
           },
         },
@@ -354,11 +330,12 @@ export async function POST(request: NextRequest) {
       return nuevaOT
     })
 
+    console.log('[API OTs POST] OT creada exitosamente:', ot.id)
+
     // Formatear respuesta
     const otFormateada = {
       ...ot,
       extras: ot.extras.map((e) => e.extra),
-      empleados: ot.empleados.map((e) => e.empleado),
       precio: Number(ot.total),
       servicio: {
         ...ot.servicio,
@@ -368,16 +345,27 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(otFormateada, { status: 201 })
   } catch (error: any) {
-    console.error('Error al crear OT:', error)
-    console.error('Error details:', {
+    console.error('❌ [API OTs POST] Error al crear OT:', error)
+    console.error('❌ [API OTs POST] Error details:', {
       message: error?.message,
-      stack: error?.stack,
-      cause: error?.cause,
+      code: error?.code,
+      meta: error?.meta,
+      stack: error?.stack?.split('\n').slice(0, 10).join('\n'), // Solo primeras 10 líneas
     })
+    
+    // En desarrollo, retornar más detalles
+    const errorMessage = process.env.NODE_ENV === 'development' 
+      ? error?.message || 'Error desconocido'
+      : 'Error al crear orden de trabajo'
+    
     return NextResponse.json(
       { 
-        error: 'Error al crear orden de trabajo',
-        details: process.env.NODE_ENV === 'development' ? error?.message : undefined
+        error: errorMessage,
+        code: error?.code,
+        details: process.env.NODE_ENV === 'development' ? {
+          message: error?.message,
+          meta: error?.meta,
+        } : undefined
       },
       { status: 500 }
     )
