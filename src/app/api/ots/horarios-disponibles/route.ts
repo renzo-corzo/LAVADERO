@@ -262,16 +262,20 @@ export async function GET(request: NextRequest) {
         }
 
         // Verificar conflictos con OTs existentes
-        // REGLA SIMPLIFICADA: Solo marcamos ocupado por coincidencia exacta del horario deseado
-        // No consideramos solapamientos porque es complicado y puede causar falsos positivos
+        // REGLA: Marcamos ocupado solo si el horario deseado de una OT coincide exactamente
         let hayConflicto = false
         let conflictoCon: any = null
         
         // minutosBloque ya está calculado arriba (hora * 60 + minuto)
         
         for (const rango of rangosOcupados) {
-          // rango.fin ya está normalizado (es el horario deseado de la OT existente)
+          // rango.fin ya está normalizado al día de consulta (es el horario deseado de la OT existente)
           const rangoFinNormalizado = new Date(rango.fin)
+          // Asegurar que esté en el mismo día de consulta
+          rangoFinNormalizado.setFullYear(fechaInicio.getFullYear())
+          rangoFinNormalizado.setMonth(fechaInicio.getMonth())
+          rangoFinNormalizado.setDate(fechaInicio.getDate())
+          
           const rangoFinMinutos = rangoFinNormalizado.getHours() * 60 + rangoFinNormalizado.getMinutes()
           
           // SOLO CASO: Coincidencia exacta del horario deseado
@@ -290,6 +294,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Marcar como disponible si no hay conflicto
+        // Por defecto, todos los horarios futuros son disponibles a menos que haya conflicto
         bloques.push({
           hora: horaStr,
           disponible: !hayConflicto,
@@ -304,7 +309,11 @@ export async function GET(request: NextRequest) {
 
     const disponibles = bloques.filter(b => b.disponible).length
     const ocupados = bloques.filter(b => !b.disponible).length
-    console.log(`[horarios-disponibles] Resultado: ${disponibles} disponibles, ${ocupados} ocupados`)
+    const ocupadosPorOT = bloques.filter(b => b.ocupadoPor && b.ocupadoPor.patente !== 'Horario pasado' && b.ocupadoPor.patente !== 'Tiempo insuficiente').length
+    const pasados = bloques.filter(b => b.ocupadoPor && (b.ocupadoPor.patente === 'Horario pasado' || b.ocupadoPor.patente === 'Tiempo insuficiente')).length
+    
+    console.log(`[horarios-disponibles] Resultado: ${disponibles} disponibles, ${ocupados} ocupados (${ocupadosPorOT} por OTs, ${pasados} pasados/insuficientes)`)
+    console.log(`[horarios-disponibles] Es hoy: ${esHoy}, Minutos ahora: ${minutosAhora}, Rangos ocupados: ${rangosOcupados.length}`)
 
     return NextResponse.json({
       fecha: fechaInicio.toISOString().split('T')[0],
