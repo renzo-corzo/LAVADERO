@@ -1,0 +1,91 @@
+═══════════════════════════════════════════════════════════════
+  VARIABLES DE ENTORNO PARA RENDER
+═══════════════════════════════════════════════════════════════
+
+Configurar en: Render Dashboard → Tu Web Service → Environment
+
+═══════════════════════════════════════════════════════════════
+  VARIABLE 1: DATABASE_URL
+═══════════════════════════════════════════════════════════════
+
+OPCIÓN A: Usar Neon (actual)
+───────────────────────────────────────────────────────────────
+postgresql://neondb_owner:npg_sl9Ojm1GPdWy@ep-nameless-frost-ad20aun9-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require
+
+OPCIÓN B: Crear nueva base de datos en Render (GRATIS)
+───────────────────────────────────────────────────────────────
+1. En Render: New → PostgreSQL
+2. Plan: Free
+3. Después de crear, ve a Connections
+4. Copia la "Internal Database URL"
+5. Usa esa URL aquí
+
+═══════════════════════════════════════════════════════════════
+  VARIABLE 2: NEXTAUTH_SECRET
+═══════════════════════════════════════════════════════════════
+
+VVLK4UNmAOC3pJZ8BEIoK/zcPuLytaTWfXF8juxcGz4=
+
+NOTA: Puedes usar esta o generar una nueva
+
+═══════════════════════════════════════════════════════════════
+  VARIABLE 3: NEXTAUTH_URL
+═══════════════════════════════════════════════════════════════
+
+⚠️ IMPORTANTE: Render te dará una URL después del primer deploy
+
+Ejemplo:
+https://lavadero.onrender.com
+
+INSTRUCCIONES:
+1. Después del primer deploy, Render te dará una URL
+2. Será algo como: lavadero.onrender.com o lavadero-xxxx.onrender.com
+3. Actualiza esta variable con: https://tu-url.onrender.com
+4. Guarda cambios (Render hará redeploy automático)
+
+═══════════════════════════════════════════════════════════════
+  VARIABLE 4: NODE_ENV
+═══════════════════════════════════════════════════════════════
+
+production
+
+═══════════════════════════════════════════════════════════════
+  PASOS EN RENDER
+═══════════════════════════════════════════════════════════════
+
+1. Ve a: https://render.com
+2. Sign up with GitHub
+3. New + → Web Service
+4. Connect GitHub → Selecciona: renzo-corzo/LAVADERO
+5. Configura:
+   - Name: lavadero
+   - Region: más cercana
+   - Branch: main
+   - Build Command: npm install && npm run build
+   - Start Command: npm start
+   - Plan: Free
+6. Ve a: Environment
+7. Agrega las 4 variables de arriba
+8. NEXTAUTH_URL lo actualizas después del primer deploy
+9. Create Web Service
+10. Render desplegará automáticamente
+
+═══════════════════════════════════════════════════════════════
+  ⚠️ IMPORTANTE: PLAN GRATUITO
+═══════════════════════════════════════════════════════════════
+
+- El servicio "duerme" después de 15 minutos de inactividad
+- El primer request puede tardar 30-60 segundos en despertar
+- Esto es normal en el plan gratuito
+- Si necesitas que esté siempre activo, considera el plan pago
+
+═══════════════════════════════════════════════════════════════
+  CREDENCIALES DE LOGIN
+═══════════════════════════════════════════════════════════════
+
+Usuario: admin
+Contraseña: admin123
+Rol: DUEÑO
+
+═══════════════════════════════════════════════════════════════
+
