@@ -73,14 +73,15 @@ https://tu-proyecto.vercel.app
 2. Te dará una URL automática como: `https://lavadero-one.vercel.app`
 3. O usa un dominio personalizado si lo configuraste
 
-**Ejemplo actual:**
+**URL ACTUAL:**
 ```
-https://lavadero-nine.vercel.app
+https://lavadero-ruby.vercel.app
 ```
 
 **Ejemplos anteriores (NO usar):**
 ```
 https://lavadero-one.vercel.app
+https://lavadero-nine.vercel.app
 ```
 
 **⚠️ IMPORTANTE:**
@@ -129,7 +130,7 @@ https://lavadero-one.vercel.app
 
 Después del deploy:
 
-1. **Ve a tu URL de Vercel** (ej: `https://lavadero-one.vercel.app`)
+1. **Ve a tu URL de Vercel:** `https://lavadero-ruby.vercel.app`
 2. **Intenta hacer login:**
    - Usuario: `admin` (o el que creaste en el seed)
    - Contraseña: `admin123` (o la que configuraste)

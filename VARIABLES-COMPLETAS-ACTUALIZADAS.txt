@@ -1,0 +1,100 @@
+═══════════════════════════════════════════════════════════════
+  VARIABLES DE ENTORNO COMPLETAS - ACTUALIZADAS
+═══════════════════════════════════════════════════════════════
+
+URL DEL PROYECTO:
+https://lavadero-ruby.vercel.app
+
+REPOSITORIO GITHUB:
+https://github.com/renzo-corzo/LAVADERO
+
+═══════════════════════════════════════════════════════════════
+  CONFIGURACIÓN EN VERCEL
+═══════════════════════════════════════════════════════════════
+
+Ve a: Vercel → Tu Proyecto → Settings → Environment Variables
+
+═══════════════════════════════════════════════════════════════
+  VARIABLE 1: DATABASE_URL
+═══════════════════════════════════════════════════════════════
+
+postgresql://neondb_owner:npg_sl9Ojm1GPdWy@ep-nameless-frost-ad20aun9-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require
+
+✅ Aplicar a: Production, Preview, Development
+
+═══════════════════════════════════════════════════════════════
+  VARIABLE 2: NEXTAUTH_SECRET
+═══════════════════════════════════════════════════════════════
+
+VVLK4UNmAOC3pJZ8BEIoK/zcPuLytaTWfXF8juxcGz4=
+
+✅ Aplicar a: Production, Preview, Development
+
+NOTA: Esta es una nueva secret generada. Si ya tienes otra configurada
+en Vercel, puedes mantenerla o cambiarla por esta.
+
+═══════════════════════════════════════════════════════════════
+  VARIABLE 3: NEXTAUTH_URL
+═══════════════════════════════════════════════════════════════
+
+https://lavadero-ruby.vercel.app
+
+⚠️ IMPORTANTE: NO incluyas la barra final (/)
+
+✅ Aplicar a: Production, Preview
+❌ NO aplicar a Development (usa http://localhost:3000)
+
+═══════════════════════════════════════════════════════════════
+  RESUMEN VISUAL
+═══════════════════════════════════════════════════════════════
+
+┌─────────────────────┬──────────────────────────────────────────────┐
+│ Variable            │ Value                                        │
+├─────────────────────┼──────────────────────────────────────────────┤
+│ DATABASE_URL        │ postgresql://neondb_owner:npg_sl9Ojm1GPdWy@  │
+│                     │ ep-nameless-frost-ad20aun9-pooler.c-2...     │
+│                     │ /neondb?sslmode=require                      │
+├─────────────────────┼──────────────────────────────────────────────┤
+│ NEXTAUTH_SECRET     │ VVLK4UNmAOC3pJZ8BEIoK/zcPuLytaTWfXF8juxcGz4= │
+├─────────────────────┼──────────────────────────────────────────────┤
+│ NEXTAUTH_URL        │ https://lavadero-ruby.vercel.app            │
+└─────────────────────┴──────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════
+  PASOS PARA CONFIGURAR
+═══════════════════════════════════════════════════════════════
+
+1. Ve a: https://vercel.com
+2. Selecciona tu proyecto: LAVADERO
+3. Ve a: Settings → Environment Variables
+4. Verifica/Actualiza las 3 variables de arriba
+5. Especialmente importante: NEXTAUTH_URL = https://lavadero-ruby.vercel.app
+6. Guarda todos los cambios
+7. Ve a: Deployments
+8. Haz clic en los 3 puntos (⋯) del último deployment
+9. Selecciona: "Redeploy"
+
+═══════════════════════════════════════════════════════════════
+  VERIFICACIÓN
+═══════════════════════════════════════════════════════════════
+
+Después del redeploy:
+
+1. Ve a: https://lavadero-ruby.vercel.app
+2. Deberías ver la página de login
+3. Intenta hacer login:
+   - Usuario: admin
+   - Contraseña: admin123
+4. Si funciona: ✅ Todo está configurado correctamente
+5. Si hay errores: Revisa los logs en Vercel → Deployments → Runtime Logs
+
+═══════════════════════════════════════════════════════════════
+  CREDENCIALES DE LOGIN
+═══════════════════════════════════════════════════════════════
+
+Usuario: admin
+Contraseña: admin123
+Rol: DUEÑO
+
+═══════════════════════════════════════════════════════════════
+

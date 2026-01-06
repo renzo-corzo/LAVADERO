@@ -6,7 +6,7 @@ REPOSITORIO GITHUB:
 https://github.com/renzo-corzo/LAVADERO
 
 URL DE PRODUCCIÓN:
-https://lavadero-one.vercel.app
+https://lavadero-ruby.vercel.app
 
 ═══════════════════════════════════════════════════════════════
 
@@ -26,7 +26,7 @@ https://lavadero-one.vercel.app
 
 3. NEXTAUTH_URL
    ────────────────────────────────────────────────────────────
-   https://lavadero-one.vercel.app
+   https://lavadero-ruby.vercel.app
    
    ✅ Aplicar a: Production, Preview
 

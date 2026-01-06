@@ -1,0 +1,29 @@
+═══════════════════════════════════════════════════════════════
+  URL ACTUAL DEL PROYECTO EN VERCEL
+═══════════════════════════════════════════════════════════════
+
+URL DE PRODUCCIÓN:
+https://lavadero-ruby.vercel.app
+
+═══════════════════════════════════════════════════════════════
+  VARIABLE DE ENTORNO
+═══════════════════════════════════════════════════════════════
+
+NEXTAUTH_URL = https://lavadero-ruby.vercel.app
+
+Aplicar a: Production, Preview
+
+═══════════════════════════════════════════════════════════════
+  CONFIGURAR EN VERCEL
+═══════════════════════════════════════════════════════════════
+
+1. Ve a: https://vercel.com
+2. Selecciona tu proyecto: LAVADERO
+3. Settings → Environment Variables
+4. Busca: NEXTAUTH_URL
+5. Actualiza el valor a: https://lavadero-ruby.vercel.app
+6. Guarda
+7. Ve a Deployments → Redeploy
+
+═══════════════════════════════════════════════════════════════
+
