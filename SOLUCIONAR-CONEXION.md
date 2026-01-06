@@ -82,3 +82,6 @@ npm run dev        # Inicia el servidor
 
 Una vez que tengas esto, actualiza el `.env` y vuelve a intentar.
 
+
+
+

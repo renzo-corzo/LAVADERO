@@ -5,13 +5,14 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState, useCallback } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { formatCurrency, formatDateTime, formatHorarioDeseado, getTimeElapsed } from '@/lib/utils'
+import { MenuMovil } from '@/components/tablero/MenuMovil'
 import type { OrdenTrabajo } from '@/types'
 
 interface OTsPorEstado {
@@ -22,8 +23,13 @@ interface OTsPorEstado {
 }
 
 export default function TableroPage() {
+  // ========== TODOS LOS HOOKS PRIMERO ==========
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { data: session } = useSession()
+  const [mounted, setMounted] = useState(false) // Para evitar problemas de hidratación
+  const [esMovil, setEsMovil] = useState(false)
+  const [mostrarKanban, setMostrarKanban] = useState(false)
   const [ots, setOTs] = useState<OTsPorEstado>({
     EN_COLA: [],
     EN_PROCESO: [],
@@ -38,32 +44,61 @@ export default function TableroPage() {
     const day = String(hoy.getDate()).padStart(2, '0')
     return `${year}-${month}-${day}`
   })
-  useEffect(() => {
-    cargarOTs()
-  }, [filtroFecha])
 
-  // Recargar si viene el parámetro recargar en la URL (después de crear OT)
+  // ========== TODOS LOS USE EFFECT ==========
+  // Marcar como montado después de la hidratación
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search)
-      if (params.get('recargar') === 'true') {
-        cargarOTs()
-        // Limpiar el parámetro de la URL
-        window.history.replaceState({}, '', '/tablero')
-      }
-    }
+    setMounted(true)
   }, [])
 
+  // Detectar si es móvil DESPUÉS de la hidratación
+  useEffect(() => {
+    if (!mounted || typeof window === 'undefined') return
+    const checkMobile = () => {
+      const isMobile = window.innerWidth < 1024 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      setEsMovil(isMobile)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [mounted])
 
-  const cargarOTs = async () => {
+  // Si viene el parámetro kanban, mostrar el kanban directamente
+  useEffect(() => {
+    if (!mounted || typeof window === 'undefined') return
+    const kanbanParam = searchParams.get('kanban')
+    const isDesktop = window.innerWidth >= 1024
+    
+    if (kanbanParam === 'true') {
+      setMostrarKanban(true)
+    } else if (isDesktop) {
+      // En desktop, siempre mostrar kanban
+      setMostrarKanban(true)
+    } else {
+      // En móvil, sin parámetro kanban, mostrar menú (kanban = false)
+      setMostrarKanban(false)
+    }
+  }, [mounted, searchParams])
+
+  // Función para cargar OTs (usando useCallback para estabilidad)
+  const cargarOTs = useCallback(async () => {
+    // No cargar OTs si no está montado o si estamos en modo menú móvil
+    if (!mounted) {
+      return
+    }
+    
+    // Si es móvil y no se muestra el kanban, no cargar OTs
+    if (esMovil && !mostrarKanban) {
+      setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
       const params = new URLSearchParams()
       if (filtroFecha) {
         params.append('fecha', filtroFecha)
       }
-
-      // Agregar cache-busting para asegurar datos frescos
       params.append('_t', Date.now().toString())
 
       const response = await fetch(`/api/ots?${params.toString()}`, {
@@ -71,39 +106,50 @@ export default function TableroPage() {
       })
       if (response.ok) {
         const data = await response.json()
-        
-        // Organizar OTs por estado
         const otsPorEstado: OTsPorEstado = {
           EN_COLA: [],
           EN_PROCESO: [],
           LISTO: [],
           ENTREGADO: [],
         }
-
         data.forEach((ot: OrdenTrabajo) => {
           if (otsPorEstado[ot.estado as keyof OTsPorEstado]) {
             otsPorEstado[ot.estado as keyof OTsPorEstado].push(ot)
           }
         })
-
         setOTs(otsPorEstado)
-      } else if (response.status === 403) {
-        const errorData = await response.json().catch(() => ({ error: 'Sin permisos' }))
-        console.error('Error 403 - Sin permisos:', errorData)
-        alert('No tienes permisos para ver las órdenes de trabajo. Contacta al administrador.')
       } else {
-        const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }))
-        console.error('Error al cargar OTs:', response.status, errorData)
-        alert(`Error al cargar las órdenes de trabajo: ${errorData.error || 'Error desconocido'}`)
+        console.error('Error al cargar OTs:', response.status, response.statusText)
       }
     } catch (error) {
       console.error('Error al cargar OTs:', error)
-      alert('Error al cargar las órdenes de trabajo. Intente recargar la página.')
     } finally {
       setLoading(false)
     }
-  }
+  }, [filtroFecha, esMovil, mostrarKanban, mounted])
 
+  // Cargar OTs cuando cambian las dependencias (solo después de montar)
+  // Este hook SIEMPRE se ejecuta, sin importar el dispositivo
+  useEffect(() => {
+    if (!mounted) {
+      setLoading(false)
+      return
+    }
+    cargarOTs()
+  }, [mounted, cargarOTs])
+
+  // Recargar si viene el parámetro recargar en la URL
+  // Este hook SIEMPRE se ejecuta
+  useEffect(() => {
+    if (!mounted || typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('recargar') === 'true') {
+      cargarOTs()
+      window.history.replaceState({}, '', '/tablero')
+    }
+  }, [mounted, cargarOTs])
+
+  // ========== FUNCIONES DESPUÉS DE TODOS LOS HOOKS ==========
   const handleCambiarEstado = async (otId: string, nuevoEstado: string) => {
     if (!confirm(`¿Cambiar estado a "${nuevoEstado}"?`)) {
       return
@@ -122,7 +168,6 @@ export default function TableroPage() {
       })
 
       if (response.ok) {
-        // Si se marca como ENTREGADO, ofrecer registrar pago
         if (nuevoEstado === 'ENTREGADO') {
           const quierePagar = confirm('¿Desea registrar el pago ahora?')
           if (quierePagar) {
@@ -130,8 +175,6 @@ export default function TableroPage() {
             return
           }
         }
-        
-        // Recargar OTs después de un pequeño delay para asegurar que la BD se actualizó
         setTimeout(() => {
           cargarOTs()
         }, 300)
@@ -184,7 +227,6 @@ export default function TableroPage() {
         )}
       </div>
 
-
       <div className="flex flex-col sm:flex-row gap-2 mt-2">
         {ot.estado === 'EN_COLA' && (
           <Button
@@ -229,7 +271,7 @@ export default function TableroPage() {
           </Button>
         )}
         {ot.estado === 'ENTREGADO' && !ot.estaPagada && (
-          <Button 
+          <Button
             type="button"
             size="lg"
             variant="primary"
@@ -252,27 +294,111 @@ export default function TableroPage() {
     </div>
   )
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">Cargando tablero...</p>
-      </div>
-    )
-  }
+  // ========== VARIABLES Y CÁLCULOS DESPUÉS DE FUNCIONES ==========
+  // Preparar items del menú para pasar como prop (evita hooks en MenuMovil)
+  // IMPORTANTE: Definir siempre el mismo array base para evitar problemas de hidratación
+  const menuItemsBase = [
+    {
+      href: '/tablero?kanban=true',
+      label: 'Tablero Kanban',
+      icon: '📋',
+      color: 'bg-green-500',
+    },
+    {
+      href: '/ots/nueva',
+      label: 'Nueva OT',
+      icon: '➕',
+      color: 'bg-purple-500',
+    },
+    {
+      href: '/catalogos',
+      label: 'Catálogos',
+      icon: '📚',
+      color: 'bg-orange-500',
+    },
+    {
+      href: '/clientes',
+      label: 'Clientes',
+      icon: '👥',
+      color: 'bg-indigo-500',
+    },
+    {
+      href: '/caja',
+      label: 'Caja',
+      icon: '💰',
+      color: 'bg-yellow-500',
+    },
+    {
+      href: '/comisiones',
+      label: 'Comisiones',
+      icon: '💵',
+      color: 'bg-teal-500',
+    },
+    {
+      href: '/reportes',
+      label: 'Reportes',
+      icon: '📈',
+      color: 'bg-pink-500',
+    },
+  ]
 
+  // Crear array final siempre con la misma estructura (evitar mutaciones condicionales)
+  const itemsFiltrados = session?.user.role === 'DUENO'
+    ? [
+        ...menuItemsBase,
+        {
+          href: '/usuarios',
+          label: 'Usuarios',
+          icon: '👤',
+          color: 'bg-gray-600',
+        },
+      ]
+    : menuItemsBase
+
+  // ========== RETURNS CONDICIONALES AL FINAL ==========
+  // Renderizar siempre ambos componentes y usar CSS para mostrar/ocultar
+  // El menú móvil se oculta automáticamente cuando se muestra el kanban
   return (
-    <div>
+    <>
+      {/* Menú Principal Móvil - Componente separado, solo visible en móvil */}
+      <MenuMovil items={itemsFiltrados} mostrarKanban={mostrarKanban} />
+
+      {/* Tablero Kanban - Visible en desktop siempre, en móvil solo cuando mostrarKanban=true */}
+      <div className={mostrarKanban ? 'block' : 'hidden lg:block'}>
+
+        {/* Botón para volver al menú en móvil - solo cuando se muestra kanban */}
+        {mostrarKanban && mounted && (
+          <div className="mb-4 lg:hidden">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setMostrarKanban(false)
+                router.push('/tablero')
+              }}
+            >
+              ← Volver al Menú
+            </Button>
+          </div>
+        )}
+
+        {loading && (
+          <div className="flex items-center justify-center h-64">
+            <p className="text-gray-500">Cargando tablero...</p>
+          </div>
+        )}
+
+        {!loading && (
+          <>
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Tablero Operativo</h1>
           <p className="text-gray-600 mt-1">Gestiona las órdenes de trabajo del día</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={cargarOTs} disabled={loading}>
+          <Button variant="secondary" onClick={() => cargarOTs()} disabled={loading}>
             {loading ? 'Cargando...' : '🔄 Recargar'}
           </Button>
-          {/* Botón Nueva OT para ENCARGADO, DUENO y LAVADOR */}
-          {(session?.user.role === 'ENCARGADO' || session?.user.role === 'DUENO' || session?.user.role === 'LAVADOR') && (
+          {(session?.user.role === 'ENCARGADO' || session?.user.role === 'DUENO') && (
             <Link href="/ots/nueva">
               <Button variant="primary">+ Nueva OT</Button>
             </Link>
@@ -280,7 +406,6 @@ export default function TableroPage() {
         </div>
       </div>
 
-      {/* Filtros */}
       <Card className="mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -311,9 +436,7 @@ export default function TableroPage() {
         </div>
       </Card>
 
-      {/* Tablero Kanban */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 overflow-x-auto">
-        {/* Columna EN_COLA */}
         <div className="bg-gray-50 rounded-lg p-4 min-w-[280px]">
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-bold text-gray-700">En Cola</h2>
@@ -331,7 +454,6 @@ export default function TableroPage() {
           </div>
         </div>
 
-        {/* Columna EN_PROCESO */}
         <div className="bg-yellow-50 rounded-lg p-4 min-w-[280px]">
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-bold text-gray-700">En Proceso</h2>
@@ -349,7 +471,6 @@ export default function TableroPage() {
           </div>
         </div>
 
-        {/* Columna LISTO */}
         <div className="bg-green-50 rounded-lg p-4 min-w-[280px]">
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-bold text-gray-700">Listo</h2>
@@ -367,7 +488,6 @@ export default function TableroPage() {
           </div>
         </div>
 
-        {/* Columna ENTREGADO */}
         <div className="bg-blue-50 rounded-lg p-4 min-w-[280px]">
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-bold text-gray-700">Entregado</h2>
@@ -385,6 +505,10 @@ export default function TableroPage() {
           </div>
         </div>
       </div>
-    </div>
+          </>
+        )}
+      </div>
+    </>
   )
 }
+

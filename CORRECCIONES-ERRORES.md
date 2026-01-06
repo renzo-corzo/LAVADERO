@@ -44,3 +44,6 @@
 - El favicon SVG se mostrará correctamente después de reiniciar
 - Tailwind CSS ahora funcionará correctamente con todos los componentes
 
+
+
+

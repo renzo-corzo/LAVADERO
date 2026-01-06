@@ -221,3 +221,6 @@ providers: [
 - Verificar que `NEXTAUTH_URL` está configurado correctamente
 - Verificar que las cookies no están bloqueadas en el navegador
 
+
+
+

@@ -5,8 +5,9 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -22,7 +23,9 @@ interface DashboardStats {
 }
 
 export default function DashboardPage() {
+  const router = useRouter()
   const { data: session } = useSession()
+  const [esMovil, setEsMovil] = useState(false)
   const [stats, setStats] = useState<DashboardStats>({
     otsHoy: 0,
     otsEnCola: 0,
@@ -33,11 +36,26 @@ export default function DashboardPage() {
   })
   const [loading, setLoading] = useState(true)
 
+  // Redirigir a /tablero en móvil
   useEffect(() => {
-    cargarEstadisticas()
-  }, [])
+    if (typeof window === 'undefined') return
+    
+    const checkMobile = () => {
+      const isMobile = window.innerWidth < 1024 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      setEsMovil(isMobile)
+      
+      // Redirigir inmediatamente si es móvil
+      if (isMobile) {
+        router.replace('/tablero')
+      }
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [router])
 
-  const cargarEstadisticas = async () => {
+  const cargarEstadisticas = useCallback(async () => {
     try {
       setLoading(true)
       const hoy = new Date()
@@ -72,6 +90,21 @@ export default function DashboardPage() {
     } finally {
       setLoading(false)
     }
+  }, [])
+
+  useEffect(() => {
+    if (!esMovil) {
+      cargarEstadisticas()
+    }
+  }, [esMovil, cargarEstadisticas])
+
+  // Si es móvil, no renderizar nada (se redirige)
+  if (esMovil) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-gray-500">Redirigiendo...</p>
+      </div>
+    )
   }
 
   if (loading) {

@@ -138,3 +138,6 @@ Value: https://lavadero-one.vercel.app
 - [ ] Se esperó 2-3 minutos después del redeploy
 - [ ] Se probó login y se verificaron los logs
 
+
+
+

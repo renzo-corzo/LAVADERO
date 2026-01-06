@@ -50,3 +50,6 @@ Después del redeploy:
 - El link "Catálogos" apuntará a `/catalogos` correctamente
 - No habrá problemas de autor porque es un redeploy, no un deployment nuevo desde un commit específico
 
+
+
+

@@ -69,3 +69,6 @@ Después de cualquiera de estas soluciones, deberías ver:
 - [ ] Webhook de Vercel está activo en GitHub (verificar en GitHub → Settings → Webhooks)
 - [ ] Deployment se crea automáticamente o manualmente
 
+
+
+

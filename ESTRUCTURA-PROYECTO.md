@@ -267,3 +267,6 @@ lavadero/
    - Configurar service worker
    - Probar instalación en dispositivos
 
+
+
+

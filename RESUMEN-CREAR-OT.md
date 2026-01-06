@@ -120,3 +120,6 @@ Con la creación de OTs lista, el siguiente paso crítico es:
 - La auditoría registra todas las acciones importantes
 - Soft validaciones: patente o descripción (al menos uno recomendado, pero no estricto en BD)
 
+
+
+

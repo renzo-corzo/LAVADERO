@@ -80,3 +80,6 @@ Una vez dentro del sistema:
 - Las contraseñas de ejemplo deben cambiarse en producción
 - El sistema está configurado para desarrollo local en `http://localhost:3000`
 
+
+
+

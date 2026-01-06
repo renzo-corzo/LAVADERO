@@ -26,3 +26,6 @@ Por ahora, puedes comentar los iconos en `manifest.json` para eliminar los error
 
 Los errores no afectan la funcionalidad, solo son advertencias del navegador.
 
+
+
+

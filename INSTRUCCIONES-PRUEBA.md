@@ -52,3 +52,6 @@ Si prefieres SQLite, necesitamos convertir todos los enums a String. Esto requie
 
 ¿Qué opción prefieres?
 
+
+
+

@@ -6,3 +6,6 @@ CREATE DATABASE lavadero;
 
 -- Luego conectarse a la base de datos y ejecutar las migraciones con Prisma
 
+
+
+

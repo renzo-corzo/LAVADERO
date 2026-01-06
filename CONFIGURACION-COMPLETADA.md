@@ -108,3 +108,6 @@ npm run db:studio
 
 ✅ **Listo para usar**: El cliente está disponible en `src/lib/db/client.ts` para usar en cualquier parte de la aplicación.
 
+
+
+

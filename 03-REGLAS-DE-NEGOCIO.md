@@ -251,3 +251,6 @@
 **Versión:** 1.0  
 **Total de reglas definidas:** 102
 
+
+
+

@@ -313,3 +313,6 @@ Inicio > Catálogos > Servicios > Editar "Lavado Completo"
 **Documento de Navegación y Permisos - Sistema Lavadero de Autos MVP**  
 **Versión:** 1.0
 
+
+
+

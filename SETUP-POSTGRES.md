@@ -57,3 +57,6 @@ npm run dev
 2. Serás redirigido a `/login`
 3. Ingresa con: `admin` / `admin123`
 
+
+
+

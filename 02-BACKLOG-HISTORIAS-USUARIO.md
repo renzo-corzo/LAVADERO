@@ -488,3 +488,6 @@
 
 **Nota:** Las estimaciones están en puntos de historia (Story Points) usando escala de Fibonacci modificada (3, 5, 8, 13). Pueden ajustarse según la metodología del equipo.
 
+
+
+

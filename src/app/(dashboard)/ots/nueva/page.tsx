@@ -338,8 +338,16 @@ export default function NuevaOTPage() {
       })
 
       if (response.ok) {
-        // Redirigir al tablero con recarga forzada
-        router.push('/tablero?recargar=true')
+        // Redirigir al tablero (en móvil mostrará el menú, en desktop el kanban)
+        // Si es móvil, redirigir al menú principal; si es desktop, al kanban
+        const isMobile = typeof window !== 'undefined' && (window.innerWidth < 1024 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))
+        if (isMobile) {
+          // En móvil, ir al menú principal (no al kanban)
+          router.push('/tablero')
+        } else {
+          // En desktop, ir al kanban
+          router.push('/tablero?kanban=true')
+        }
         // Forzar recarga completa de la página para asegurar que se vea la nueva OT
         setTimeout(() => {
           window.location.reload()

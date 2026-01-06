@@ -94,3 +94,6 @@ Deberías ver que hay usuarios en la BD.
 - [ ] Se hizo Redeploy después de configurar variables
 - [ ] Probar login con `admin` / `admin123`
 
+
+
+

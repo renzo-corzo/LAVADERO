@@ -78,3 +78,6 @@ Ya está en `.gitignore` para proteger tu información.
 
 Si necesitas compartir las variables de entorno con tu equipo, usa el archivo `env.example` como plantilla.
 
+
+
+

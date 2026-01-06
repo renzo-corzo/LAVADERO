@@ -70,3 +70,6 @@ Puede ser que necesites:
 - O que los deployments automáticos estén pausados
 - En ese caso, verifica en **Settings** → **Git** que la conexión esté activa
 
+
+
+

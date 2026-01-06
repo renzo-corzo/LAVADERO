@@ -264,3 +264,6 @@ En `src/types/index.ts` se encuentran todos los tipos:
 **Total de líneas de documentación:** ~3,500+ líneas  
 **Estado:** ✅ LISTO PARA DESARROLLO
 
+
+
+

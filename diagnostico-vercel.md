@@ -154,3 +154,6 @@ Abre la consola del navegador (F12) cuando intentas hacer login y busca:
 3. **Haz Redeploy** - Después de verificar variables
 4. **Comparte el error** - Si aparece algo en los logs o consola del navegador
 
+
+
+

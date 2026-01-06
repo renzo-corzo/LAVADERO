@@ -46,3 +46,6 @@ Si nada funciona, podemos crear un nuevo commit con el autor configurado correct
 
 **Usa la Solución 1**: Escribe `main` en el campo. Es la más simple y siempre funciona porque deployará el último commit de la rama principal.
 
+
+
+

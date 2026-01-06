@@ -102,3 +102,6 @@ Después del redeploy:
 - [ ] Esperado 2-3 minutos después del redeploy
 - [ ] Probar login nuevamente
 
+
+
+

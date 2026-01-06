@@ -79,3 +79,6 @@ Si tu IP local cambia (al reconectar el WiFi), vuelve a ejecutar `ipconfig` para
 2. **Seguridad**: En desarrollo, solo accesible en tu red local. No compartas la IP públicamente.
 3. **Base de datos**: La base de datos sigue siendo la de tu computadora, así que ambos dispositivos comparten los mismos datos.
 
+
+
+

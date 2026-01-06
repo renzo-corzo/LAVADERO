@@ -363,3 +363,6 @@
 **Versión:** 1.0  
 **Total de criterios definidos:** 7 principales + 6 generales
 
+
+
+

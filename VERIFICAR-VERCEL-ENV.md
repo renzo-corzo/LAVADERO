@@ -83,3 +83,6 @@ Si sospechas que las contraseñas no se hashearon correctamente, puedes re-hashe
 - [ ] Se hizo Redeploy después de cambiar variables
 - [ ] El login funciona localmente (con la misma DATABASE_URL de Neon)
 
+
+
+

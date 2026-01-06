@@ -95,3 +95,6 @@ Con el catálogo completo, ahora se puede avanzar con:
 - Las validaciones se hacen tanto en cliente como en servidor
 - Los precios se almacenan como Decimal en Prisma (precisión monetaria)
 
+
+
+

@@ -6,7 +6,8 @@ export default async function Home() {
   const session = await getServerSession(authOptions)
 
   if (session) {
-    redirect('/dashboard')
+    // Redirigir al tablero (menú principal) en lugar del dashboard
+    redirect('/tablero')
   } else {
     redirect('/login')
   }

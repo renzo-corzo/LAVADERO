@@ -200,3 +200,6 @@ Se han creado índices para optimizar consultas frecuentes:
 - [Prisma con Next.js](https://www.prisma.io/docs/guides/deployment/deployment-guides/deploying-to-vercel)
 - [Prisma Migrate](https://www.prisma.io/docs/concepts/components/prisma-migrate)
 
+
+
+

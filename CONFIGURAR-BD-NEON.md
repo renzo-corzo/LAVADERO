@@ -78,3 +78,6 @@ Después de ejecutar los comandos, deberías poder:
 - **Error "relation does not exist":** Ejecuta `npx prisma db push` nuevamente
 - **Error al hacer seed:** Verifica que las tablas se hayan creado correctamente
 
+
+
+

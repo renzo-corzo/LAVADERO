@@ -68,3 +68,6 @@ Si lo ves, Vercel debería detectarlo pronto.
 
 El commit `859d944` que está usando el deployment actual es antiguo. El nuevo commit `92223e4` tiene el fix del link de Catálogos. Necesitas que el deployment use ese commit para que el cambio funcione.
 
+
+
+
