@@ -219,71 +219,40 @@ export default function NuevaOTPage() {
     }
 
     try {
-      // Intentar primero con hoy
+      // SIEMPRE mostrar primero los horarios de HOY (aunque estén todos ocupados)
+      // Esto permite al usuario ver qué horarios ya pasaron
       const hoy = new Date()
       const fechaHoy = hoy.toISOString().split('T')[0]
       
-      let fechaConsulta = fechaHoy
-      let data: any = null
-      let disponible = false
-      
-      // Intentar hasta 7 días en el futuro si no hay horarios disponibles hoy
-      for (let dias = 0; dias < 7 && !disponible; dias++) {
-        const fecha = new Date(hoy)
-        fecha.setDate(hoy.getDate() + dias)
-        fechaConsulta = fecha.toISOString().split('T')[0]
-        
-        const params = new URLSearchParams({
-          fecha: fechaConsulta,
-          servicioId: formData.servicioId,
-          extrasIds: formData.extrasIds.join(','),
-        })
+      const params = new URLSearchParams({
+        fecha: fechaHoy,
+        servicioId: formData.servicioId,
+        extrasIds: formData.extrasIds.join(','),
+      })
 
-        console.log('[nueva-ot] Cargando horarios disponibles...', { fecha: fechaConsulta, servicioId: formData.servicioId })
-        
-        const response = await fetch(`/api/ots/horarios-disponibles?${params}`)
-        
-        if (response.ok) {
-          data = await response.json()
-          const disponiblesCount = data.bloques?.filter((b: any) => b.disponible).length || 0
-          
-          console.log('[nueva-ot] Horarios recibidos:', { 
-            fecha: fechaConsulta,
-            bloques: data.bloques?.length || 0, 
-            disponibles: disponiblesCount 
-          })
-          
-          if (disponiblesCount > 0) {
-            disponible = true
-          }
-        } else {
-          const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }))
-          console.error('[nueva-ot] Error al cargar horarios:', response.status, errorData)
-          break
-        }
-      }
+      console.log('[nueva-ot] Cargando horarios disponibles para HOY...', { fecha: fechaHoy, servicioId: formData.servicioId })
       
-      if (data) {
+      const response = await fetch(`/api/ots/horarios-disponibles?${params}`)
+      
+      if (response.ok) {
+        const data = await response.json()
+        const disponiblesCount = data.bloques?.filter((b: any) => b.disponible).length || 0
+        
+        console.log('[nueva-ot] Horarios recibidos para HOY:', { 
+          fecha: fechaHoy,
+          bloques: data.bloques?.length || 0, 
+          disponibles: disponiblesCount,
+          ocupados: data.bloques?.filter((b: any) => !b.disponible).length || 0
+        })
+        
         // Guardar la fecha que se está consultando
-        setFechaConsultaActual(fechaConsulta)
+        setFechaConsultaActual(fechaHoy)
         
         // Agregar la fecha a los datos para mostrarla en el UI
-        const dataConFecha = { ...data, fecha: fechaConsulta }
+        const dataConFecha = { ...data, fecha: fechaHoy }
         setHorariosDelDia(dataConFecha)
         
-        // Mostrar la fecha que se está consultando en consola
-        if (fechaConsulta !== fechaHoy) {
-          const fechaMostrar = new Date(fechaConsulta)
-          const fechaFormateada = fechaMostrar.toLocaleDateString('es-AR', { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-          })
-          console.log(`[nueva-ot] Mostrando horarios para: ${fechaFormateada} (${fechaConsulta})`)
-        } else {
-          console.log(`[nueva-ot] Mostrando horarios para hoy: ${fechaConsulta}`)
-        }
+        console.log(`[nueva-ot] Mostrando horarios para HOY: ${fechaHoy}`)
         
         // Automatically select the first available slot if none is selected
         if (!formData.horarioDeseado && data.bloques?.some((b: any) => b.disponible)) {
@@ -294,8 +263,10 @@ export default function NuevaOTPage() {
           }
         }
       } else {
+        const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }))
+        console.error('[nueva-ot] Error al cargar horarios:', response.status, errorData)
         setHorariosDelDia(null)
-        alert('No hay horarios disponibles en los próximos 7 días. Por favor, intenta más tarde.')
+        alert(`Error al cargar horarios: ${errorData.error || 'Error desconocido'}`)
       }
     } catch (error) {
       console.error('[nueva-ot] Error al cargar horarios disponibles:', error)
