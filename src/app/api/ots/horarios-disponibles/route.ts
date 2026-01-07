@@ -204,16 +204,29 @@ export async function GET(request: NextRequest) {
     const ahora = new Date()
     
     // Verificar si estamos consultando el día de hoy
+    // Usar UTC para evitar problemas de zona horaria
+    const ahoraUTC = new Date()
+    const hoyUTC = new Date(Date.UTC(
+      ahoraUTC.getUTCFullYear(),
+      ahoraUTC.getUTCMonth(),
+      ahoraUTC.getUTCDate(),
+      0, 0, 0, 0
+    ))
+    
+    // Normalizar fechaInicio a UTC también
+    const fechaInicioUTC = new Date(Date.UTC(
+      fechaInicio.getUTCFullYear(),
+      fechaInicio.getUTCMonth(),
+      fechaInicio.getUTCDate(),
+      0, 0, 0, 0
+    ))
+    
+    const esHoy = fechaInicioUTC.getTime() === hoyUTC.getTime()
+    
+    // Para cálculos de minutos, usar hora local (no UTC) ya que el negocio opera en hora local
+    const ahora = new Date()
     const hoy = new Date()
     hoy.setHours(0, 0, 0, 0)
-    hoy.setMinutes(0, 0)
-    hoy.setSeconds(0, 0)
-    hoy.setMilliseconds(0)
-    
-    // Comparar fechas solo por año, mes y día (ignorando hora)
-    const fechaInicioStr = `${fechaInicio.getFullYear()}-${fechaInicio.getMonth()}-${fechaInicio.getDate()}`
-    const hoyStr = `${hoy.getFullYear()}-${hoy.getMonth()}-${hoy.getDate()}`
-    const esHoy = fechaInicioStr === hoyStr
     
     // Calcular minutos desde medianoche para comparaciones simples
     const minutosAhora = esHoy ? ahora.getHours() * 60 + ahora.getMinutes() : -1
