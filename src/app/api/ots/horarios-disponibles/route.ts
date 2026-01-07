@@ -36,7 +36,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Parsear fecha correctamente (puede venir como YYYY-MM-DD o ISO string)
-    const fechaConsulta = fecha.includes('T') ? new Date(fecha) : new Date(fecha + 'T00:00:00')
+    // IMPORTANTE: Usar hora local para evitar problemas de zona horaria
+    const fechaStr = fecha.split('T')[0] // Asegurar formato YYYY-MM-DD
+    const fechaConsulta = new Date(fechaStr + 'T00:00:00')
+    
+    // Normalizar a medianoche en hora local (no UTC)
     const fechaInicio = new Date(fechaConsulta)
     fechaInicio.setHours(0, 0, 0, 0)
     fechaInicio.setMinutes(0, 0)
@@ -202,38 +206,32 @@ export async function GET(request: NextRequest) {
 
     // Generar bloques de 15 minutos
     // Verificar si estamos consultando el día de hoy
-    // Usar UTC para evitar problemas de zona horaria
-    const ahoraUTC = new Date()
-    const hoyUTC = new Date(Date.UTC(
-      ahoraUTC.getUTCFullYear(),
-      ahoraUTC.getUTCMonth(),
-      ahoraUTC.getUTCDate(),
-      0, 0, 0, 0
-    ))
-    
-    // Normalizar fechaInicio a UTC también
-    const fechaInicioUTC = new Date(Date.UTC(
-      fechaInicio.getUTCFullYear(),
-      fechaInicio.getUTCMonth(),
-      fechaInicio.getUTCDate(),
-      0, 0, 0, 0
-    ))
-    
-    const esHoy = fechaInicioUTC.getTime() === hoyUTC.getTime()
-    
-    // Para cálculos de minutos, usar hora local (no UTC) ya que el negocio opera en hora local
+    // IMPORTANTE: Usar hora local del servidor (no UTC) para comparar con la hora del negocio
     const ahora = new Date()
     const hoy = new Date()
     hoy.setHours(0, 0, 0, 0)
+    hoy.setMinutes(0, 0)
+    hoy.setSeconds(0, 0)
+    hoy.setMilliseconds(0)
+    
+    // Comparar fechas normalizadas (solo año, mes, día en hora local)
+    const fechaInicioNormalizada = new Date(fechaInicio)
+    fechaInicioNormalizada.setHours(0, 0, 0, 0)
+    fechaInicioNormalizada.setMinutes(0, 0)
+    fechaInicioNormalizada.setSeconds(0, 0)
+    fechaInicioNormalizada.setMilliseconds(0)
+    
+    const esHoy = fechaInicioNormalizada.getTime() === hoy.getTime()
     
     // Calcular minutos desde medianoche para comparaciones simples
     const minutosAhora = esHoy ? ahora.getHours() * 60 + ahora.getMinutes() : -1
     
     console.log(`[horarios-disponibles] ===== INICIO PROCESAMIENTO =====`)
-    console.log(`[horarios-disponibles] Fecha consulta UTC: ${fechaInicioUTC.toISOString()}`)
-    console.log(`[horarios-disponibles] Hoy UTC: ${hoyUTC.toISOString()}`)
+    console.log(`[horarios-disponibles] Hora del servidor (ahora): ${ahora.toISOString()} (${ahora.toLocaleString('es-AR')})`)
+    console.log(`[horarios-disponibles] Fecha consulta: ${fechaInicioNormalizada.toISOString().split('T')[0]} (${fechaInicioNormalizada.toLocaleDateString('es-AR')})`)
+    console.log(`[horarios-disponibles] Hoy: ${hoy.toISOString().split('T')[0]} (${hoy.toLocaleDateString('es-AR')})`)
     console.log(`[horarios-disponibles] Es hoy: ${esHoy}`)
-    console.log(`[horarios-disponibles] Minutos ahora (local): ${minutosAhora} (${Math.floor(minutosAhora/60)}:${minutosAhora%60})`)
+    console.log(`[horarios-disponibles] Minutos ahora (local): ${minutosAhora} (${Math.floor(minutosAhora/60)}:${String(minutosAhora%60).padStart(2, '0')})`)
     console.log(`[horarios-disponibles] Duración servicio: ${duracionTotal} minutos`)
     console.log(`[horarios-disponibles] OTs activas encontradas: ${otsActivas.length}`)
     
@@ -242,36 +240,43 @@ export async function GET(request: NextRequest) {
         const horaStr = `${hora.toString().padStart(2, '0')}:${minuto.toString().padStart(2, '0')}`
         const minutosBloque = hora * 60 + minuto
 
-        // Verificar si el bloque ya pasó (solo si es hoy)
+        // REGLA FUNDAMENTAL: Los horarios pasados siempre están ocupados
+        // porque no se puede entregar un auto antes de que ingrese
         if (esHoy && minutosAhora >= 0) {
-          // Si el bloque ya pasó hace más de 5 minutos, no está disponible
-          if (minutosBloque <= minutosAhora - 5) {
+          // Si el bloque ya pasó (incluye horarios que están pasando ahora)
+          // Un bloque está pasado si ya pasó su hora completa
+          // Ejemplo: Si son las 19:17, el bloque 19:15 ya pasó (no disponible)
+          // El bloque 19:30 aún no pasó (disponible si hay tiempo suficiente)
+          if (minutosBloque < minutosAhora) {
             bloques.push({
               hora: horaStr,
               disponible: false,
               ocupadoPor: {
                 patente: 'Horario pasado',
-                cliente: 'Este horario ya pasó',
-                fin: `${Math.floor(minutosAhora / 60).toString().padStart(2, '0')}:${(minutosAhora % 60).toString().padStart(2, '0')}`,
+                cliente: 'Este horario ya pasó - No se puede entregar antes del ingreso',
+                fin: `${Math.floor(minutosAhora / 60).toString().padStart(2, '0')}:${String(minutosAhora % 60).padStart(2, '0')}`,
               },
             })
             continue
           }
           
           // Si hay servicio seleccionado, verificar tiempo suficiente
+          // Necesitamos tiempo suficiente para completar el servicio antes del horario deseado
           if (servicioId) {
             // Calcular cuándo necesitaríamos empezar para terminar a este horario
             const minutosInicioNecesario = minutosBloque - duracionTotal
             
-            // Si no hay tiempo suficiente (el inicio necesario ya pasó hace más de 5 minutos)
-            if (minutosInicioNecesario < minutosAhora - 5) {
+            // Si no hay tiempo suficiente (el inicio necesario ya pasó)
+            // Ejemplo: Si son las 19:17 y queremos terminar a las 19:30 con un servicio de 30 min
+            // Necesitaríamos empezar a las 19:00, pero ya pasó → No disponible
+            if (minutosInicioNecesario < minutosAhora) {
               bloques.push({
                 hora: horaStr,
                 disponible: false,
                 ocupadoPor: {
                   patente: 'Tiempo insuficiente',
-                  cliente: 'No hay tiempo suficiente para completar',
-                  fin: `${Math.floor(minutosAhora / 60).toString().padStart(2, '0')}:${(minutosAhora % 60).toString().padStart(2, '0')}`,
+                  cliente: `No hay tiempo suficiente para completar (${duracionTotal} min) antes de ${horaStr}`,
+                  fin: `${Math.floor(minutosAhora / 60).toString().padStart(2, '0')}:${String(minutosAhora % 60).padStart(2, '0')}`,
                 },
               })
               continue
