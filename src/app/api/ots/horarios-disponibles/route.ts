@@ -242,22 +242,7 @@ export async function GET(request: NextRequest) {
         const horaStr = `${hora.toString().padStart(2, '0')}:${minuto.toString().padStart(2, '0')}`
         const minutosBloque = hora * 60 + minuto
 
-        // Si no hay servicio seleccionado, mostrar todos como disponibles (excepto pasados si es hoy)
-        if (!servicioId) {
-          const esFuturo = !esHoy || minutosBloque > minutosAhora + 5
-          bloques.push({
-            hora: horaStr,
-            disponible: esFuturo,
-            ocupadoPor: !esFuturo ? {
-              patente: 'Horario pasado',
-              cliente: 'Este horario ya pasó',
-              fin: `${Math.floor(minutosAhora / 60).toString().padStart(2, '0')}:${(minutosAhora % 60).toString().padStart(2, '0')}`,
-            } : undefined,
-          })
-          continue
-        }
-
-        // Si es hoy, verificar si el bloque ya pasó o si no hay tiempo suficiente
+        // Verificar si el bloque ya pasó (solo si es hoy)
         if (esHoy && minutosAhora >= 0) {
           // Si el bloque ya pasó hace más de 5 minutos, no está disponible
           if (minutosBloque <= minutosAhora - 5) {
@@ -273,23 +258,24 @@ export async function GET(request: NextRequest) {
             continue
           }
           
-          // Calcular cuándo necesitaríamos empezar para terminar a este horario
-          const minutosInicioNecesario = minutosBloque - duracionTotal
-          
-          // Si no hay tiempo suficiente (el inicio necesario ya pasó hace más de 5 minutos)
-          // Solo marcar como "tiempo insuficiente" si el bloque es muy cercano al tiempo actual
-          // Permitir bloques futuros con tiempo suficiente
-          if (minutosInicioNecesario < minutosAhora - 5) {
-            bloques.push({
-              hora: horaStr,
-              disponible: false,
-              ocupadoPor: {
-                patente: 'Tiempo insuficiente',
-                cliente: 'No hay tiempo suficiente para completar',
-                fin: `${Math.floor(minutosAhora / 60).toString().padStart(2, '0')}:${(minutosAhora % 60).toString().padStart(2, '0')}`,
-              },
-            })
-            continue
+          // Si hay servicio seleccionado, verificar tiempo suficiente
+          if (servicioId) {
+            // Calcular cuándo necesitaríamos empezar para terminar a este horario
+            const minutosInicioNecesario = minutosBloque - duracionTotal
+            
+            // Si no hay tiempo suficiente (el inicio necesario ya pasó hace más de 5 minutos)
+            if (minutosInicioNecesario < minutosAhora - 5) {
+              bloques.push({
+                hora: horaStr,
+                disponible: false,
+                ocupadoPor: {
+                  patente: 'Tiempo insuficiente',
+                  cliente: 'No hay tiempo suficiente para completar',
+                  fin: `${Math.floor(minutosAhora / 60).toString().padStart(2, '0')}:${(minutosAhora % 60).toString().padStart(2, '0')}`,
+                },
+              })
+              continue
+            }
           }
         }
 
