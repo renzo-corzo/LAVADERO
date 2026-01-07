@@ -240,10 +240,10 @@ export async function GET(request: NextRequest) {
           continue
         }
 
-        // Si es hoy, verificar si el bloque ya pasó
+        // Si es hoy, verificar si el bloque ya pasó o si no hay tiempo suficiente
         if (esHoy && minutosAhora >= 0) {
           // Si el bloque ya pasó hace más de 5 minutos, no está disponible
-          if (minutosBloque < minutosAhora - 5) {
+          if (minutosBloque <= minutosAhora - 5) {
             bloques.push({
               hora: horaStr,
               disponible: false,
@@ -260,7 +260,7 @@ export async function GET(request: NextRequest) {
           const minutosInicioNecesario = minutosBloque - duracionTotal
           
           // Si no hay tiempo suficiente (menos de 5 minutos hasta el inicio necesario)
-          if (minutosInicioNecesario < minutosAhora - 5) {
+          if (minutosInicioNecesario <= minutosAhora - 5) {
             bloques.push({
               hora: horaStr,
               disponible: false,
