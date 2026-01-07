@@ -235,6 +235,10 @@ export async function GET(request: NextRequest) {
     console.log(`[horarios-disponibles] Duración servicio: ${duracionTotal} minutos`)
     console.log(`[horarios-disponibles] OTs activas encontradas: ${otsActivas.length}`)
     
+    // Debug: contar cuántos bloques pasados hay
+    let bloquesPasados = 0
+    let bloquesFuturos = 0
+    
     for (let hora = 8; hora < 22; hora++) {
       for (let minuto = 0; minuto < 60; minuto += 15) {
         const horaStr = `${hora.toString().padStart(2, '0')}:${minuto.toString().padStart(2, '0')}`
@@ -248,6 +252,7 @@ export async function GET(request: NextRequest) {
           // Ejemplo: Si son las 19:17, el bloque 19:15 ya pasó (no disponible)
           // El bloque 19:30 aún no pasó (disponible si hay tiempo suficiente)
           if (minutosBloque < minutosAhora) {
+            bloquesPasados++
             bloques.push({
               hora: horaStr,
               disponible: false,
@@ -258,6 +263,8 @@ export async function GET(request: NextRequest) {
               },
             })
             continue
+          } else {
+            bloquesFuturos++
           }
           
           // Si hay servicio seleccionado, verificar tiempo suficiente
@@ -338,10 +345,17 @@ export async function GET(request: NextRequest) {
     console.log(`[horarios-disponibles] Ocupados: ${ocupados}`)
     console.log(`[horarios-disponibles]   - Por OTs: ${ocupadosPorOT}`)
     console.log(`[horarios-disponibles]   - Pasados/Insuficientes: ${pasados}`)
-    console.log(`[horarios-disponibles] Es hoy: ${esHoy}, Minutos ahora: ${minutosAhora}`)
+    console.log(`[horarios-disponibles] Es hoy: ${esHoy}, Minutos ahora: ${minutosAhora} (${Math.floor(minutosAhora/60)}:${String(minutosAhora%60).padStart(2, '0')})`)
+    console.log(`[horarios-disponibles] Bloques pasados detectados: ${bloquesPasados}, Bloques futuros: ${bloquesFuturos}`)
     console.log(`[horarios-disponibles] Rangos ocupados: ${rangosOcupados.length}`)
     console.log(`[horarios-disponibles] Servicio ID: ${servicioId || 'NINGUNO'}`)
     console.log(`[horarios-disponibles] Duración total: ${duracionTotal} minutos`)
+    
+    // Debug: mostrar algunos ejemplos de bloques
+    const ejemplosPasados = bloques.filter(b => b.ocupadoPor?.patente === 'Horario pasado').slice(0, 3).map(b => b.hora).join(', ')
+    const ejemplosDisponibles = bloques.filter(b => b.disponible).slice(0, 3).map(b => b.hora).join(', ')
+    console.log(`[horarios-disponibles] Ejemplos pasados: ${ejemplosPasados || 'ninguno'}`)
+    console.log(`[horarios-disponibles] Ejemplos disponibles: ${ejemplosDisponibles || 'ninguno'}`)
 
     return NextResponse.json({
       fecha: fechaInicio.toISOString().split('T')[0],
