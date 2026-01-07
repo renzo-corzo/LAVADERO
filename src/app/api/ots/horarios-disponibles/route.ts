@@ -231,7 +231,13 @@ export async function GET(request: NextRequest) {
     // Calcular minutos desde medianoche para comparaciones simples
     const minutosAhora = esHoy ? ahora.getHours() * 60 + ahora.getMinutes() : -1
     
-    console.log(`[horarios-disponibles] Fecha consulta: ${fechaInicioStr}, Hoy: ${hoyStr}, Es hoy: ${esHoy}, Minutos ahora: ${minutosAhora}`)
+    console.log(`[horarios-disponibles] ===== INICIO PROCESAMIENTO =====`)
+    console.log(`[horarios-disponibles] Fecha consulta UTC: ${fechaInicioUTC.toISOString()}`)
+    console.log(`[horarios-disponibles] Hoy UTC: ${hoyUTC.toISOString()}`)
+    console.log(`[horarios-disponibles] Es hoy: ${esHoy}`)
+    console.log(`[horarios-disponibles] Minutos ahora (local): ${minutosAhora} (${Math.floor(minutosAhora/60)}:${minutosAhora%60})`)
+    console.log(`[horarios-disponibles] Duración servicio: ${duracionTotal} minutos`)
+    console.log(`[horarios-disponibles] OTs activas encontradas: ${otsActivas.length}`)
     
     for (let hora = 8; hora < 22; hora++) {
       for (let minuto = 0; minuto < 60; minuto += 15) {
@@ -272,8 +278,10 @@ export async function GET(request: NextRequest) {
           // Calcular cuándo necesitaríamos empezar para terminar a este horario
           const minutosInicioNecesario = minutosBloque - duracionTotal
           
-          // Si no hay tiempo suficiente (menos de 5 minutos hasta el inicio necesario)
-          if (minutosInicioNecesario <= minutosAhora - 5) {
+          // Si no hay tiempo suficiente (el inicio necesario ya pasó hace más de 5 minutos)
+          // Solo marcar como "tiempo insuficiente" si el bloque es muy cercano al tiempo actual
+          // Permitir bloques futuros con tiempo suficiente
+          if (minutosInicioNecesario < minutosAhora - 5) {
             bloques.push({
               hora: horaStr,
               disponible: false,
