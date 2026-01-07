@@ -28,16 +28,16 @@
     "@types/node": "^20.11.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
+    "@types/bcryptjs": "^2.4.6",
     "typescript": "^5.3.0",
     "autoprefixer": "^10.4.23",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.19",
-    "sharp": "^0.34.5"
+    "sharp": "^0.34.5",
+    "eslint": "^8.56.0",
+    "eslint-config-next": "^14.2.0"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "eslint": "^8.56.0",
-    "eslint-config-next": "^14.2.0",
     "prisma": "^5.9.0",
     "tsx": "^4.7.0"
   }
