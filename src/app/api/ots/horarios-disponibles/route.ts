@@ -82,6 +82,7 @@ export async function GET(request: NextRequest) {
     // Buscar OTs que:
     // 1. Tengan fechaIngreso en el día consultado, O
     // 2. Tengan horarioDeseado en el día consultado
+    // IMPORTANTE: Normalizar las fechas correctamente para comparaciones
     const whereClause: any = {
       OR: [
         {
@@ -101,6 +102,8 @@ export async function GET(request: NextRequest) {
         in: ['EN_COLA', 'EN_PROCESO', 'LISTO'],
       },
     }
+    
+    console.log(`[horarios-disponibles] Buscando OTs en rango: ${fechaInicio.toISOString()} - ${fechaFin.toISOString()}`)
 
     if (excludeOTId) {
       whereClause.id = { not: excludeOTId }
@@ -118,6 +121,10 @@ export async function GET(request: NextRequest) {
     console.log(`[horarios-disponibles] OTs activas encontradas: ${otsActivas.length}`)
     console.log(`[horarios-disponibles] Fecha consulta: ${fechaInicio.toISOString()} - ${fechaFin.toISOString()}`)
     console.log(`[horarios-disponibles] Duración total servicio: ${duracionTotal} minutos`)
+    otsActivas.forEach(ot => {
+      const horarioStr = ot.horarioDeseado ? new Date(ot.horarioDeseado).toTimeString().slice(0, 5) : 'Sin horario'
+      console.log(`[horarios-disponibles] OT: ${ot.patente} - Estado: ${ot.estado} - Horario deseado: ${horarioStr} - Fecha ingreso: ${new Date(ot.fechaIngreso).toISOString()}`)
+    })
 
     // Generar bloques de tiempo de 15 minutos desde las 8:00 hasta las 22:00
     const bloques: Array<{
@@ -203,12 +210,15 @@ export async function GET(request: NextRequest) {
     hoy.setSeconds(0, 0)
     hoy.setMilliseconds(0)
     
-    const esHoy = fechaInicio.getTime() === hoy.getTime()
+    // Comparar fechas solo por año, mes y día (ignorando hora)
+    const fechaInicioStr = `${fechaInicio.getFullYear()}-${fechaInicio.getMonth()}-${fechaInicio.getDate()}`
+    const hoyStr = `${hoy.getFullYear()}-${hoy.getMonth()}-${hoy.getDate()}`
+    const esHoy = fechaInicioStr === hoyStr
     
     // Calcular minutos desde medianoche para comparaciones simples
     const minutosAhora = esHoy ? ahora.getHours() * 60 + ahora.getMinutes() : -1
     
-    console.log(`[horarios-disponibles] Es hoy: ${esHoy}, Minutos ahora: ${minutosAhora}`)
+    console.log(`[horarios-disponibles] Fecha consulta: ${fechaInicioStr}, Hoy: ${hoyStr}, Es hoy: ${esHoy}, Minutos ahora: ${minutosAhora}`)
     
     for (let hora = 8; hora < 22; hora++) {
       for (let minuto = 0; minuto < 60; minuto += 15) {
@@ -264,11 +274,12 @@ export async function GET(request: NextRequest) {
           }
         }
 
+        // Por defecto, el bloque está disponible (ya pasamos las validaciones de tiempo)
+        let disponible = true
+        let ocupadoPor: any = undefined
+        
         // Verificar conflictos con OTs existentes
         // REGLA: Marcamos ocupado solo si el horario deseado de una OT coincide exactamente
-        let hayConflicto = false
-        let conflictoCon: any = null
-        
         // minutosBloque ya está calculado arriba (hora * 60 + minuto)
         
         for (const rango of rangosOcupados) {
@@ -285,8 +296,8 @@ export async function GET(request: NextRequest) {
           // Si una OT tiene horario deseado a las 20:30, ese bloque (20:30) está ocupado
           // Si una OT tiene horario deseado a las 21:15, ese bloque (21:15) está ocupado
           if (minutosBloque === rangoFinMinutos) {
-            hayConflicto = true
-            conflictoCon = {
+            disponible = false
+            ocupadoPor = {
               patente: rango.ot.patente,
               cliente: rango.ot.cliente,
               fin: rangoFinNormalizado.toTimeString().slice(0, 5),
@@ -296,12 +307,11 @@ export async function GET(request: NextRequest) {
           }
         }
 
-        // Marcar como disponible si no hay conflicto
-        // Por defecto, todos los horarios futuros son disponibles a menos que haya conflicto
+        // Marcar el bloque (por defecto está disponible a menos que haya conflicto)
         bloques.push({
           hora: horaStr,
-          disponible: !hayConflicto,
-          ocupadoPor: hayConflicto ? conflictoCon : undefined,
+          disponible,
+          ocupadoPor,
         })
       }
     }
