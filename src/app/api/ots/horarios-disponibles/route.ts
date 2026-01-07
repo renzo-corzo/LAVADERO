@@ -282,28 +282,25 @@ export async function GET(request: NextRequest) {
         // REGLA: Marcamos ocupado solo si el horario deseado de una OT coincide exactamente
         // minutosBloque ya está calculado arriba (hora * 60 + minuto)
         
-        for (const rango of rangosOcupados) {
-          // rango.fin ya está normalizado al día de consulta (es el horario deseado de la OT existente)
-          const rangoFinNormalizado = new Date(rango.fin)
-          // Asegurar que esté en el mismo día de consulta
-          rangoFinNormalizado.setFullYear(fechaInicio.getFullYear())
-          rangoFinNormalizado.setMonth(fechaInicio.getMonth())
-          rangoFinNormalizado.setDate(fechaInicio.getDate())
-          
-          const rangoFinMinutos = rangoFinNormalizado.getHours() * 60 + rangoFinNormalizado.getMinutes()
-          
-          // SOLO CASO: Coincidencia exacta del horario deseado
-          // Si una OT tiene horario deseado a las 20:30, ese bloque (20:30) está ocupado
-          // Si una OT tiene horario deseado a las 21:15, ese bloque (21:15) está ocupado
-          if (minutosBloque === rangoFinMinutos) {
-            disponible = false
-            ocupadoPor = {
-              patente: rango.ot.patente,
-              cliente: rango.ot.cliente,
-              fin: rangoFinNormalizado.toTimeString().slice(0, 5),
+        if (rangosOcupados.length > 0) {
+          for (const rango of rangosOcupados) {
+            // rango.fin ya está normalizado al día de consulta (es el horario deseado de la OT existente)
+            // Extraer directamente los minutos del rango.fin que ya está normalizado
+            const rangoFinMinutos = rango.fin.getHours() * 60 + rango.fin.getMinutes()
+            
+            // SOLO CASO: Coincidencia exacta del horario deseado
+            // Si una OT tiene horario deseado a las 20:30, ese bloque (20:30) está ocupado
+            // Si una OT tiene horario deseado a las 21:15, ese bloque (21:15) está ocupado
+            if (minutosBloque === rangoFinMinutos) {
+              disponible = false
+              ocupadoPor = {
+                patente: rango.ot.patente,
+                cliente: rango.ot.cliente,
+                fin: rango.fin.toTimeString().slice(0, 5),
+              }
+              console.log(`[horarios-disponibles] ⛔ BLOQUE OCUPADO: ${horaStr} (${minutosBloque} min) coincide con horario deseado de OT ${rango.ot.patente} (${rangoFinMinutos} min)`)
+              break
             }
-            console.log(`[horarios-disponibles] ⛔ BLOQUE OCUPADO: ${horaStr} coincide con horario deseado de OT ${rango.ot.patente}`)
-            break
           }
         }
 
@@ -317,7 +314,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Debug: mostrar algunos bloques
-    const ejemplos = bloques.slice(0, 8).map(b => `${b.hora}: ${b.disponible ? 'DISP' : 'OCUP'}`).join(', ')
+    const ejemplos = bloques.slice(0, 10).map(b => `${b.hora}: ${b.disponible ? 'DISP' : 'OCUP'}`).join(', ')
     console.log(`[horarios-disponibles] Primeros bloques: ${ejemplos}`)
 
     const disponibles = bloques.filter(b => b.disponible).length
@@ -325,8 +322,16 @@ export async function GET(request: NextRequest) {
     const ocupadosPorOT = bloques.filter(b => b.ocupadoPor && b.ocupadoPor.patente !== 'Horario pasado' && b.ocupadoPor.patente !== 'Tiempo insuficiente').length
     const pasados = bloques.filter(b => b.ocupadoPor && (b.ocupadoPor.patente === 'Horario pasado' || b.ocupadoPor.patente === 'Tiempo insuficiente')).length
     
-    console.log(`[horarios-disponibles] Resultado: ${disponibles} disponibles, ${ocupados} ocupados (${ocupadosPorOT} por OTs, ${pasados} pasados/insuficientes)`)
-    console.log(`[horarios-disponibles] Es hoy: ${esHoy}, Minutos ahora: ${minutosAhora}, Rangos ocupados: ${rangosOcupados.length}`)
+    console.log(`[horarios-disponibles] ===== RESUMEN =====`)
+    console.log(`[horarios-disponibles] Total bloques: ${bloques.length}`)
+    console.log(`[horarios-disponibles] Disponibles: ${disponibles}`)
+    console.log(`[horarios-disponibles] Ocupados: ${ocupados}`)
+    console.log(`[horarios-disponibles]   - Por OTs: ${ocupadosPorOT}`)
+    console.log(`[horarios-disponibles]   - Pasados/Insuficientes: ${pasados}`)
+    console.log(`[horarios-disponibles] Es hoy: ${esHoy}, Minutos ahora: ${minutosAhora}`)
+    console.log(`[horarios-disponibles] Rangos ocupados: ${rangosOcupados.length}`)
+    console.log(`[horarios-disponibles] Servicio ID: ${servicioId || 'NINGUNO'}`)
+    console.log(`[horarios-disponibles] Duración total: ${duracionTotal} minutos`)
 
     return NextResponse.json({
       fecha: fechaInicio.toISOString().split('T')[0],
