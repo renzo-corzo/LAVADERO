@@ -201,8 +201,6 @@ export async function GET(request: NextRequest) {
     }), null, 2))
 
     // Generar bloques de 15 minutos
-    const ahora = new Date()
-    
     // Verificar si estamos consultando el día de hoy
     // Usar UTC para evitar problemas de zona horaria
     const ahoraUTC = new Date()
