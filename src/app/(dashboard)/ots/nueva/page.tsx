@@ -32,12 +32,14 @@ export default function NuevaOTPage() {
   } | null>(null)
   const [mostrarSelectorHorarios, setMostrarSelectorHorarios] = useState(false)
   const [horariosDelDia, setHorariosDelDia] = useState<{
+    fecha?: string
     bloques: Array<{
       hora: string
       disponible: boolean
       ocupadoPor?: { patente: string; cliente: string; fin: string }
     }>
   } | null>(null)
+  const [fechaConsultaActual, setFechaConsultaActual] = useState<string>('')
 
   const [servicios, setServicios] = useState<Servicio[]>([])
   const [extras, setExtras] = useState<Extra[]>([])
@@ -262,7 +264,14 @@ export default function NuevaOTPage() {
       }
       
       if (data) {
-        // Mostrar la fecha que se está consultando
+        // Guardar la fecha que se está consultando
+        setFechaConsultaActual(fechaConsulta)
+        
+        // Agregar la fecha a los datos para mostrarla en el UI
+        const dataConFecha = { ...data, fecha: fechaConsulta }
+        setHorariosDelDia(dataConFecha)
+        
+        // Mostrar la fecha que se está consultando en consola
         if (fechaConsulta !== fechaHoy) {
           const fechaMostrar = new Date(fechaConsulta)
           const fechaFormateada = fechaMostrar.toLocaleDateString('es-AR', { 
@@ -271,10 +280,10 @@ export default function NuevaOTPage() {
             month: 'long', 
             day: 'numeric' 
           })
-          console.log(`[nueva-ot] Mostrando horarios para: ${fechaFormateada}`)
+          console.log(`[nueva-ot] Mostrando horarios para: ${fechaFormateada} (${fechaConsulta})`)
+        } else {
+          console.log(`[nueva-ot] Mostrando horarios para hoy: ${fechaConsulta}`)
         }
-        
-        setHorariosDelDia(data)
         
         // Automatically select the first available slot if none is selected
         if (!formData.horarioDeseado && data.bloques?.some((b: any) => b.disponible)) {
@@ -557,7 +566,17 @@ export default function NuevaOTPage() {
                         <div className="border-2 border-gray-300 rounded-lg p-4 bg-white shadow-sm">
                           <h4 className="text-sm font-semibold mb-3 text-gray-800 flex items-center gap-2">
                             <span className="text-lg">📅</span>
-                            Selecciona un horario disponible
+                            {horariosDelDia.fecha && horariosDelDia.fecha !== new Date().toISOString().split('T')[0] ? (
+                              <span>
+                                Horarios disponibles para {new Date(horariosDelDia.fecha + 'T00:00:00').toLocaleDateString('es-AR', { 
+                                  weekday: 'long', 
+                                  day: 'numeric',
+                                  month: 'long'
+                                })}
+                              </span>
+                            ) : (
+                              <span>Selecciona un horario disponible</span>
+                            )}
                           </h4>
                           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-2 max-h-96 overflow-y-auto p-2 bg-gray-50 rounded">
                             {horariosDelDia.bloques.map((bloque) => {
