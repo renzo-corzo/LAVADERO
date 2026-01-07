@@ -217,23 +217,62 @@ export default function NuevaOTPage() {
     }
 
     try {
-      const hoy = new Date().toISOString().split('T')[0]
-      const params = new URLSearchParams({
-        fecha: hoy,
-        servicioId: formData.servicioId,
-        extrasIds: formData.extrasIds.join(','),
-      })
-
-      console.log('[nueva-ot] Cargando horarios disponibles...', { fecha: hoy, servicioId: formData.servicioId })
+      // Intentar primero con hoy
+      const hoy = new Date()
+      const fechaHoy = hoy.toISOString().split('T')[0]
       
-      const response = await fetch(`/api/ots/horarios-disponibles?${params}`)
+      let fechaConsulta = fechaHoy
+      let data: any = null
+      let disponible = false
       
-      if (response.ok) {
-        const data = await response.json()
-        console.log('[nueva-ot] Horarios recibidos:', { 
-          bloques: data.bloques?.length || 0, 
-          disponibles: data.bloques?.filter((b: any) => b.disponible).length || 0 
+      // Intentar hasta 7 días en el futuro si no hay horarios disponibles hoy
+      for (let dias = 0; dias < 7 && !disponible; dias++) {
+        const fecha = new Date(hoy)
+        fecha.setDate(hoy.getDate() + dias)
+        fechaConsulta = fecha.toISOString().split('T')[0]
+        
+        const params = new URLSearchParams({
+          fecha: fechaConsulta,
+          servicioId: formData.servicioId,
+          extrasIds: formData.extrasIds.join(','),
         })
+
+        console.log('[nueva-ot] Cargando horarios disponibles...', { fecha: fechaConsulta, servicioId: formData.servicioId })
+        
+        const response = await fetch(`/api/ots/horarios-disponibles?${params}`)
+        
+        if (response.ok) {
+          data = await response.json()
+          const disponiblesCount = data.bloques?.filter((b: any) => b.disponible).length || 0
+          
+          console.log('[nueva-ot] Horarios recibidos:', { 
+            fecha: fechaConsulta,
+            bloques: data.bloques?.length || 0, 
+            disponibles: disponiblesCount 
+          })
+          
+          if (disponiblesCount > 0) {
+            disponible = true
+          }
+        } else {
+          const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }))
+          console.error('[nueva-ot] Error al cargar horarios:', response.status, errorData)
+          break
+        }
+      }
+      
+      if (data) {
+        // Mostrar la fecha que se está consultando
+        if (fechaConsulta !== fechaHoy) {
+          const fechaMostrar = new Date(fechaConsulta)
+          const fechaFormateada = fechaMostrar.toLocaleDateString('es-AR', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          })
+          console.log(`[nueva-ot] Mostrando horarios para: ${fechaFormateada}`)
+        }
         
         setHorariosDelDia(data)
         
@@ -246,10 +285,8 @@ export default function NuevaOTPage() {
           }
         }
       } else {
-        const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }))
-        console.error('[nueva-ot] Error al cargar horarios:', response.status, errorData)
         setHorariosDelDia(null)
-        alert(`Error al cargar horarios: ${errorData.error || 'Error desconocido'}`)
+        alert('No hay horarios disponibles en los próximos 7 días. Por favor, intenta más tarde.')
       }
     } catch (error) {
       console.error('[nueva-ot] Error al cargar horarios disponibles:', error)
