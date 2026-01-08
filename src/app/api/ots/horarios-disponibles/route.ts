@@ -29,15 +29,44 @@ export async function GET(request: NextRequest) {
     const excludeOTId = searchParams.get('excludeOTId')
     
     // IMPORTANTE: Obtener hora actual del cliente desde query params
-    // Si el cliente envía su hora actual, usarla; si no, usar hora del servidor
-    const clienteHoraActual = searchParams.get('horaActual') // ISO string opcional
+    // El cliente envía un objeto JSON con componentes locales (año, mes, dia, hora, minuto)
+    // Esto evita problemas de zona horaria entre cliente y servidor
+    const clienteHoraActualRaw = searchParams.get('horaActual') // JSON string opcional
     
     console.log(`[horarios-disponibles] Parámetros recibidos:`, {
       fecha,
       servicioId,
       extrasIds: extrasIds.join(','),
-      horaActualCliente: clienteHoraActual || 'NO ENVIADA'
+      horaActualClienteRaw: clienteHoraActualRaw || 'NO ENVIADA'
     })
+    
+    type ClienteHoraActual = {
+      año: number
+      mes: number
+      dia: number
+      hora: number
+      minuto: number
+      segundo: number
+      iso: string
+    }
+    
+    let clienteHoraActual: ClienteHoraActual | null = null
+    
+    if (clienteHoraActualRaw) {
+      try {
+        const parsed = JSON.parse(clienteHoraActualRaw) as ClienteHoraActual
+        // Validar que tenga las propiedades necesarias
+        if (parsed && typeof parsed.año === 'number' && typeof parsed.mes === 'number' && 
+            typeof parsed.dia === 'number' && typeof parsed.hora === 'number' && 
+            typeof parsed.minuto === 'number') {
+          clienteHoraActual = parsed
+        } else {
+          console.error(`[horarios-disponibles] ⚠️ horaActual del cliente no tiene el formato correcto:`, parsed)
+        }
+      } catch (e) {
+        console.error(`[horarios-disponibles] ⚠️ Error parseando horaActual del cliente:`, e)
+      }
+    }
 
     if (!fecha) {
       return NextResponse.json(
