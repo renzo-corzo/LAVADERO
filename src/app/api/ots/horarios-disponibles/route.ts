@@ -289,72 +289,72 @@ export async function GET(request: NextRequest) {
         const horaStr = `${hora.toString().padStart(2, '0')}:${minuto.toString().padStart(2, '0')}`
         const minutosBloque = hora * 60 + minuto
 
-        // REGLA FUNDAMENTAL: Los horarios pasados siempre están ocupados
+        // REGLA 1: Los horarios pasados siempre están ocupados/no disponibles
         // porque no se puede entregar un auto antes de que ingrese
+        let disponible = true
+        let ocupadoPor: any = undefined
+        
         if (esHoy && minutosAhora >= 0) {
-          // IMPORTANTE: Verificar que el bloque ya pasó comparando minutos
-          // Un bloque está pasado si ya pasó su hora completa
-          // Ejemplo: Si son las 19:17, el bloque 19:15 ya pasó (no disponible)
-          // El bloque 19:30 aún no pasó (disponible si hay tiempo suficiente)
-          
-          // Validar que el bloque ya pasó
-          // CRÍTICO: Un bloque está pasado si ya pasó su hora completa
-          // Ejemplo: Si son las 22:01, el bloque 22:00 ya pasó (no disponible)
-          // El bloque 22:15 aún no pasó (disponible si hay tiempo suficiente)
-          
+          // REGLA 1.1: Si el bloque ya pasó (minutosBloque < minutosAhora) → NO DISPONIBLE
           if (minutosBloque < minutosAhora) {
-            // Debug para los primeros bloques pasados
             if (bloquesPasados < 3) {
               console.log(`[horarios-disponibles] ⏰ BLOQUE PASADO: ${horaStr} (${minutosBloque} min) < ahora (${minutosAhora} min)`)
             }
             bloquesPasados++
-            bloques.push({
-              hora: horaStr,
-              disponible: false,
-              ocupadoPor: {
-                patente: 'Horario pasado',
-                cliente: 'Este horario ya pasó - No se puede entregar antes del ingreso',
-                fin: `${Math.floor(minutosAhora / 60).toString().padStart(2, '0')}:${String(minutosAhora % 60).padStart(2, '0')}`,
-              },
-            })
-            continue
-          } else {
-            bloquesFuturos++
+            disponible = false
+            ocupadoPor = {
+              patente: 'Horario pasado',
+              cliente: 'Este horario ya pasó - No se puede entregar antes del ingreso',
+              fin: `${Math.floor(minutosAhora / 60).toString().padStart(2, '0')}:${String(minutosAhora % 60).padStart(2, '0')}`,
+            }
+          } 
+          // REGLA 1.2: Si el bloque está dentro de los próximos 30 minutos → NO DISPONIBLE
+          // (Necesitamos al menos 30 minutos de anticipación)
+          else if (minutosBloque - minutosAhora < 30) {
+            bloquesPasados++
+            disponible = false
+            ocupadoPor = {
+              patente: 'Tiempo insuficiente',
+              cliente: `Se necesita al menos 30 minutos de anticipación. Tiempo disponible: ${minutosBloque - minutosAhora} min`,
+              fin: `${Math.floor(minutosAhora / 60).toString().padStart(2, '0')}:${String(minutosAhora % 60).padStart(2, '0')}`,
+            }
           }
-          
-          // Si hay servicio seleccionado, verificar tiempo suficiente
-          // Necesitamos tiempo suficiente para completar el servicio antes del horario deseado
-          if (servicioId) {
+          // REGLA 1.3: Si hay servicio seleccionado, verificar tiempo suficiente para completarlo
+          else if (servicioId) {
             // Calcular cuándo necesitaríamos empezar para terminar a este horario
             const minutosInicioNecesario = minutosBloque - duracionTotal
             
-            // Si no hay tiempo suficiente (el inicio necesario ya pasó)
-            // Ejemplo: Si son las 19:17 y queremos terminar a las 19:30 con un servicio de 30 min
-            // Necesitaríamos empezar a las 19:00, pero ya pasó → No disponible
-            if (minutosInicioNecesario < minutosAhora) {
-              bloques.push({
-                hora: horaStr,
-                disponible: false,
-                ocupadoPor: {
-                  patente: 'Tiempo insuficiente',
-                  cliente: `No hay tiempo suficiente para completar (${duracionTotal} min) antes de ${horaStr}`,
-                  fin: `${Math.floor(minutosAhora / 60).toString().padStart(2, '0')}:${String(minutosAhora % 60).padStart(2, '0')}`,
-                },
-              })
-              continue
+            // Si no hay tiempo suficiente para completar el servicio (el inicio necesario ya pasó o es muy pronto)
+            if (minutosInicioNecesario < minutosAhora || minutosBloque - minutosAhora < duracionTotal) {
+              disponible = false
+              ocupadoPor = {
+                patente: 'Tiempo insuficiente',
+                cliente: `No hay tiempo suficiente para completar el servicio (${duracionTotal} min) antes de ${horaStr}`,
+                fin: `${Math.floor(minutosAhora / 60).toString().padStart(2, '0')}:${String(minutosAhora % 60).padStart(2, '0')}`,
+              }
+            } else {
+              bloquesFuturos++
             }
+          } else {
+            bloquesFuturos++
           }
         } else {
-          // Si no es hoy, todos los bloques son futuros
+          // Si no es hoy, todos los bloques son futuros (no hay validación de tiempo)
           bloquesFuturos++
         }
-
-        // Por defecto, el bloque está disponible (ya pasamos las validaciones de tiempo)
-        let disponible = true
-        let ocupadoPor: any = undefined
         
-        // Verificar conflictos con OTs existentes
-        // REGLA: Marcamos ocupado solo si el horario deseado de una OT coincide exactamente
+        // Si ya está marcado como no disponible por tiempo, agregarlo y continuar
+        if (!disponible) {
+          bloques.push({
+            hora: horaStr,
+            disponible: false,
+            ocupadoPor,
+          })
+          continue
+        }
+
+        // REGLA 2: Verificar conflictos con OTs existentes
+        // Si otro auto ya tiene un horario deseado en este mismo bloque → NO DISPONIBLE
         // minutosBloque ya está calculado arriba (hora * 60 + minuto)
         
         if (rangosOcupados.length > 0) {
@@ -363,9 +363,8 @@ export async function GET(request: NextRequest) {
             // Extraer directamente los minutos del rango.fin que ya está normalizado
             const rangoFinMinutos = rango.fin.getHours() * 60 + rango.fin.getMinutes()
             
-            // SOLO CASO: Coincidencia exacta del horario deseado
+            // REGLA 2.1: Coincidencia exacta del horario deseado
             // Si una OT tiene horario deseado a las 20:30, ese bloque (20:30) está ocupado
-            // Si una OT tiene horario deseado a las 21:15, ese bloque (21:15) está ocupado
             if (minutosBloque === rangoFinMinutos) {
               disponible = false
               ocupadoPor = {
