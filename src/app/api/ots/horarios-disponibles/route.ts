@@ -36,21 +36,18 @@ export async function GET(request: NextRequest) {
     }
 
     // Parsear fecha correctamente (puede venir como YYYY-MM-DD o ISO string)
-    // IMPORTANTE: Usar hora local para evitar problemas de zona horaria
-    const fechaStr = fecha.split('T')[0] // Asegurar formato YYYY-MM-DD
-    const fechaConsulta = new Date(fechaStr + 'T00:00:00')
+    // IMPORTANTE: Parsear fecha como hora local, no UTC
+    // Ejemplo: '2026-01-07' debe interpretarse como 2026-01-07 00:00:00 en hora local
+    const fechaStr = fecha.split('T')[0] // Asegurar formato YYYY-MM-DD (ej: '2026-01-07')
+    const [año, mes, dia] = fechaStr.split('-').map(Number)
     
-    // Normalizar a medianoche en hora local (no UTC)
-    const fechaInicio = new Date(fechaConsulta)
-    fechaInicio.setHours(0, 0, 0, 0)
-    fechaInicio.setMinutes(0, 0)
-    fechaInicio.setSeconds(0, 0)
-    fechaInicio.setMilliseconds(0)
+    // Crear fecha en hora local (no UTC)
+    const fechaInicio = new Date(año, mes - 1, dia, 0, 0, 0, 0)
     
-    const fechaFin = new Date(fechaConsulta)
-    fechaFin.setHours(23, 59, 59, 999)
-    fechaFin.setMinutes(59, 59)
-    fechaFin.setSeconds(59, 999)
+    console.log(`[horarios-disponibles] Fecha parseada: ${fechaStr} -> ${fechaInicio.toISOString()} (local: ${fechaInicio.toLocaleString('es-AR')})`)
+    
+    // Crear fecha fin en hora local
+    const fechaFin = new Date(año, mes - 1, dia, 23, 59, 59, 999)
     
     console.log(`[horarios-disponibles] Fecha consulta parseada:`, {
       fechaOriginal: fecha,
