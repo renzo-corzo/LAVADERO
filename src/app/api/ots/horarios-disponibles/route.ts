@@ -223,6 +223,7 @@ export async function GET(request: NextRequest) {
     if (clienteHoraActual) {
       // El cliente envió componentes locales directamente, usarlos sin conversión
       // IMPORTANTE: Usar los valores que el cliente envió directamente
+      // TypeScript ya valida que clienteHoraActual no es null aquí
       const añoCliente = clienteHoraActual.año
       const mesCliente = clienteHoraActual.mes // Ya viene como 0-11 (índice de mes)
       const diaCliente = clienteHoraActual.dia
