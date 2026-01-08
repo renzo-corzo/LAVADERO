@@ -28,9 +28,16 @@ export async function GET(request: NextRequest) {
     const extrasIds = searchParams.get('extrasIds')?.split(',') || []
     const excludeOTId = searchParams.get('excludeOTId')
     
-    // IMPORTANTE: Obtener hora actual del cliente desde headers o usar hora del servidor
+    // IMPORTANTE: Obtener hora actual del cliente desde query params
     // Si el cliente envía su hora actual, usarla; si no, usar hora del servidor
     const clienteHoraActual = searchParams.get('horaActual') // ISO string opcional
+    
+    console.log(`[horarios-disponibles] Parámetros recibidos:`, {
+      fecha,
+      servicioId,
+      extrasIds: extrasIds.join(','),
+      horaActualCliente: clienteHoraActual || 'NO ENVIADA'
+    })
 
     if (!fecha) {
       return NextResponse.json(
@@ -206,22 +213,47 @@ export async function GET(request: NextRequest) {
     }), null, 2))
 
     // Generar bloques de 15 minutos
-    // IMPORTANTE: Usar hora del cliente (no hora del servidor en UTC)
+    // IMPORTANTE: El cliente envía su hora actual en ISO (UTC), pero necesitamos extraer
+    // la hora LOCAL del cliente para validar horarios pasados
     // El negocio opera en hora local de Argentina (UTC-3), no en UTC del servidor
-    // Si el cliente envía su hora actual, usarla; si no, intentar usar hora local del servidor
     let ahora: Date
+    let minutosAhoraCliente = -1
+    let fechaHoyCliente: Date | null = null
+    
     if (clienteHoraActual) {
-      // Usar hora del cliente si está disponible
-      ahora = new Date(clienteHoraActual)
-      console.log(`[horarios-disponibles] Usando hora del cliente: ${ahora.toISOString()} (${ahora.toLocaleString('es-AR')})`)
+      // El cliente envía ISO string (UTC), pero necesitamos extraer componentes locales
+      const fechaCliente = new Date(clienteHoraActual)
+      
+      // IMPORTANTE: Extraer año, mes, día, hora y minuto usando métodos LOCALES
+      // Esto nos da la hora que el cliente ve en su pantalla, no UTC
+      const añoCliente = fechaCliente.getFullYear()
+      const mesCliente = fechaCliente.getMonth()
+      const diaCliente = fechaCliente.getDate()
+      const horaCliente = fechaCliente.getHours()
+      const minutoCliente = fechaCliente.getMinutes()
+      
+      // Crear fecha de hoy en hora local del cliente
+      fechaHoyCliente = new Date(añoCliente, mesCliente, diaCliente, 0, 0, 0, 0)
+      
+      // Calcular minutos desde medianoche en hora local del cliente
+      minutosAhoraCliente = horaCliente * 60 + minutoCliente
+      
+      ahora = fechaCliente
+      console.log(`[horarios-disponibles] ✅ Usando hora del cliente:`, {
+        iso: fechaCliente.toISOString(),
+        local: fechaCliente.toLocaleString('es-AR'),
+        fecha: `${diaCliente}/${mesCliente + 1}/${añoCliente}`,
+        hora: `${horaCliente}:${minutoCliente.toString().padStart(2, '0')}`,
+        minutosDesdeMedianoche: minutosAhoraCliente
+      })
     } else {
       // Usar hora local del servidor como fallback
       ahora = new Date()
-      console.log(`[horarios-disponibles] Usando hora del servidor (fallback): ${ahora.toISOString()} (${ahora.toLocaleString('es-AR')})`)
+      console.log(`[horarios-disponibles] ⚠️ Usando hora del servidor (fallback): ${ahora.toISOString()} (${ahora.toLocaleString('es-AR')})`)
     }
     
     // Normalizar fecha de hoy usando la misma hora de referencia
-    const hoy = new Date(ahora)
+    const hoy = fechaHoyCliente || new Date(ahora)
     hoy.setHours(0, 0, 0, 0)
     hoy.setMinutes(0, 0)
     hoy.setSeconds(0, 0)
@@ -236,9 +268,8 @@ export async function GET(request: NextRequest) {
     
     const esHoy = fechaInicioNormalizada.getTime() === hoy.getTime()
     
-    // Calcular minutos desde medianoche para comparaciones simples
-    // Usar hora local de la referencia (cliente o servidor)
-    const minutosAhora = esHoy ? ahora.getHours() * 60 + ahora.getMinutes() : -1
+    // Usar minutos del cliente si es hoy, sino -1
+    const minutosAhora = esHoy ? minutosAhoraCliente : -1
     
     console.log(`[horarios-disponibles] ===== INICIO PROCESAMIENTO =====`)
     console.log(`[horarios-disponibles] HoraActual recibida del cliente: ${clienteHoraActual || 'NO ENVIADA'}`)
