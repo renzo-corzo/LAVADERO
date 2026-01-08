@@ -213,38 +213,37 @@ export async function GET(request: NextRequest) {
     }), null, 2))
 
     // Generar bloques de 15 minutos
-    // IMPORTANTE: El cliente envía su hora actual en ISO (UTC), pero necesitamos extraer
-    // la hora LOCAL del cliente para validar horarios pasados
+    // IMPORTANTE: El cliente envía su hora LOCAL como objeto JSON (año, mes, dia, hora, minuto)
+    // Esto permite validar horarios pasados usando la hora que el cliente ve, no UTC
     // El negocio opera en hora local de Argentina (UTC-3), no en UTC del servidor
     let ahora: Date
     let minutosAhoraCliente = -1
     let fechaHoyCliente: Date | null = null
     
     if (clienteHoraActual) {
-      // El cliente envía ISO string (UTC), pero necesitamos extraer componentes locales
-      const fechaCliente = new Date(clienteHoraActual)
+      // El cliente envió componentes locales directamente, usarlos sin conversión
+      // IMPORTANTE: Usar los valores que el cliente envió directamente
+      const añoCliente = clienteHoraActual.año
+      const mesCliente = clienteHoraActual.mes // Ya viene como 0-11 (índice de mes)
+      const diaCliente = clienteHoraActual.dia
+      const horaCliente = clienteHoraActual.hora
+      const minutoCliente = clienteHoraActual.minuto
       
-      // IMPORTANTE: Extraer año, mes, día, hora y minuto usando métodos LOCALES
-      // Esto nos da la hora que el cliente ve en su pantalla, no UTC
-      const añoCliente = fechaCliente.getFullYear()
-      const mesCliente = fechaCliente.getMonth()
-      const diaCliente = fechaCliente.getDate()
-      const horaCliente = fechaCliente.getHours()
-      const minutoCliente = fechaCliente.getMinutes()
-      
-      // Crear fecha de hoy en hora local del cliente
+      // Crear fecha usando los componentes locales del cliente
+      // NOTA: new Date(año, mes, dia, hora, minuto) crea una fecha en hora LOCAL del servidor
+      // pero usamos los valores que el cliente envió, que son su hora local
       fechaHoyCliente = new Date(añoCliente, mesCliente, diaCliente, 0, 0, 0, 0)
+      ahora = new Date(añoCliente, mesCliente, diaCliente, horaCliente, minutoCliente, 0, 0)
       
-      // Calcular minutos desde medianoche en hora local del cliente
+      // Calcular minutos desde medianoche usando valores del cliente directamente
       minutosAhoraCliente = horaCliente * 60 + minutoCliente
       
-      ahora = fechaCliente
-      console.log(`[horarios-disponibles] ✅ Usando hora del cliente:`, {
-        iso: fechaCliente.toISOString(),
-        local: fechaCliente.toLocaleString('es-AR'),
+      console.log(`[horarios-disponibles] ✅ Usando hora LOCAL del cliente:`, {
         fecha: `${diaCliente}/${mesCliente + 1}/${añoCliente}`,
-        hora: `${horaCliente}:${minutoCliente.toString().padStart(2, '0')}`,
-        minutosDesdeMedianoche: minutosAhoraCliente
+        hora: `${horaCliente.toString().padStart(2, '0')}:${minutoCliente.toString().padStart(2, '0')}`,
+        minutosDesdeMedianoche: minutosAhoraCliente,
+        isoCliente: clienteHoraActual.iso, // Solo para referencia
+        isoServidor: ahora.toISOString() // Para comparación
       })
     } else {
       // Usar hora local del servidor como fallback
@@ -269,15 +268,15 @@ export async function GET(request: NextRequest) {
     const esHoy = fechaInicioNormalizada.getTime() === hoy.getTime()
     
     // Usar minutos del cliente si es hoy, sino -1
-    const minutosAhora = esHoy ? minutosAhoraCliente : -1
+    const minutosAhora = esHoy && minutosAhoraCliente >= 0 ? minutosAhoraCliente : (esHoy ? ahora.getHours() * 60 + ahora.getMinutes() : -1)
     
     console.log(`[horarios-disponibles] ===== INICIO PROCESAMIENTO =====`)
-    console.log(`[horarios-disponibles] HoraActual recibida del cliente: ${clienteHoraActual || 'NO ENVIADA'}`)
+    console.log(`[horarios-disponibles] HoraActual recibida del cliente: ${clienteHoraActual ? JSON.stringify(clienteHoraActual) : 'NO ENVIADA'}`)
     console.log(`[horarios-disponibles] Hora usada para validación: ${ahora.toISOString()} (${ahora.toLocaleString('es-AR')})`)
     console.log(`[horarios-disponibles] Fecha consulta: ${fechaInicioNormalizada.toISOString().split('T')[0]} (${fechaInicioNormalizada.toLocaleDateString('es-AR')})`)
     console.log(`[horarios-disponibles] Hoy (según hora usada): ${hoy.toISOString().split('T')[0]} (${hoy.toLocaleDateString('es-AR')})`)
     console.log(`[horarios-disponibles] Es hoy: ${esHoy}`)
-    console.log(`[horarios-disponibles] Minutos ahora: ${minutosAhora} (${minutosAhora >= 0 ? `${Math.floor(minutosAhora/60)}:${String(minutosAhora%60).padStart(2, '0')}` : 'N/A'})`)
+    console.log(`[horarios-disponibles] Minutos ahora: ${minutosAhora} (${minutosAhora >= 0 ? `${Math.floor(minutosAhora/60).toString().padStart(2, '0')}:${String(minutosAhora%60).padStart(2, '0')}` : 'N/A'})`)
     console.log(`[horarios-disponibles] Duración servicio: ${duracionTotal} minutos`)
     console.log(`[horarios-disponibles] OTs activas encontradas: ${otsActivas.length}`)
     
