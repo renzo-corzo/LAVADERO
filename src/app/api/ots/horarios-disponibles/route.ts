@@ -247,10 +247,16 @@ export async function GET(request: NextRequest) {
         // REGLA FUNDAMENTAL: Los horarios pasados siempre están ocupados
         // porque no se puede entregar un auto antes de que ingrese
         if (esHoy && minutosAhora >= 0) {
-          // Si el bloque ya pasó (incluye horarios que están pasando ahora)
+          // IMPORTANTE: Verificar que el bloque ya pasó comparando minutos
           // Un bloque está pasado si ya pasó su hora completa
           // Ejemplo: Si son las 19:17, el bloque 19:15 ya pasó (no disponible)
           // El bloque 19:30 aún no pasó (disponible si hay tiempo suficiente)
+          
+          // Debug para los primeros bloques
+          if (hora <= 10 || (hora === 14 && minuto <= 30)) {
+            console.log(`[horarios-disponibles] DEBUG bloque ${horaStr}: minutosBloque=${minutosBloque}, minutosAhora=${minutosAhora}, pasado=${minutosBloque < minutosAhora}`)
+          }
+          
           if (minutosBloque < minutosAhora) {
             bloquesPasados++
             bloques.push({
@@ -289,6 +295,9 @@ export async function GET(request: NextRequest) {
               continue
             }
           }
+        } else {
+          // Si no es hoy, todos los bloques son futuros
+          bloquesFuturos++
         }
 
         // Por defecto, el bloque está disponible (ya pasamos las validaciones de tiempo)
