@@ -221,8 +221,21 @@ export default function NuevaOTPage() {
     try {
       // SIEMPRE mostrar primero los horarios de HOY (aunque estén todos ocupados)
       // Esto permite al usuario ver qué horarios ya pasaron
-      const hoy = new Date()
-      const fechaHoy = hoy.toISOString().split('T')[0]
+      // IMPORTANTE: Usar fecha local (no UTC) para que coincida con la hora del negocio
+      const ahora = new Date()
+      const año = ahora.getFullYear()
+      const mes = String(ahora.getMonth() + 1).padStart(2, '0')
+      const dia = String(ahora.getDate()).padStart(2, '0')
+      const fechaHoy = `${año}-${mes}-${dia}`
+      
+      console.log('[nueva-ot] Fecha calculada:', { 
+        fechaHoy,
+        ahoraISO: ahora.toISOString(),
+        ahoraLocal: ahora.toLocaleString('es-AR'),
+        año,
+        mes,
+        dia
+      })
       
       const params = new URLSearchParams({
         fecha: fechaHoy,
