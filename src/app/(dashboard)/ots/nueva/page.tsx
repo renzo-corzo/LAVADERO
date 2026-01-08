@@ -578,7 +578,16 @@ export default function NuevaOTPage() {
                             )}
                           </h4>
                           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-2 max-h-96 overflow-y-auto p-2 bg-gray-50 rounded">
-                            {horariosDelDia.bloques.map((bloque) => {
+                            {horariosDelDia.bloques
+                              .filter((bloque) => {
+                                // Ocultar horarios pasados (marcados como "Horario pasado")
+                                if (bloque.ocupadoPor?.patente === 'Horario pasado') {
+                                  return false
+                                }
+                                // Mostrar todos los demás (disponibles, ocupados por otros autos, o con tiempo insuficiente)
+                                return true
+                              })
+                              .map((bloque) => {
                               const isSelected = formData.horarioDeseado === bloque.hora
                               return (
                                 <button
