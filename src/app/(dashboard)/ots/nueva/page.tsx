@@ -237,10 +237,15 @@ export default function NuevaOTPage() {
         dia
       })
       
+      // IMPORTANTE: Enviar hora actual del cliente para que el servidor valide correctamente
+      // Esto permite que el servidor use la hora local del cliente, no UTC
+      const horaActualCliente = new Date().toISOString()
+      
       const params = new URLSearchParams({
         fecha: fechaHoy,
         servicioId: formData.servicioId,
         extrasIds: formData.extrasIds.join(','),
+        horaActual: horaActualCliente, // Enviar hora actual del cliente
       })
 
       console.log('[nueva-ot] Cargando horarios disponibles para HOY...', { fecha: fechaHoy, servicioId: formData.servicioId })

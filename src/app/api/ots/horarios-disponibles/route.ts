@@ -27,6 +27,10 @@ export async function GET(request: NextRequest) {
     const servicioId = searchParams.get('servicioId')
     const extrasIds = searchParams.get('extrasIds')?.split(',') || []
     const excludeOTId = searchParams.get('excludeOTId')
+    
+    // IMPORTANTE: Obtener hora actual del cliente desde headers o usar hora del servidor
+    // Si el cliente envía su hora actual, usarla; si no, usar hora del servidor
+    const clienteHoraActual = searchParams.get('horaActual') // ISO string opcional
 
     if (!fecha) {
       return NextResponse.json(
@@ -202,16 +206,28 @@ export async function GET(request: NextRequest) {
     }), null, 2))
 
     // Generar bloques de 15 minutos
-    // Verificar si estamos consultando el día de hoy
-    // IMPORTANTE: Usar hora local del servidor (no UTC) para comparar con la hora del negocio
-    const ahora = new Date()
-    const hoy = new Date()
+    // IMPORTANTE: Usar hora del cliente (no hora del servidor en UTC)
+    // El negocio opera en hora local de Argentina (UTC-3), no en UTC del servidor
+    // Si el cliente envía su hora actual, usarla; si no, intentar usar hora local del servidor
+    let ahora: Date
+    if (clienteHoraActual) {
+      // Usar hora del cliente si está disponible
+      ahora = new Date(clienteHoraActual)
+      console.log(`[horarios-disponibles] Usando hora del cliente: ${ahora.toISOString()} (${ahora.toLocaleString('es-AR')})`)
+    } else {
+      // Usar hora local del servidor como fallback
+      ahora = new Date()
+      console.log(`[horarios-disponibles] Usando hora del servidor (fallback): ${ahora.toISOString()} (${ahora.toLocaleString('es-AR')})`)
+    }
+    
+    // Normalizar fecha de hoy usando la misma hora de referencia
+    const hoy = new Date(ahora)
     hoy.setHours(0, 0, 0, 0)
     hoy.setMinutes(0, 0)
     hoy.setSeconds(0, 0)
     hoy.setMilliseconds(0)
     
-    // Comparar fechas normalizadas (solo año, mes, día en hora local)
+    // Comparar fechas normalizadas (solo año, mes, día)
     const fechaInicioNormalizada = new Date(fechaInicio)
     fechaInicioNormalizada.setHours(0, 0, 0, 0)
     fechaInicioNormalizada.setMinutes(0, 0)
@@ -221,6 +237,7 @@ export async function GET(request: NextRequest) {
     const esHoy = fechaInicioNormalizada.getTime() === hoy.getTime()
     
     // Calcular minutos desde medianoche para comparaciones simples
+    // Usar hora local de la referencia (cliente o servidor)
     const minutosAhora = esHoy ? ahora.getHours() * 60 + ahora.getMinutes() : -1
     
     console.log(`[horarios-disponibles] ===== INICIO PROCESAMIENTO =====`)
