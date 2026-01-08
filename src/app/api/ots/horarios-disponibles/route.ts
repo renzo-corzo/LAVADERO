@@ -241,11 +241,12 @@ export async function GET(request: NextRequest) {
     const minutosAhora = esHoy ? ahora.getHours() * 60 + ahora.getMinutes() : -1
     
     console.log(`[horarios-disponibles] ===== INICIO PROCESAMIENTO =====`)
-    console.log(`[horarios-disponibles] Hora del servidor (ahora): ${ahora.toISOString()} (${ahora.toLocaleString('es-AR')})`)
+    console.log(`[horarios-disponibles] HoraActual recibida del cliente: ${clienteHoraActual || 'NO ENVIADA'}`)
+    console.log(`[horarios-disponibles] Hora usada para validación: ${ahora.toISOString()} (${ahora.toLocaleString('es-AR')})`)
     console.log(`[horarios-disponibles] Fecha consulta: ${fechaInicioNormalizada.toISOString().split('T')[0]} (${fechaInicioNormalizada.toLocaleDateString('es-AR')})`)
-    console.log(`[horarios-disponibles] Hoy: ${hoy.toISOString().split('T')[0]} (${hoy.toLocaleDateString('es-AR')})`)
+    console.log(`[horarios-disponibles] Hoy (según hora usada): ${hoy.toISOString().split('T')[0]} (${hoy.toLocaleDateString('es-AR')})`)
     console.log(`[horarios-disponibles] Es hoy: ${esHoy}`)
-    console.log(`[horarios-disponibles] Minutos ahora (local): ${minutosAhora} (${Math.floor(minutosAhora/60)}:${String(minutosAhora%60).padStart(2, '0')})`)
+    console.log(`[horarios-disponibles] Minutos ahora: ${minutosAhora} (${minutosAhora >= 0 ? `${Math.floor(minutosAhora/60)}:${String(minutosAhora%60).padStart(2, '0')}` : 'N/A'})`)
     console.log(`[horarios-disponibles] Duración servicio: ${duracionTotal} minutos`)
     console.log(`[horarios-disponibles] OTs activas encontradas: ${otsActivas.length}`)
     
@@ -266,12 +267,16 @@ export async function GET(request: NextRequest) {
           // Ejemplo: Si son las 19:17, el bloque 19:15 ya pasó (no disponible)
           // El bloque 19:30 aún no pasó (disponible si hay tiempo suficiente)
           
-          // Debug para los primeros bloques
-          if (hora <= 10 || (hora === 14 && minuto <= 30)) {
-            console.log(`[horarios-disponibles] DEBUG bloque ${horaStr}: minutosBloque=${minutosBloque}, minutosAhora=${minutosAhora}, pasado=${minutosBloque < minutosAhora}`)
-          }
+          // Validar que el bloque ya pasó
+          // CRÍTICO: Un bloque está pasado si ya pasó su hora completa
+          // Ejemplo: Si son las 22:01, el bloque 22:00 ya pasó (no disponible)
+          // El bloque 22:15 aún no pasó (disponible si hay tiempo suficiente)
           
           if (minutosBloque < minutosAhora) {
+            // Debug para los primeros bloques pasados
+            if (bloquesPasados < 3) {
+              console.log(`[horarios-disponibles] ⏰ BLOQUE PASADO: ${horaStr} (${minutosBloque} min) < ahora (${minutosAhora} min)`)
+            }
             bloquesPasados++
             bloques.push({
               hora: horaStr,
