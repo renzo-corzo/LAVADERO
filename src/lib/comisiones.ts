@@ -10,7 +10,8 @@ interface ConfigComision {
   empleadoId: string
   modelo: 'POR_ITEM' | 'POR_OT'
   porcentaje: number
-  porcentajePorServicio?: Record<string, number> | null
+  // En BD se guarda como JSON serializado (string) o como objeto
+  porcentajePorServicio?: Record<string, number> | string | null
   activo: boolean
 }
 
