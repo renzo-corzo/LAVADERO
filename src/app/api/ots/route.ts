@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
 
     // Si hay precio ajustado, usar ese (sobrescribe el descuento)
     if (precioAjustado !== undefined && precioAjustado !== null) {
-      total = parseFloat(precioAjustado)
+      total = precioAjustado
       if (!justificacionPrecio) {
         return NextResponse.json(
           { error: 'Justificación requerida si se ajusta el precio' },
@@ -264,7 +264,7 @@ export async function POST(request: NextRequest) {
           observaciones: observaciones || null,
           estado: 'EN_COLA',
           total,
-          precioAjustado: precioAjustado ? parseFloat(precioAjustado) : null,
+          precioAjustado: precioAjustado ?? null,
           justificacionPrecio: justificacionPrecio || null,
           usuarioCreadorId: session.user.id,
           extras: {
