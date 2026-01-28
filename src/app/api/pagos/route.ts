@@ -201,7 +201,7 @@ export async function POST(request: NextRequest) {
       const nuevoPago = await tx.pago.create({
         data: {
           ordenTrabajoId,
-          monto: parseFloat(monto),
+          monto,
           medioPago: medioPago as any,
           referencia: referencia || null,
           fechaHora: fechaHora ? new Date(fechaHora) : new Date(),
