@@ -183,11 +183,7 @@ export async function calcularComisiones(otId: string): Promise<void> {
           prisma.comision.create({
             data: comision,
           })
-        ),
-        {
-          maxWait: 5000, // Máximo 5 segundos de espera
-          timeout: 10000, // Timeout de 10 segundos
-        }
+        )
       )
 
       console.log(
