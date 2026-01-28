@@ -86,8 +86,8 @@ export async function POST(request: NextRequest) {
     const extra = await prisma.extra.create({
       data: {
         nombre,
-        precio: parseFloat(precio),
-        duracionEstimada: duracionEstimada ? parseInt(duracionEstimada) : null,
+        precio,
+        duracionEstimada: duracionEstimada ?? null,
         descripcion: descripcion || null,
         activo: activo !== undefined ? activo : true,
       },

@@ -87,8 +87,8 @@ export async function POST(request: NextRequest) {
     const servicio = await prisma.servicio.create({
       data: {
         nombre,
-        precio: parseFloat(precio),
-        duracionEstimada: duracionEstimada ? parseInt(duracionEstimada) : null,
+        precio,
+        duracionEstimada: duracionEstimada ?? null,
         tipoVehiculo: tipoVehiculo || null,
         descripcion: descripcion || null,
         activo: activo !== undefined ? activo : true,
