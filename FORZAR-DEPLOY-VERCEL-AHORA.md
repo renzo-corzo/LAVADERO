@@ -40,3 +40,4 @@ vercel --prod
    - Debe mostrar: `693d619` o `1950d91`
    - NO debe mostrar: `ddb25ac`
 
+

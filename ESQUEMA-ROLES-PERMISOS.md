@@ -425,3 +425,4 @@ Para modificar permisos:
 **Última actualización:** 2026-01-08  
 **Versión del sistema:** v1.0-horarios-funcionando
 
+

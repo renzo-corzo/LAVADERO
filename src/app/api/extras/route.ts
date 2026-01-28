@@ -9,6 +9,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { crearExtraSchema } from '@/lib/validations'
 
 export async function GET(request: NextRequest) {
   try {
@@ -51,22 +52,24 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { nombre, precio, duracionEstimada, descripcion, activo } = body
 
-    // Validaciones
-    if (!nombre || !precio) {
+    // Validación con Zod
+    const validationResult = crearExtraSchema.safeParse(body)
+    if (!validationResult.success) {
       return NextResponse.json(
-        { error: 'Nombre y precio son obligatorios' },
+        {
+          error: 'Datos inválidos',
+          details: validationResult.error.errors.map((e) => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        },
         { status: 400 }
       )
     }
 
-    if (precio <= 0) {
-      return NextResponse.json(
-        { error: 'El precio debe ser mayor a cero' },
-        { status: 400 }
-      )
-    }
+    const { nombre, precio, duracionEstimada, descripcion } = validationResult.data
+    const activo = body.activo !== undefined ? body.activo : true
 
     // Verificar que el nombre sea único
     const existente = await prisma.extra.findUnique({
@@ -99,6 +102,7 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
 
 
 

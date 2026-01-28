@@ -2,9 +2,15 @@
  * Utilidades generales
  */
 
-// Función para combinar clases CSS (simplificada, sin dependencias externas)
-export function cn(...classes: (string | undefined | null | false)[]): string {
-  return classes.filter(Boolean).join(' ')
+import { type ClassValue, clsx } from 'clsx'
+import { twMerge } from 'tailwind-merge'
+
+/**
+ * Combina clases CSS usando clsx y tailwind-merge
+ * Permite mergear clases de Tailwind de forma inteligente
+ */
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
 }
 
 /**

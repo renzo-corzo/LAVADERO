@@ -9,6 +9,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { formatCurrency, formatDateTime, formatHorarioDeseado, getTimeElapsed } from '@/lib/utils'
@@ -188,10 +189,16 @@ export default function TableroPage() {
     }
   }
 
-  const renderTarjetaOT = (ot: OrdenTrabajo) => (
-    <div
+  const renderTarjetaOT = (ot: OrdenTrabajo, index: number) => (
+    <motion.div
       key={ot.id}
-      className="bg-white border rounded-lg p-3 mb-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      transition={{ duration: 0.3, delay: index * 0.05 }}
+      whileHover={{ scale: 1.02, y: -2 }}
+      whileTap={{ scale: 0.98 }}
+      className="bg-white/90 backdrop-blur-sm border border-gray-200/50 rounded-xl p-4 mb-3 shadow-sm hover:shadow-lg transition-all cursor-pointer"
       onClick={() => router.push(`/tablero/${ot.id}`)}
     >
       <div className="flex justify-between items-start mb-2">
@@ -291,7 +298,7 @@ export default function TableroPage() {
           </span>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 
   // ========== VARIABLES Y CÁLCULOS DESPUÉS DE FUNCIONES ==========
@@ -343,17 +350,33 @@ export default function TableroPage() {
   ]
 
   // Crear array final siempre con la misma estructura (evitar mutaciones condicionales)
-  const itemsFiltrados = session?.user.role === 'DUENO'
-    ? [
-        ...menuItemsBase,
-        {
-          href: '/usuarios',
-          label: 'Usuarios',
-          icon: '👤',
-          color: 'bg-gray-600',
-        },
-      ]
-    : menuItemsBase
+  let itemsFiltrados = menuItemsBase
+
+  // Modo Kiosco para ENCARGADO y DUEÑO (quien opera / puede ser lavador)
+  if (session?.user.role === 'ENCARGADO' || session?.user.role === 'DUENO') {
+    itemsFiltrados = [
+      {
+        href: '/kiosco',
+        label: 'Modo Kiosco',
+        icon: '🖥️',
+        color: 'bg-blue-600',
+      },
+      ...menuItemsBase,
+    ]
+  }
+
+  // Agregar Usuarios solo para DUENO
+  if (session?.user.role === 'DUENO') {
+    itemsFiltrados = [
+      ...itemsFiltrados,
+      {
+        href: '/usuarios',
+        label: 'Usuarios',
+        icon: '👤',
+        color: 'bg-gray-600',
+      },
+    ]
+  }
 
   // ========== RETURNS CONDICIONALES AL FINAL ==========
   // Renderizar siempre ambos componentes y usar CSS para mostrar/ocultar
@@ -437,73 +460,136 @@ export default function TableroPage() {
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 overflow-x-auto">
-        <div className="bg-gray-50 rounded-lg p-4 min-w-[280px]">
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="bg-gray-50/80 backdrop-blur-sm rounded-xl p-4 min-w-[280px] border border-gray-200/50"
+        >
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-bold text-gray-700">En Cola</h2>
-            <span className="bg-gray-200 text-gray-700 text-xs font-bold px-2 py-1 rounded-full">
+            <motion.span 
+              key={ots.EN_COLA.length}
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="bg-gray-200 text-gray-700 text-xs font-bold px-2 py-1 rounded-full"
+            >
               {ots.EN_COLA.length}
-            </span>
+            </motion.span>
           </div>
-          <div className="space-y-2">
-            {ots.EN_COLA.map(renderTarjetaOT)}
-            {ots.EN_COLA.length === 0 && (
-              <div className="text-center text-gray-400 py-8 text-sm">
-                No hay OTs en cola
-              </div>
-            )}
-          </div>
-        </div>
+          <AnimatePresence mode="popLayout">
+            <div className="space-y-2">
+              {ots.EN_COLA.map((ot, index) => renderTarjetaOT(ot, index))}
+              {ots.EN_COLA.length === 0 && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center text-gray-400 py-8 text-sm"
+                >
+                  No hay OTs en cola
+                </motion.div>
+              )}
+            </div>
+          </AnimatePresence>
+        </motion.div>
 
-        <div className="bg-yellow-50 rounded-lg p-4 min-w-[280px]">
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-yellow-50/80 backdrop-blur-sm rounded-xl p-4 min-w-[280px] border border-yellow-200/50"
+        >
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-bold text-gray-700">En Proceso</h2>
-            <span className="bg-yellow-200 text-yellow-800 text-xs font-bold px-2 py-1 rounded-full">
+            <motion.span 
+              key={ots.EN_PROCESO.length}
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="bg-yellow-200 text-yellow-800 text-xs font-bold px-2 py-1 rounded-full"
+            >
               {ots.EN_PROCESO.length}
-            </span>
+            </motion.span>
           </div>
-          <div className="space-y-2">
-            {ots.EN_PROCESO.map(renderTarjetaOT)}
-            {ots.EN_PROCESO.length === 0 && (
-              <div className="text-center text-gray-400 py-8 text-sm">
-                No hay OTs en proceso
-              </div>
-            )}
-          </div>
-        </div>
+          <AnimatePresence mode="popLayout">
+            <div className="space-y-2">
+              {ots.EN_PROCESO.map((ot, index) => renderTarjetaOT(ot, index))}
+              {ots.EN_PROCESO.length === 0 && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center text-gray-400 py-8 text-sm"
+                >
+                  No hay OTs en proceso
+                </motion.div>
+              )}
+            </div>
+          </AnimatePresence>
+        </motion.div>
 
-        <div className="bg-green-50 rounded-lg p-4 min-w-[280px]">
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-green-50/80 backdrop-blur-sm rounded-xl p-4 min-w-[280px] border border-green-200/50"
+        >
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-bold text-gray-700">Listo</h2>
-            <span className="bg-green-200 text-green-800 text-xs font-bold px-2 py-1 rounded-full">
+            <motion.span 
+              key={ots.LISTO.length}
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="bg-green-200 text-green-800 text-xs font-bold px-2 py-1 rounded-full"
+            >
               {ots.LISTO.length}
-            </span>
+            </motion.span>
           </div>
-          <div className="space-y-2">
-            {ots.LISTO.map(renderTarjetaOT)}
-            {ots.LISTO.length === 0 && (
-              <div className="text-center text-gray-400 py-8 text-sm">
-                No hay OTs listas
-              </div>
-            )}
-          </div>
-        </div>
+          <AnimatePresence mode="popLayout">
+            <div className="space-y-2">
+              {ots.LISTO.map((ot, index) => renderTarjetaOT(ot, index))}
+              {ots.LISTO.length === 0 && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center text-gray-400 py-8 text-sm"
+                >
+                  No hay OTs listas
+                </motion.div>
+              )}
+            </div>
+          </AnimatePresence>
+        </motion.div>
 
-        <div className="bg-blue-50 rounded-lg p-4 min-w-[280px]">
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-blue-50/80 backdrop-blur-sm rounded-xl p-4 min-w-[280px] border border-blue-200/50"
+        >
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-bold text-gray-700">Entregado</h2>
-            <span className="bg-blue-200 text-blue-800 text-xs font-bold px-2 py-1 rounded-full">
+            <motion.span 
+              key={ots.ENTREGADO.length}
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="bg-blue-200 text-blue-800 text-xs font-bold px-2 py-1 rounded-full"
+            >
               {ots.ENTREGADO.length}
-            </span>
+            </motion.span>
           </div>
-          <div className="space-y-2">
-            {ots.ENTREGADO.map(renderTarjetaOT)}
-            {ots.ENTREGADO.length === 0 && (
-              <div className="text-center text-gray-400 py-8 text-sm">
-                No hay OTs entregadas
-              </div>
-            )}
-          </div>
-        </div>
+          <AnimatePresence mode="popLayout">
+            <div className="space-y-2">
+              {ots.ENTREGADO.map((ot, index) => renderTarjetaOT(ot, index))}
+              {ots.ENTREGADO.length === 0 && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center text-gray-400 py-8 text-sm"
+                >
+                  No hay OTs entregadas
+                </motion.div>
+              )}
+            </div>
+          </AnimatePresence>
+        </motion.div>
       </div>
           </>
         )}

@@ -82,3 +82,4 @@ Si tu IP local cambia (al reconectar el WiFi), vuelve a ejecutar `ipconfig` para
 
 
 
+

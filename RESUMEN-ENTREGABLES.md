@@ -267,3 +267,4 @@ En `src/types/index.ts` se encuentran todos los tipos:
 
 
 
+

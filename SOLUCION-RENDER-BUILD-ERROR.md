@@ -72,3 +72,4 @@ Si después de actualizar el build command sigue fallando:
 
 3. Asegúrate de que el commit más reciente incluya todos los componentes
 
+

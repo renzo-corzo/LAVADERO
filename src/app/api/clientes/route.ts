@@ -9,6 +9,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { crearClienteSchema } from '@/lib/validations'
 
 // GET: Listar clientes
 export async function GET(request: NextRequest) {
@@ -67,22 +68,23 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { nombre, tipo, telefono, email, descuentoPorcentaje, prioridad, observaciones } = body
 
-    // Validaciones
-    if (!nombre || typeof nombre !== 'string' || !nombre.trim()) {
+    // Validación con Zod
+    const validationResult = crearClienteSchema.safeParse(body)
+    if (!validationResult.success) {
       return NextResponse.json(
-        { error: 'El nombre es obligatorio' },
+        {
+          error: 'Datos inválidos',
+          details: validationResult.error.errors.map((e) => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        },
         { status: 400 }
       )
     }
 
-    if (!tipo || (tipo !== 'CONCESIONARIA' && tipo !== 'WALK_IN')) {
-      return NextResponse.json(
-        { error: 'El tipo debe ser CONCESIONARIA o WALK_IN' },
-        { status: 400 }
-      )
-    }
+    const { nombre, tipo, telefono, email, descuentoPorcentaje, prioridad, observaciones } = validationResult.data
 
     // Verificar que no exista un cliente con el mismo nombre
     const clienteExistente = await prisma.cliente.findUnique({
@@ -100,11 +102,11 @@ export async function POST(request: NextRequest) {
     const cliente = await prisma.cliente.create({
       data: {
         nombre: nombre.trim(),
-        tipo: tipo,
+        tipo,
         telefono: telefono?.trim() || null,
-        email: email?.trim() || null,
-        descuentoPorcentaje: descuentoPorcentaje ? Number(descuentoPorcentaje) : null,
-        prioridad: prioridad ? Number(prioridad) : 0,
+        email: email && email.trim() ? email.trim() : null,
+        descuentoPorcentaje: descuentoPorcentaje || null,
+        prioridad: prioridad || 0,
         observaciones: observaciones?.trim() || null,
         activo: true,
       },

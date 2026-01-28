@@ -400,9 +400,20 @@ export default function NuevaOTPage() {
       } else {
         const data = await response.json()
         console.error('[nueva-ot] Error del servidor:', data)
-        const errorMessage = data.details?.message || data.error || 'Error al crear orden de trabajo'
-        setErrors({ submit: errorMessage })
-        alert(`Error: ${errorMessage}${data.details?.meta ? '\n\nDetalles: ' + JSON.stringify(data.details.meta) : ''}`)
+        const details = Array.isArray(data.details) ? data.details : []
+        const newErrors: Record<string, string> = {}
+        details.forEach((d: { field?: string; message?: string }) => {
+          const key = d.field || 'submit'
+          newErrors[key] = d.message || data.error || 'Error'
+        })
+        if (details.length === 0) {
+          newErrors.submit = data.error || 'Error al crear orden de trabajo'
+        }
+        setErrors(newErrors)
+        const msg = details.length > 0
+          ? details.map((d: { field?: string; message?: string }) => `${d.field || 'Campo'}: ${d.message}`).join('\n')
+          : data.error
+        alert(`Error: ${msg}`)
       }
     } catch (error) {
       setErrors({ submit: 'Error al crear orden de trabajo' })

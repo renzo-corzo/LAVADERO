@@ -9,6 +9,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { crearUsuarioSchema } from '@/lib/validations'
 import bcrypt from 'bcryptjs'
 
 export async function GET(request: NextRequest) {
@@ -93,29 +94,24 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { nombre, usuario: username, password, rol, activo } = body
 
-    // Validaciones
-    if (!nombre || !username || !password || !rol) {
+    // Validación con Zod
+    const validationResult = crearUsuarioSchema.safeParse(body)
+    if (!validationResult.success) {
       return NextResponse.json(
-        { error: 'Faltan campos requeridos: nombre, usuario, password, rol' },
+        {
+          error: 'Datos inválidos',
+          details: validationResult.error.errors.map((e) => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        },
         { status: 400 }
       )
     }
 
-    if (password.length < 6) {
-      return NextResponse.json(
-        { error: 'La contraseña debe tener al menos 6 caracteres' },
-        { status: 400 }
-      )
-    }
-
-    if (!['DUENO', 'ENCARGADO', 'LAVADOR'].includes(rol)) {
-      return NextResponse.json(
-        { error: 'Rol inválido' },
-        { status: 400 }
-      )
-    }
+    const { nombre, usuario: username, password, rol } = validationResult.data
+    const activo = body.activo !== undefined ? body.activo : true
 
     // Verificar que el usuario no exista
     const usuarioExistente = await prisma.usuario.findUnique({

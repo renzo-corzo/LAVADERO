@@ -592,3 +592,4 @@ Estas mejoras transformarían el sistema de un **sistema básico de gestión** a
 
 ¿Cuál te parece más importante para implementar primero?
 
+

@@ -9,6 +9,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { crearOTSchema } from '@/lib/validations'
 
 export async function GET(request: NextRequest) {
   try {
@@ -128,6 +129,22 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     console.log('[API OTs POST] Body recibido:', JSON.stringify(body, null, 2))
     console.log('[API OTs POST] Session user:', { id: session.user.id, role: session.user.role })
+
+    // Validación con Zod
+    const validationResult = crearOTSchema.safeParse(body)
+    if (!validationResult.success) {
+      return NextResponse.json(
+        {
+          error: 'Datos inválidos',
+          details: validationResult.error.errors.map((e) => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        },
+        { status: 400 }
+      )
+    }
+
     const {
       servicioId,
       extrasIds = [],
@@ -141,40 +158,7 @@ export async function POST(request: NextRequest) {
       observaciones,
       precioAjustado,
       justificacionPrecio,
-    } = body
-
-    // Validaciones
-    if (!servicioId || !patente || !nombreCliente || !telefonoCliente || !horarioDeseado) {
-      return NextResponse.json(
-        { error: 'Servicio, patente, nombre del cliente, teléfono y horario deseado son obligatorios' },
-        { status: 400 }
-      )
-    }
-
-    // Ya no se asignan empleados a las OTs
-    
-    // Validar que patente no esté vacío
-    if (!patente || typeof patente !== 'string' || !patente.trim()) {
-      return NextResponse.json(
-        { error: 'La patente es obligatoria y no puede estar vacía' },
-        { status: 400 }
-      )
-    }
-    
-    // Validar que nombre y teléfono no estén vacíos
-    if (!nombreCliente || typeof nombreCliente !== 'string' || !nombreCliente.trim()) {
-      return NextResponse.json(
-        { error: 'El nombre del cliente es obligatorio' },
-        { status: 400 }
-      )
-    }
-    
-    if (!telefonoCliente || typeof telefonoCliente !== 'string' || !telefonoCliente.trim()) {
-      return NextResponse.json(
-        { error: 'El teléfono del cliente es obligatorio' },
-        { status: 400 }
-      )
-    }
+    } = validationResult.data
 
     // Obtener servicio y extras para calcular total
     const servicio = await prisma.servicio.findUnique({

@@ -10,6 +10,7 @@ import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
 import { verificarYCalcularComisiones } from '@/lib/comisiones'
+import { registrarPagoSchema } from '@/lib/validations'
 
 export async function GET(request: NextRequest) {
   try {
@@ -143,29 +144,23 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { ordenTrabajoId, monto, medioPago, referencia, fechaHora } = body
 
-    // Validaciones
-    if (!ordenTrabajoId || !monto || !medioPago) {
+    // Validación con Zod
+    const validationResult = registrarPagoSchema.safeParse(body)
+    if (!validationResult.success) {
       return NextResponse.json(
-        { error: 'OT, monto y medio de pago son obligatorios' },
+        { 
+          error: 'Datos inválidos',
+          details: validationResult.error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        },
         { status: 400 }
       )
     }
 
-    if (Number(monto) <= 0) {
-      return NextResponse.json(
-        { error: 'El monto debe ser mayor a 0' },
-        { status: 400 }
-      )
-    }
-
-    if (!['EFECTIVO', 'TRANSFERENCIA'].includes(medioPago)) {
-      return NextResponse.json(
-        { error: 'Medio de pago inválido' },
-        { status: 400 }
-      )
-    }
+    const { ordenTrabajoId, monto, medioPago, referencia } = validationResult.data
 
     // Verificar que la OT existe
     const ot = await prisma.ordenTrabajo.findUnique({

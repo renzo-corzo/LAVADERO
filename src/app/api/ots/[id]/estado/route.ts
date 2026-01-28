@@ -10,6 +10,7 @@ import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
 import { isValidEstadoTransition } from '@/lib/reglas-negocio'
 import { verificarYCalcularComisiones } from '@/lib/comisiones'
+import { cambiarEstadoOTSchema } from '@/lib/validations'
 
 export async function PUT(
   request: NextRequest,
@@ -22,14 +23,23 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const { nuevoEstado, motivo } = body
 
-    if (!nuevoEstado) {
+    // Validación con Zod
+    const validationResult = cambiarEstadoOTSchema.safeParse(body)
+    if (!validationResult.success) {
       return NextResponse.json(
-        { error: 'Nuevo estado es requerido' },
+        {
+          error: 'Datos inválidos',
+          details: validationResult.error.errors.map((e) => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        },
         { status: 400 }
       )
     }
+
+    const { nuevoEstado, motivo } = validationResult.data
 
     // Obtener OT actual
     const otActual = await prisma.ordenTrabajo.findUnique({
@@ -59,14 +69,6 @@ export async function PUT(
     }
 
     console.log(`[estado-route] Transición válida: ${otActual.estado} → ${nuevoEstado} para rol ${session.user.role}`)
-
-    // Si requiere motivo (cancelaciones), validar
-    if (nuevoEstado === 'CANCELADO' && !motivo) {
-      return NextResponse.json(
-        { error: 'Motivo es obligatorio para cancelar una OT' },
-        { status: 400 }
-      )
-    }
 
     // Actualizar estado con transacción
     const ot = await prisma.$transaction(async (tx) => {

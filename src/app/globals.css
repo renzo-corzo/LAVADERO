@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
 * {
   box-sizing: border-box;
   padding: 0;
@@ -14,8 +16,16 @@ body {
   overflow-x: hidden;
 }
 
+:root {
+  --font-inter: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
 body {
-  @apply bg-gray-50 text-gray-900;
+  @apply bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-50 text-gray-900;
+  font-family: var(--font-inter);
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 a {
@@ -30,5 +40,22 @@ a {
 
 button, [role="button"] {
   touch-action: manipulation;
+}
+
+/* Glassmorphism utilities */
+@layer utilities {
+  .glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+  }
+  
+  .glass-strong {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
 }
 

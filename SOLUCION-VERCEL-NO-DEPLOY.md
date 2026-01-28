@@ -84,3 +84,4 @@ Si aún no funciona, verifica:
    - Ve a Vercel → Deployments → [último deployment] → Logs
    - Revisa si hay errores de build
 
+

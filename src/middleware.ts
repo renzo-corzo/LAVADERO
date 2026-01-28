@@ -58,6 +58,7 @@ export const config = {
   matcher: [
     '/dashboard/:path*',
     '/tablero/:path*',
+    '/kiosco/:path*',
     '/ots/:path*',
     '/caja/:path*',
     '/comisiones/:path*',

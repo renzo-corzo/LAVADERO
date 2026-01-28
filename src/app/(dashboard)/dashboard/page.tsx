@@ -133,72 +133,106 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Tarjetas de Resumen */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <Card>
-          <div className="text-center">
-            <p className="text-sm text-gray-600 mb-1">Órdenes Hoy</p>
-            <p className="text-3xl font-bold text-gray-900">{stats.otsHoy}</p>
+      {/* Bento Grid Layout - Estilo 2026 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {/* Tarjeta grande - Órdenes Hoy */}
+        <Card variant="glass" className="md:col-span-2 lg:col-span-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600 mb-2">Órdenes de Trabajo Hoy</p>
+              <p className="text-5xl font-bold text-gray-900 mb-1">{stats.otsHoy}</p>
+              <p className="text-xs text-gray-500">Total registradas</p>
+            </div>
+            <div className="text-6xl opacity-20">📋</div>
           </div>
         </Card>
 
-        <Card>
+        {/* Tarjeta mediana - En Cola */}
+        <Card variant="glass" className="bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200/50">
           <div className="text-center">
-            <p className="text-sm text-gray-600 mb-1">En Cola</p>
-            <p className="text-3xl font-bold text-blue-600">{stats.otsEnCola}</p>
+            <div className="text-3xl mb-2">⏳</div>
+            <p className="text-sm font-medium text-gray-700 mb-1">En Cola</p>
+            <p className="text-4xl font-bold text-blue-600">{stats.otsEnCola}</p>
           </div>
         </Card>
 
-        <Card>
+        {/* Tarjeta mediana - En Proceso */}
+        <Card variant="glass" className="bg-gradient-to-br from-yellow-50 to-yellow-100/50 border-yellow-200/50">
           <div className="text-center">
-            <p className="text-sm text-gray-600 mb-1">En Proceso</p>
-            <p className="text-3xl font-bold text-yellow-600">{stats.otsEnProceso}</p>
+            <div className="text-3xl mb-2">🔧</div>
+            <p className="text-sm font-medium text-gray-700 mb-1">En Proceso</p>
+            <p className="text-4xl font-bold text-yellow-600">{stats.otsEnProceso}</p>
           </div>
         </Card>
 
-        <Card>
+        {/* Tarjeta mediana - Listas */}
+        <Card variant="glass" className="bg-gradient-to-br from-green-50 to-green-100/50 border-green-200/50">
           <div className="text-center">
-            <p className="text-sm text-gray-600 mb-1">Listas</p>
-            <p className="text-3xl font-bold text-green-600">{stats.otsListas}</p>
+            <div className="text-3xl mb-2">✅</div>
+            <p className="text-sm font-medium text-gray-700 mb-1">Listas</p>
+            <p className="text-4xl font-bold text-green-600">{stats.otsListas}</p>
           </div>
         </Card>
-      </div>
 
-      {/* Ventas y Comisiones */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card title="Ventas del Día">
-          <div className="text-center py-4">
-            <p className="text-3xl font-bold text-gray-900">
-              {formatCurrency(stats.ventasHoy)}
-            </p>
-            <p className="text-sm text-gray-600 mt-2">
-              Total de OTs entregadas hoy
-            </p>
+        {/* Tarjeta grande - Ventas del Día */}
+        <Card variant="glass" className="md:col-span-2 lg:col-span-2 bg-gradient-to-br from-purple-50 to-purple-100/50 border-purple-200/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-2">💰 Ventas del Día</p>
+              <p className="text-4xl font-bold text-purple-700 mb-1">
+                {formatCurrency(stats.ventasHoy)}
+              </p>
+              <p className="text-xs text-gray-600">Total de OTs entregadas</p>
+            </div>
+            <div className="text-6xl opacity-30">💵</div>
           </div>
           <div className="mt-4">
             <Link href="/reportes">
-              <Button variant="secondary" className="w-full">
-                Ver Reportes
+              <Button variant="outline" className="w-full">
+                Ver Reportes Detallados
               </Button>
             </Link>
           </div>
         </Card>
 
-        <Card title="Accesos Rápidos">
-          <div className="space-y-2">
+        {/* Tarjeta grande - Accesos Rápidos */}
+        <Card variant="glass" className="md:col-span-2 lg:col-span-2">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Accesos Rápidos</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Link href="/tablero">
-              <Button variant="secondary" className="w-full justify-start">
-                📋 Ver Tablero
+              <Button variant="ghost" className="w-full justify-start h-auto py-3">
+                <span className="text-xl mr-2">📋</span>
+                <div className="text-left">
+                  <div className="font-medium">Tablero</div>
+                  <div className="text-xs text-gray-500">Vista Kanban</div>
+                </div>
               </Button>
             </Link>
             <Link href="/catalogos">
-              <Button variant="secondary" className="w-full justify-start">
-                ⚙️ Gestionar Catálogos
+              <Button variant="ghost" className="w-full justify-start h-auto py-3">
+                <span className="text-xl mr-2">⚙️</span>
+                <div className="text-left">
+                  <div className="font-medium">Catálogos</div>
+                  <div className="text-xs text-gray-500">Servicios y Extras</div>
+                </div>
               </Button>
             </Link>
             <Link href="/caja">
-              <Button variant="secondary" className="w-full justify-start">
-                💰 Caja y Cobros
+              <Button variant="ghost" className="w-full justify-start h-auto py-3">
+                <span className="text-xl mr-2">💰</span>
+                <div className="text-left">
+                  <div className="font-medium">Caja</div>
+                  <div className="text-xs text-gray-500">Cobros y Cierres</div>
+                </div>
+              </Button>
+            </Link>
+            <Link href="/comisiones">
+              <Button variant="ghost" className="w-full justify-start h-auto py-3">
+                <span className="text-xl mr-2">💵</span>
+                <div className="text-left">
+                  <div className="font-medium">Comisiones</div>
+                  <div className="text-xs text-gray-500">Liquidaciones</div>
+                </div>
               </Button>
             </Link>
           </div>
