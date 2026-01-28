@@ -204,7 +204,8 @@ export async function POST(request: NextRequest) {
           monto,
           medioPago: medioPago as any,
           referencia: referencia || null,
-          fechaHora: fechaHora ? new Date(fechaHora) : new Date(),
+          // Usamos siempre la fecha/hora actual para el registro del pago
+          fechaHora: new Date(),
           usuarioId: session.user.id,
         },
         include: {
