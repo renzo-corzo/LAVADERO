@@ -72,8 +72,9 @@ export async function POST(request: NextRequest) {
     const activo = body.activo !== undefined ? body.activo : true
 
     // Verificar que el nombre sea único
+    const nombreTrim = nombre.trim()
     const existente = await prisma.extra.findUnique({
-      where: { nombre },
+      where: { nombre: nombreTrim },
     })
 
     if (existente) {
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
 
     const extra = await prisma.extra.create({
       data: {
-        nombre,
+        nombre: nombreTrim,
         precio,
         duracionEstimada: duracionEstimada ?? null,
         descripcion: descripcion || null,

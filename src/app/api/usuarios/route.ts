@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const rol = searchParams.get('rol')
     const incluirInactivos = searchParams.get('incluirInactivos') === 'true'
+    const incluirClientes = searchParams.get('incluirClientes') === 'true'
 
     // Construir where clause
     const where: any = {}
@@ -42,6 +43,12 @@ export async function GET(request: NextRequest) {
       if (!incluirInactivos) {
         where.activo = true
       }
+    }
+
+    // Por defecto, NO incluir usuarios del portal (rol=CLIENTE) en ABM de usuarios
+    // Se gestionan desde Clientes -> Acceso Portal.
+    if (!rol && !incluirClientes) {
+      where.rol = { not: 'CLIENTE' }
     }
 
     // Para gestión de usuarios (sin filtro de rol), verificar permisos

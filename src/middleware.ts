@@ -19,6 +19,18 @@ export default withAuth(
     // Verificar permisos según ruta
     const role = token.role
 
+    // Portal de clientes (rol CLIENTE)
+    if (path.startsWith('/portal')) {
+      if (role !== 'CLIENTE' && role !== 'DUENO' && role !== 'ENCARGADO') {
+        return NextResponse.redirect(new URL('/dashboard', req.url))
+      }
+    }
+
+    // CLIENTE solo puede acceder al portal
+    if (role === 'CLIENTE' && !path.startsWith('/portal')) {
+      return NextResponse.redirect(new URL('/portal', req.url))
+    }
+
     // Rutas solo para DUENO
     if (path.startsWith('/usuarios') || path.startsWith('/config')) {
       if (role !== 'DUENO') {
@@ -66,6 +78,7 @@ export const config = {
     '/catalogos/:path*',
     '/usuarios/:path*',
     '/config/:path*',
+    '/portal/:path*',
   ],
 }
 

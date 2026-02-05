@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { Prisma } from '@prisma/client'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
@@ -68,7 +69,23 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const { nombre, tipo, telefono, email, descuentoPorcentaje, prioridad, observaciones, activo } = body
+    const {
+      nombre,
+      tipo,
+      telefono,
+      email,
+      descuentoPorcentaje,
+      trabajoExterno,
+      usaMontosFijos,
+      montosFijosServicios,
+      montosFijosExtras,
+      prioridad,
+      observaciones,
+      activo,
+    } = body
+
+    const usaMontosFijosBool =
+      usaMontosFijos === undefined ? undefined : Boolean(usaMontosFijos)
 
     // Validaciones
     if (nombre && (typeof nombre !== 'string' || !nombre.trim())) {
@@ -107,7 +124,26 @@ export async function PUT(
         ...(tipo && { tipo }),
         ...(telefono !== undefined && { telefono: telefono?.trim() || null }),
         ...(email !== undefined && { email: email?.trim() || null }),
-        ...(descuentoPorcentaje !== undefined && { descuentoPorcentaje: descuentoPorcentaje ? Number(descuentoPorcentaje) : null }),
+        ...(trabajoExterno !== undefined && { trabajoExterno: Boolean(trabajoExterno) }),
+        ...(usaMontosFijosBool !== undefined && { usaMontosFijos: usaMontosFijosBool }),
+        ...(usaMontosFijosBool === false && {
+          montosFijosServicios: Prisma.DbNull,
+          montosFijosExtras: Prisma.DbNull,
+          descuentoPorcentaje: descuentoPorcentaje ? Number(descuentoPorcentaje) : null,
+        }),
+        ...(usaMontosFijosBool === true && {
+          descuentoPorcentaje: null,
+          ...(montosFijosServicios !== undefined && {
+            montosFijosServicios: montosFijosServicios ?? {},
+          }),
+          ...(montosFijosExtras !== undefined && {
+            montosFijosExtras: montosFijosExtras ?? {},
+          }),
+        }),
+        ...(usaMontosFijosBool === undefined &&
+          descuentoPorcentaje !== undefined && {
+            descuentoPorcentaje: descuentoPorcentaje ? Number(descuentoPorcentaje) : null,
+          }),
         ...(prioridad !== undefined && { prioridad: Number(prioridad) }),
         ...(observaciones !== undefined && { observaciones: observaciones?.trim() || null }),
         ...(activo !== undefined && { activo: activo }),

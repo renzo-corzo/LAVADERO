@@ -63,6 +63,7 @@ export const authOptions: NextAuthOptions = {
             name: user.nombre,
             email: null, // No tenemos email en el modelo
             role: user.rol,
+            clienteId: user.clienteId ?? null,
           }
         } catch (error) {
           console.error('❌ [AUTH] Error en authorize:', error)
@@ -76,6 +77,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         token.role = (user as any).role
+        token.clienteId = (user as any).clienteId ?? null
       }
       return token
     },
@@ -83,6 +85,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id as string
         session.user.role = token.role as UserRole
+        session.user.clienteId = (token as any).clienteId ?? null
       }
       return session
     },

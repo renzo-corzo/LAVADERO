@@ -26,11 +26,17 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const estado = searchParams.get('estado')
     const fecha = searchParams.get('fecha') // formato: YYYY-MM-DD
+    const incluirExternas = searchParams.get('incluirExternas') === 'true'
 
     const where: any = {}
 
     if (estado) {
       where.estado = estado
+    }
+
+    // Por defecto NO mostrar OTs externas (trabajo fuera del lavadero)
+    if (!incluirExternas) {
+      where.esExterna = false
     }
 
     if (fecha) {
@@ -211,14 +217,48 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const esExterna = Boolean(cliente?.trabajoExterno)
+
+    // Validar horario solo si NO es externa
+    if (!esExterna && !horarioDeseado) {
+      return NextResponse.json(
+        { error: 'El horario deseado es obligatorio para OTs en lavadero' },
+        { status: 400 }
+      )
+    }
+
     // Calcular total
-    let total = Number(servicio.precio)
+    const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+      typeof v === 'object' && v !== null && !Array.isArray(v)
+
+    const asNumberRecord = (v: unknown): Record<string, number> => {
+      if (!isPlainObject(v)) return {}
+      const out: Record<string, number> = {}
+      for (const [k, val] of Object.entries(v)) {
+        if (typeof val === 'number' && Number.isFinite(val)) out[k] = val
+      }
+      return out
+    }
+
+    const usaMontosFijos = Boolean(cliente?.usaMontosFijos)
+    const montosFijosServicios = asNumberRecord(cliente?.montosFijosServicios)
+    const montosFijosExtras = asNumberRecord(cliente?.montosFijosExtras)
+
+    let total = 0
+    const precioServicioFinal = usaMontosFijos
+      ? montosFijosServicios[servicioId] ?? Number(servicio.precio)
+      : Number(servicio.precio)
+    total += Number(precioServicioFinal)
+
     extras.forEach((extra) => {
-      total += Number(extra.precio)
+      const precioExtraFinal = usaMontosFijos
+        ? montosFijosExtras[extra.id] ?? Number(extra.precio)
+        : Number(extra.precio)
+      total += Number(precioExtraFinal)
     })
 
-    // Aplicar descuento del cliente si hay uno seleccionado
-    if (cliente && cliente.descuentoPorcentaje) {
+    // Aplicar descuento del cliente SOLO si NO usa montos fijos
+    if (!usaMontosFijos && cliente && cliente.descuentoPorcentaje) {
       const descuento = (total * cliente.descuentoPorcentaje) / 100
       total = total - descuento
     }
@@ -239,26 +279,15 @@ export async function POST(request: NextRequest) {
     const ot = await prisma.$transaction(async (tx) => {
       console.log('[API OTs POST] Creando OT en BD...')
       const nuevaOT = await tx.ordenTrabajo.create({
-        data: {
+        data: ({
           fechaIngreso: new Date(),
           patente: patente?.trim() || '',
           tipoVehiculo: tipoVehiculo || null,
           descripcionVehiculo: descripcionVehiculo?.trim() || null,
           nombreCliente: nombreCliente?.trim() || null,
           telefonoCliente: telefonoCliente?.trim() || null,
-          horarioDeseado: horarioDeseado ? (() => {
-            try {
-              const fecha = new Date(horarioDeseado)
-              if (isNaN(fecha.getTime())) {
-                console.error('Fecha inválida recibida:', horarioDeseado)
-                return null
-              }
-              return fecha
-            } catch (error) {
-              console.error('Error al parsear fecha horarioDeseado:', error)
-              return null
-            }
-          })() : null,
+          horarioDeseado: esExterna ? null : (horarioDeseado ? new Date(horarioDeseado as any) : null),
+          esExterna,
           clienteId: clienteId || null,
           servicioId,
           observaciones: observaciones || null,
@@ -272,7 +301,7 @@ export async function POST(request: NextRequest) {
               extraId,
             })),
           },
-        },
+        } as any),
         include: {
           servicio: true,
           extras: {
@@ -317,14 +346,17 @@ export async function POST(request: NextRequest) {
     console.log('[API OTs POST] OT creada exitosamente:', ot.id)
 
     // Formatear respuesta
+    const otAny = ot as any
     const otFormateada = {
-      ...ot,
-      extras: ot.extras.map((e) => e.extra),
-      precio: Number(ot.total),
-      servicio: {
-        ...ot.servicio,
-        precio: Number(ot.servicio.precio),
-      },
+      ...otAny,
+      extras: (otAny.extras || []).map((e: any) => e.extra),
+      precio: Number(otAny.total),
+      servicio: otAny.servicio
+        ? {
+            ...otAny.servicio,
+            precio: Number(otAny.servicio.precio),
+          }
+        : undefined,
     }
 
     return NextResponse.json(otFormateada, { status: 201 })

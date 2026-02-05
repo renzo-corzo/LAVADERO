@@ -19,6 +19,10 @@ export default async function DashboardLayout({
     redirect('/login')
   }
 
+  if (session.user.role === 'CLIENTE') {
+    redirect('/portal')
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />

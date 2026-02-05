@@ -46,6 +46,7 @@ export default function NuevaOTPage() {
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null)
   const [loadingClientes, setLoadingClientes] = useState(false)
+  const [loadingClienteSeleccionado, setLoadingClienteSeleccionado] = useState(false)
 
   const [formData, setFormData] = useState({
     tipoCliente: 'WALK_IN' as 'FIJO' | 'WALK_IN',
@@ -69,17 +70,48 @@ export default function NuevaOTPage() {
 
   // Cargar datos del cliente cuando se selecciona
   useEffect(() => {
-    if (formData.clienteId && clientes.length > 0) {
-      const cliente = clientes.find((c) => c.id === formData.clienteId)
-      setClienteSeleccionado(cliente || null)
-      if (cliente) {
-        // Si es cliente fijo, prellenar nombre y teléfono
+    const cargarDetalleCliente = async () => {
+      if (!formData.clienteId) {
+        setClienteSeleccionado(null)
+        return
+      }
+
+      // Fallback rápido con lo que ya está en lista (mejor UX)
+      const clienteEnLista = clientes.find((c) => c.id === formData.clienteId) || null
+      if (clienteEnLista) {
+        setClienteSeleccionado(clienteEnLista)
         setFormData((prev) => ({
           ...prev,
-          nombreCliente: cliente.nombre,
-          telefonoCliente: cliente.telefono || '',
+          nombreCliente: clienteEnLista.nombre,
+          telefonoCliente: clienteEnLista.telefono || '',
         }))
       }
+
+      // Traer detalle actualizado (incluye montos fijos)
+      try {
+        setLoadingClienteSeleccionado(true)
+        const response = await fetch(`/api/clientes/${formData.clienteId}`)
+        if (response.ok) {
+          const data = await response.json()
+          const cliente = (data?.cliente || null) as Cliente | null
+          setClienteSeleccionado(cliente)
+          if (cliente) {
+            setFormData((prev) => ({
+              ...prev,
+              nombreCliente: cliente.nombre,
+              telefonoCliente: cliente.telefono || '',
+            }))
+          }
+        }
+      } catch (error) {
+        console.error('Error al cargar detalle del cliente:', error)
+      } finally {
+        setLoadingClienteSeleccionado(false)
+      }
+    }
+
+    if (formData.tipoCliente === 'FIJO') {
+      cargarDetalleCliente()
     } else {
       setClienteSeleccionado(null)
     }
@@ -103,6 +135,24 @@ export default function NuevaOTPage() {
       cargarClientes()
     }
   }, [session])
+
+  const clienteUsaMontosFijos =
+    formData.tipoCliente === 'FIJO' && Boolean(clienteSeleccionado?.usaMontosFijos)
+
+  const clienteTrabajoExterno =
+    formData.tipoCliente === 'FIJO' && Boolean(clienteSeleccionado?.trabajoExterno)
+
+  const getPrecioServicioParaCliente = (servicio: Servicio) => {
+    if (!clienteUsaMontosFijos) return Number(servicio.precio)
+    const fijo = (clienteSeleccionado?.montosFijosServicios as any)?.[servicio.id]
+    return fijo !== undefined && fijo !== null && !isNaN(Number(fijo)) ? Number(fijo) : Number(servicio.precio)
+  }
+
+  const getPrecioExtraParaCliente = (extra: Extra) => {
+    if (!clienteUsaMontosFijos) return Number(extra.precio)
+    const fijo = (clienteSeleccionado?.montosFijosExtras as any)?.[extra.id]
+    return fijo !== undefined && fijo !== null && !isNaN(Number(fijo)) ? Number(fijo) : Number(extra.precio)
+  }
 
   const cargarClientes = async () => {
     try {
@@ -141,16 +191,19 @@ export default function NuevaOTPage() {
     const servicioSeleccionado = servicios.find((s) => s.id === formData.servicioId)
     if (!servicioSeleccionado) return 0
 
-    let total = Number(servicioSeleccionado.precio)
+    const precioServicioFinal = getPrecioServicioParaCliente(servicioSeleccionado)
+
+    let total = Number(precioServicioFinal)
     formData.extrasIds.forEach((extraId) => {
       const extra = extras.find((e) => e.id === extraId)
       if (extra) {
-        total += Number(extra.precio)
+        const precioExtraFinal = getPrecioExtraParaCliente(extra)
+        total += Number(precioExtraFinal)
       }
     })
 
-    // Aplicar descuento del cliente si hay uno seleccionado
-    if (formData.tipoCliente === 'FIJO' && clienteSeleccionado && clienteSeleccionado.descuentoPorcentaje) {
+    // Aplicar descuento del cliente SOLO si NO usa montos fijos
+    if (!clienteUsaMontosFijos && formData.tipoCliente === 'FIJO' && clienteSeleccionado && clienteSeleccionado.descuentoPorcentaje) {
       const descuento = (total * clienteSeleccionado.descuentoPorcentaje) / 100
       total = total - descuento
     }
@@ -165,6 +218,10 @@ export default function NuevaOTPage() {
 
   // Validar disponibilidad de horario
   const validarDisponibilidadHorario = async () => {
+    if (clienteTrabajoExterno) {
+      setDisponibilidad(null)
+      return
+    }
     if (!formData.servicioId || !formData.horarioDeseado) {
       setDisponibilidad(null)
       return
@@ -184,6 +241,7 @@ export default function NuevaOTPage() {
           extrasIds: formData.extrasIds,
           horarioDeseado: hoy.toISOString(),
           fechaIngreso: new Date().toISOString(),
+          clienteId: formData.tipoCliente === 'FIJO' && formData.clienteId ? formData.clienteId : null,
         }),
       })
 
@@ -213,6 +271,10 @@ export default function NuevaOTPage() {
 
   // Cargar horarios disponibles del día cuando cambia servicio o se abre el selector
   const cargarHorariosDisponibles = async () => {
+    if (clienteTrabajoExterno) {
+      setHorariosDelDia(null)
+      return
+    }
     if (!formData.servicioId) {
       setHorariosDelDia(null)
       return
@@ -341,8 +403,10 @@ export default function NuevaOTPage() {
     if (!formData.telefonoCliente || formData.telefonoCliente.trim() === '') {
       newErrors.telefonoCliente = 'El teléfono del cliente es obligatorio'
     }
-    if (!formData.horarioDeseado || formData.horarioDeseado.trim() === '') {
-      newErrors.horarioDeseado = 'El horario deseado es obligatorio'
+    if (!clienteTrabajoExterno) {
+      if (!formData.horarioDeseado || formData.horarioDeseado.trim() === '') {
+        newErrors.horarioDeseado = 'El horario deseado es obligatorio'
+      }
     }
     // NO bloquear por conflictos - solo advertir, el usuario decide manualmente
     if (!formData.servicioId) {
@@ -373,12 +437,16 @@ export default function NuevaOTPage() {
           precioAjustado: formData.precioAjustado ? parseFloat(formData.precioAjustado) : null,
           justificacionPrecio: formData.justificacionPrecio || null,
           // Combinar fecha actual con la hora seleccionada
-          horarioDeseado: formData.horarioDeseado ? (() => {
-            const hoy = new Date()
-            const [horas, minutos] = formData.horarioDeseado.split(':')
-            hoy.setHours(parseInt(horas), parseInt(minutos), 0, 0)
-            return hoy.toISOString()
-          })() : null,
+          horarioDeseado: clienteTrabajoExterno
+            ? null
+            : formData.horarioDeseado
+              ? (() => {
+                  const hoy = new Date()
+                  const [horas, minutos] = formData.horarioDeseado.split(':')
+                  hoy.setHours(parseInt(horas), parseInt(minutos), 0, 0)
+                  return hoy.toISOString()
+                })()
+              : null,
         }),
       })
 
@@ -525,16 +593,30 @@ export default function NuevaOTPage() {
                         { value: '', label: 'Seleccionar cliente...' },
                         ...clientes.map((c) => ({
                           value: c.id,
-                          label: `${c.nombre}${c.descuentoPorcentaje ? ` (${c.descuentoPorcentaje}% desc.)` : ''}`,
+                          label: `${c.nombre}${
+                            c.usaMontosFijos
+                              ? ' (tarifa fija)'
+                              : c.descuentoPorcentaje
+                                ? ` (${c.descuentoPorcentaje}% desc.)`
+                                : ''
+                          }`,
                         })),
                       ]}
                       required
                       disabled={loadingClientes}
                     />
-                    {clienteSeleccionado && clienteSeleccionado.descuentoPorcentaje && (
-                      <p className="text-sm text-green-600 mt-1">
-                        ✓ Se aplicará un descuento del {clienteSeleccionado.descuentoPorcentaje}%
+                    {loadingClienteSeleccionado ? (
+                      <p className="text-sm text-gray-500 mt-1">Cargando configuración del cliente...</p>
+                    ) : clienteSeleccionado?.usaMontosFijos ? (
+                      <p className="text-sm text-blue-700 mt-1">
+                        ✓ Se aplicará la tarifa fija configurada para este cliente (sin descuentos)
                       </p>
+                    ) : (
+                      clienteSeleccionado?.descuentoPorcentaje && (
+                        <p className="text-sm text-green-600 mt-1">
+                          ✓ Se aplicará un descuento del {clienteSeleccionado.descuentoPorcentaje}%
+                        </p>
+                      )
                     )}
                   </div>
                 )}
@@ -570,7 +652,11 @@ export default function NuevaOTPage() {
                   </label>
                   
                   {/* Selector visual de horarios (siempre visible cuando hay servicio) */}
-                  {formData.servicioId ? (
+                  {clienteTrabajoExterno ? (
+                    <div className="p-4 border rounded bg-blue-50 border-blue-200 text-blue-900 text-sm">
+                      Este cliente está configurado como <strong>trabajo externo</strong>: no requiere turnos y las OTs se procesan en paralelo.
+                    </div>
+                  ) : formData.servicioId ? (
                     <>
                       {horariosDelDia ? (
                         <div className="border-2 border-gray-300 rounded-lg p-4 bg-white shadow-sm">
@@ -807,7 +893,7 @@ export default function NuevaOTPage() {
                   placeholder="Seleccionar servicio"
                   options={servicios.map((s) => ({
                     value: s.id,
-                    label: `${s.nombre} - ${formatCurrency(Number(s.precio))}`,
+                    label: `${s.nombre} - ${formatCurrency(getPrecioServicioParaCliente(s))}`,
                   }))}
                 />
               )}
@@ -834,7 +920,7 @@ export default function NuevaOTPage() {
                       <span className="ml-3 flex-1">
                         <span className="font-medium">{extra.nombre}</span>
                         <span className="ml-2 text-gray-600">
-                          {formatCurrency(Number(extra.precio))}
+                          {formatCurrency(getPrecioExtraParaCliente(extra))}
                         </span>
                       </span>
                     </label>

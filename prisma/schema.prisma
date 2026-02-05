@@ -18,6 +18,7 @@ enum UserRole {
   DUENO
   ENCARGADO
   LAVADOR
+  CLIENTE
 }
 
 enum OTEstado {
@@ -64,11 +65,13 @@ model Usuario {
   usuario   String   @unique // login username
   password  String   // hash de contraseña
   rol       UserRole
+  clienteId String?  // Si rol=CLIENTE, referencia a concesionaria (Cliente)
   activo    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relaciones
+  cliente             Cliente?            @relation(fields: [clienteId], references: [id])
   otsCreadas          OrdenTrabajo[]       @relation("OTCreador")
   otsAsignadas        OrdenTrabajoEmpleado[]
   pagosRegistrados    Pago[]
@@ -80,6 +83,7 @@ model Usuario {
   estadosCambiados    EstadoHistorial[]
   auditoriaLogs       AuditoriaLog[]
 
+  @@index([clienteId])
   @@map("usuarios")
 }
 
@@ -123,6 +127,10 @@ model Cliente {
   telefono            String?
   email               String?
   descuentoPorcentaje Float?      // Porcentaje de descuento (ej: 10 para 10% off)
+  trabajoExterno      Boolean     @default(false) // Si true, OT sin turnos (se trabaja fuera del lavadero)
+  usaMontosFijos      Boolean     @default(false) // Si true, usa montos fijos por servicio/extra en vez de descuento
+  montosFijosServicios Json?      // { [servicioId]: number }
+  montosFijosExtras    Json?      // { [extraId]: number }
   prioridad           Int         @default(0) // Mayor número = mayor prioridad
   activo              Boolean     @default(true)
   observaciones       String?     // Notas sobre el cliente
@@ -131,6 +139,7 @@ model Cliente {
 
   // Relaciones
   ordenesTrabajo      OrdenTrabajo[]
+  portalUsuarios      Usuario[]
 
   @@index([tipo])
   @@index([activo])
@@ -147,6 +156,7 @@ model OrdenTrabajo {
   nombreCliente       String?     // Nuevo: nombre del cliente (temporalmente opcional para migración)
   telefonoCliente     String?     // Nuevo: teléfono del cliente (temporalmente opcional para migración)
   horarioDeseado      DateTime?   // Nuevo: horario en que quiere tenerlo listo
+  esExterna           Boolean     @default(false) // OT fuera del lavadero: no ocupa turnos ni genera conflictos
   clienteId           String?     // Cliente fijo (concesionaria), null para walk-in
   servicioId          String
   observaciones       String?

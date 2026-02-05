@@ -15,6 +15,7 @@ interface DisponibilidadRequest {
   horarioDeseado: string // ISO string
   fechaIngreso?: string // ISO string, opcional (default: ahora)
   excludeOTId?: string // Para excluir una OT en edición
+  clienteId?: string | null // opcional: para OTs externas (sin turnos)
 }
 
 export async function POST(request: NextRequest) {
@@ -29,7 +30,20 @@ export async function POST(request: NextRequest) {
     }
 
     const body: DisponibilidadRequest = await request.json()
-    const { servicioId, extrasIds = [], horarioDeseado, fechaIngreso, excludeOTId } = body
+    const { servicioId, extrasIds = [], horarioDeseado, fechaIngreso, excludeOTId, clienteId } = body
+
+    // Si es OT externa (cliente con trabajoExterno), no se valida horario
+    if (clienteId) {
+      const cliente: any = await prisma.cliente.findUnique({ where: { id: clienteId } })
+      if (cliente?.trabajoExterno) {
+        return NextResponse.json({
+          disponible: true,
+          conflicto: null,
+          horariosDisponibles: [],
+          motivo: 'OT externa: no ocupa turnos',
+        })
+      }
+    }
 
     if (!servicioId || !horarioDeseado) {
       return NextResponse.json(
@@ -102,6 +116,7 @@ export async function POST(request: NextRequest) {
         gte: fechaInicio,
         lte: fechaFin,
       },
+      esExterna: false,
       estado: {
         in: ['EN_COLA', 'EN_PROCESO', 'LISTO'], // Solo OTs activas
       },

@@ -83,9 +83,10 @@ export default function EditarExtraPage() {
         },
         body: JSON.stringify({
           ...formData,
+          nombre: formData.nombre.trim(),
           precio: parseFloat(formData.precio),
-          duracionEstimada: formData.duracionEstimada || null,
-          descripcion: formData.descripcion || null,
+          duracionEstimada: formData.duracionEstimada ? parseInt(formData.duracionEstimada) : undefined,
+          descripcion: formData.descripcion,
         }),
       })
 

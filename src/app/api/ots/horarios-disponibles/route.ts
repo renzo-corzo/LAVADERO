@@ -139,6 +139,7 @@ export async function GET(request: NextRequest) {
           },
         },
       ],
+      esExterna: false,
       estado: {
         in: ['EN_COLA', 'EN_PROCESO', 'LISTO'],
       },

@@ -9,6 +9,7 @@ import { signIn } from 'next-auth/react'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { getSession } from 'next-auth/react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -33,7 +34,12 @@ export default function LoginPage() {
         setError('Usuario o contraseña incorrectos')
       } else {
         // Redirigir según rol
-        router.push('/dashboard')
+        const session = await getSession()
+        if (session?.user?.role === 'CLIENTE') {
+          router.push('/portal')
+        } else {
+          router.push('/dashboard')
+        }
         router.refresh()
       }
     } catch (err) {

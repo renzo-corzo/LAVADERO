@@ -55,10 +55,11 @@ export default function NuevoServicioPage() {
         },
         body: JSON.stringify({
           ...formData,
+          nombre: formData.nombre.trim(),
           precio: parseFloat(formData.precio),
-          duracionEstimada: formData.duracionEstimada || null,
-          tipoVehiculo: formData.tipoVehiculo || null,
-          descripcion: formData.descripcion || null,
+          duracionEstimada: formData.duracionEstimada ? parseInt(formData.duracionEstimada) : undefined,
+          tipoVehiculo: formData.tipoVehiculo || undefined,
+          descripcion: formData.descripcion,
         }),
       })
 

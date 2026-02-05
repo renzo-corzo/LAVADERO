@@ -27,6 +27,7 @@ export function hasPermission(userRole: UserRole, action: string): boolean {
       'comision:config',
       'reporte:view',
       'servicio:manage',
+      'portal:manage',
     ],
     LAVADOR: [
       'ot:create',
@@ -37,6 +38,7 @@ export function hasPermission(userRole: UserRole, action: string): boolean {
       'pago:view:assigned',
       'pago:create',
     ],
+    CLIENTE: ['portal:report:view'],
   }
 
   const userPerms = permissions[userRole] || []

@@ -182,7 +182,7 @@ export default function ClientesPage() {
                     Teléfono
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Descuento
+                    Tarifa / Descuento
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Estado
@@ -210,7 +210,11 @@ export default function ClientesPage() {
                       {cliente.telefono || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {cliente.descuentoPorcentaje ? `${cliente.descuentoPorcentaje}%` : '-'}
+                      {cliente.usaMontosFijos
+                        ? 'Tarifa fija'
+                        : cliente.descuentoPorcentaje
+                          ? `${cliente.descuentoPorcentaje}%`
+                          : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${

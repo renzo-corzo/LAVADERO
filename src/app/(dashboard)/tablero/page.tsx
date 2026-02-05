@@ -38,6 +38,10 @@ export default function TableroPage() {
     ENTREGADO: [],
   })
   const [loading, setLoading] = useState(true)
+  const [mostrarExternas, setMostrarExternas] = useState(false)
+  const [seleccionadasIds, setSeleccionadasIds] = useState<string[]>([])
+  const [estadoLote, setEstadoLote] = useState<'EN_PROCESO' | 'LISTO' | 'ENTREGADO'>('LISTO')
+  const [aplicandoLote, setAplicandoLote] = useState(false)
   const [filtroFecha, setFiltroFecha] = useState<string>(() => {
     const hoy = new Date()
     const year = hoy.getFullYear()
@@ -100,6 +104,9 @@ export default function TableroPage() {
       if (filtroFecha) {
         params.append('fecha', filtroFecha)
       }
+      if (mostrarExternas) {
+        params.append('incluirExternas', 'true')
+      }
       params.append('_t', Date.now().toString())
 
       const response = await fetch(`/api/ots?${params.toString()}`, {
@@ -119,6 +126,10 @@ export default function TableroPage() {
           }
         })
         setOTs(otsPorEstado)
+
+        // Mantener selección solo para OTs que siguen visibles
+        const idsVisibles = new Set<string>((data as OrdenTrabajo[]).map((ot) => ot.id))
+        setSeleccionadasIds((prev) => prev.filter((id) => idsVisibles.has(id)))
       } else {
         console.error('Error al cargar OTs:', response.status, response.statusText)
       }
@@ -127,7 +138,7 @@ export default function TableroPage() {
     } finally {
       setLoading(false)
     }
-  }, [filtroFecha, esMovil, mostrarKanban, mounted])
+  }, [filtroFecha, esMovil, mostrarKanban, mounted, mostrarExternas])
 
   // Cargar OTs cuando cambian las dependencias (solo después de montar)
   // Este hook SIEMPRE se ejecuta, sin importar el dispositivo
@@ -189,6 +200,55 @@ export default function TableroPage() {
     }
   }
 
+  const toggleSeleccion = (otId: string) => {
+    setSeleccionadasIds((prev) => (prev.includes(otId) ? prev.filter((id) => id !== otId) : [...prev, otId]))
+  }
+
+  const limpiarSeleccion = () => setSeleccionadasIds([])
+
+  const handleCambiarEstadoLote = async () => {
+    if (seleccionadasIds.length === 0) return
+    if (!confirm(`¿Cambiar estado de ${seleccionadasIds.length} OTs externas a "${estadoLote}"?`)) {
+      return
+    }
+
+    try {
+      setAplicandoLote(true)
+      const response = await fetch('/api/ots/estado-lote', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          otIds: seleccionadasIds,
+          nuevoEstado: estadoLote,
+        }),
+      })
+
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        alert(`Error: ${data?.error || 'No se pudo cambiar el estado en lote'}`)
+        return
+      }
+
+      const updatedCount = Number(data?.updatedCount || 0)
+      const failedCount = Number(data?.failedCount || 0)
+
+      if (failedCount > 0) {
+        alert(`Listo: ${updatedCount} actualizadas. ${failedCount} no se pudieron actualizar (transición no permitida).`)
+      } else {
+        alert(`Listo: ${updatedCount} OTs actualizadas.`)
+      }
+
+      limpiarSeleccion()
+      setTimeout(() => cargarOTs(), 300)
+    } catch (error) {
+      console.error('Error al cambiar estado en lote:', error)
+      alert('Error al cambiar estado en lote')
+    } finally {
+      setAplicandoLote(false)
+    }
+  }
+
   const renderTarjetaOT = (ot: OrdenTrabajo, index: number) => (
     <motion.div
       key={ot.id}
@@ -198,7 +258,7 @@ export default function TableroPage() {
       transition={{ duration: 0.3, delay: index * 0.05 }}
       whileHover={{ scale: 1.02, y: -2 }}
       whileTap={{ scale: 0.98 }}
-      className="bg-white/90 backdrop-blur-sm border border-gray-200/50 rounded-xl p-4 mb-3 shadow-sm hover:shadow-lg transition-all cursor-pointer"
+      className="bg-white border border-gray-200 rounded-xl p-4 mb-3 shadow-sm hover:shadow-lg transition-all cursor-pointer"
       onClick={() => router.push(`/tablero/${ot.id}`)}
     >
       <div className="flex justify-between items-start mb-2">
@@ -214,8 +274,31 @@ export default function TableroPage() {
               ⏰ {formatHorarioDeseado(new Date(ot.horarioDeseado), new Date(ot.fechaIngreso))}
             </div>
           )}
+          {ot.esExterna && (
+            <div className="mt-2">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-purple-100 text-purple-700">
+                OT externa
+              </span>
+            </div>
+          )}
         </div>
         <div className="text-right ml-2 flex-shrink-0">
+          {ot.esExterna && (
+            <div className="flex items-center justify-end gap-2 mb-1">
+              <label
+                className="inline-flex items-center gap-2 text-xs text-gray-600 select-none"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <input
+                  type="checkbox"
+                  checked={seleccionadasIds.includes(ot.id)}
+                  onChange={() => toggleSeleccion(ot.id)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                Seleccionar
+              </label>
+            </div>
+          )}
           <div className="font-bold text-base sm:text-sm text-gray-900">{formatCurrency(ot.precio)}</div>
           {ot.estado === 'EN_PROCESO' && ot.fechaIngreso && (
             <div className="text-xs text-gray-500">
@@ -442,6 +525,25 @@ export default function TableroPage() {
               className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
+          {(session?.user.role === 'ENCARGADO' || session?.user.role === 'DUENO') && (
+            <div className="flex items-end">
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={mostrarExternas}
+                  onChange={(e) => {
+                    const checked = e.target.checked
+                    setMostrarExternas(checked)
+                    if (!checked) {
+                      setSeleccionadasIds([])
+                    }
+                  }}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                Mostrar OTs externas (trabajo en planta)
+              </label>
+            </div>
+          )}
           <div className="flex items-end">
             <Button
               variant="secondary"
@@ -459,11 +561,43 @@ export default function TableroPage() {
         </div>
       </Card>
 
+      {mostrarExternas && seleccionadasIds.length > 0 && (
+        <Card className="mb-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+            <div className="text-sm text-gray-700">
+              <strong>{seleccionadasIds.length}</strong> OTs externas seleccionadas
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+              <select
+                value={estadoLote}
+                onChange={(e) => setEstadoLote(e.target.value as any)}
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                disabled={aplicandoLote}
+              >
+                <option value="EN_PROCESO">EN_PROCESO</option>
+                <option value="LISTO">LISTO</option>
+                <option value="ENTREGADO">ENTREGADO</option>
+              </select>
+              <Button
+                variant="primary"
+                onClick={handleCambiarEstadoLote}
+                disabled={aplicandoLote || seleccionadasIds.length === 0}
+              >
+                {aplicandoLote ? 'Aplicando...' : 'Aplicar estado'}
+              </Button>
+              <Button variant="secondary" onClick={limpiarSeleccion} disabled={aplicandoLote}>
+                Limpiar selección
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 overflow-x-auto">
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="bg-gray-50/80 backdrop-blur-sm rounded-xl p-4 min-w-[280px] border border-gray-200/50"
+          className="bg-white rounded-xl p-4 min-w-[280px] border border-gray-200 shadow-sm border-t-4 border-t-gray-400"
         >
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-bold text-gray-700">En Cola</h2>
@@ -496,7 +630,7 @@ export default function TableroPage() {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-yellow-50/80 backdrop-blur-sm rounded-xl p-4 min-w-[280px] border border-yellow-200/50"
+          className="bg-white rounded-xl p-4 min-w-[280px] border border-gray-200 shadow-sm border-t-4 border-t-yellow-400"
         >
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-bold text-gray-700">En Proceso</h2>
@@ -529,7 +663,7 @@ export default function TableroPage() {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-green-50/80 backdrop-blur-sm rounded-xl p-4 min-w-[280px] border border-green-200/50"
+          className="bg-white rounded-xl p-4 min-w-[280px] border border-gray-200 shadow-sm border-t-4 border-t-green-400"
         >
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-bold text-gray-700">Listo</h2>
@@ -562,7 +696,7 @@ export default function TableroPage() {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-blue-50/80 backdrop-blur-sm rounded-xl p-4 min-w-[280px] border border-blue-200/50"
+          className="bg-white rounded-xl p-4 min-w-[280px] border border-gray-200 shadow-sm border-t-4 border-t-blue-400"
         >
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-bold text-gray-700">Entregado</h2>

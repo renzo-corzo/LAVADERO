@@ -5,18 +5,25 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
+import { formatCurrency } from '@/lib/utils'
+import type { Extra, Servicio } from '@/types'
 
 export default function NuevoClientePage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const [loadingCatalogos, setLoadingCatalogos] = useState(true)
+  const [servicios, setServicios] = useState<Servicio[]>([])
+  const [extras, setExtras] = useState<Extra[]>([])
   
   const [formData, setFormData] = useState({
     nombre: '',
@@ -24,6 +31,10 @@ export default function NuevoClientePage() {
     telefono: '',
     email: '',
     descuentoPorcentaje: '',
+    trabajoExterno: false,
+    usaMontosFijos: false,
+    montosFijosServicios: {} as Record<string, number>,
+    montosFijosExtras: {} as Record<string, number>,
     observaciones: '',
   })
 
@@ -31,6 +42,27 @@ export default function NuevoClientePage() {
     { value: 'CONCESIONARIA', label: '🏢 Concesionaria' },
     { value: 'WALK_IN', label: '👤 Walk-in' },
   ]
+
+  const cargarCatalogos = async () => {
+    try {
+      setLoadingCatalogos(true)
+      const response = await fetch('/api/catalogos/activos')
+      if (response.ok) {
+        const data = await response.json()
+        setServicios(data.servicios || [])
+        setExtras(data.extras || [])
+      }
+    } catch (e) {
+      console.error('Error al cargar catálogos:', e)
+    } finally {
+      setLoadingCatalogos(false)
+    }
+  }
+
+  useEffect(() => {
+    cargarCatalogos()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -48,7 +80,7 @@ export default function NuevoClientePage() {
     }
 
     // Validar descuento si está presente
-    if (formData.descuentoPorcentaje && (isNaN(Number(formData.descuentoPorcentaje)) || Number(formData.descuentoPorcentaje) < 0 || Number(formData.descuentoPorcentaje) > 100)) {
+    if (!formData.usaMontosFijos && formData.descuentoPorcentaje && (isNaN(Number(formData.descuentoPorcentaje)) || Number(formData.descuentoPorcentaje) < 0 || Number(formData.descuentoPorcentaje) > 100)) {
       setError('El descuento debe ser un número entre 0 y 100')
       return
     }
@@ -64,7 +96,15 @@ export default function NuevoClientePage() {
           tipo: formData.tipo,
           telefono: formData.telefono.trim() || null,
           email: formData.email.trim() || null,
-          descuentoPorcentaje: formData.descuentoPorcentaje ? Number(formData.descuentoPorcentaje) : null,
+          descuentoPorcentaje: formData.usaMontosFijos
+            ? null
+            : formData.descuentoPorcentaje
+              ? Number(formData.descuentoPorcentaje)
+              : null,
+          trabajoExterno: Boolean(formData.trabajoExterno),
+          usaMontosFijos: formData.usaMontosFijos,
+          montosFijosServicios: formData.usaMontosFijos ? formData.montosFijosServicios : null,
+          montosFijosExtras: formData.usaMontosFijos ? formData.montosFijosExtras : null,
           prioridad: 0, // Por ahora sin prioridad
           observaciones: formData.observaciones.trim() || null,
         }),
@@ -147,9 +187,160 @@ export default function NuevoClientePage() {
               value={formData.descuentoPorcentaje}
               onChange={(e) => setFormData({ ...formData, descuentoPorcentaje: e.target.value })}
               placeholder="Ej: 10 para 10% de descuento"
+              disabled={formData.usaMontosFijos}
             />
 
           </div>
+
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="usaMontosFijos"
+              checked={formData.usaMontosFijos}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  usaMontosFijos: e.target.checked,
+                  descuentoPorcentaje: e.target.checked ? '' : prev.descuentoPorcentaje,
+                }))
+              }
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="usaMontosFijos" className="ml-2 block text-sm text-gray-900">
+              Usar montos fijos por cliente (sin descuentos)
+            </label>
+          </div>
+
+          {formData.tipo === 'CONCESIONARIA' && (
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="trabajoExterno"
+                checked={formData.trabajoExterno}
+                onChange={(e) => setFormData((prev) => ({ ...prev, trabajoExterno: e.target.checked }))}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="trabajoExterno" className="ml-2 block text-sm text-gray-900">
+                Trabajo externo (sin turnos, OTs en paralelo)
+              </label>
+            </div>
+          )}
+
+          {formData.usaMontosFijos && (
+            <div className="space-y-6 border-t pt-6">
+              <div>
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+                  <h3 className="text-sm font-semibold text-gray-900">Tarifa fija por servicio (opcional)</h3>
+                  <div className="flex flex-wrap gap-2">
+                    <Link href="/catalogos/servicios/nuevo">
+                      <Button type="button" variant="secondary" size="sm">
+                        + Crear servicio (catálogo)
+                      </Button>
+                    </Link>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => cargarCatalogos()}
+                      disabled={loadingCatalogos}
+                    >
+                      Actualizar lista
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-600 mb-4">
+                  Si dejás un precio vacío, se usará el precio del catálogo. El valor que cargues acá aplica solo a este cliente.
+                </p>
+                {loadingCatalogos ? (
+                  <p className="text-sm text-gray-500">Cargando servicios...</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {servicios.map((s) => (
+                      <Input
+                        key={s.id}
+                        id={`servicio-${s.id}`}
+                        label={`${s.nombre} (catálogo: ${formatCurrency(Number(s.precio))})`}
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.montosFijosServicios[s.id]?.toString() ?? ''}
+                        onChange={(e) => {
+                          const value = e.target.value
+                          setFormData((prev) => {
+                            const next = { ...prev.montosFijosServicios }
+                            if (!value) {
+                              delete next[s.id]
+                            } else {
+                              next[s.id] = Number(value)
+                            }
+                            return { ...prev, montosFijosServicios: next }
+                          })
+                        }}
+                        placeholder="Precio fijo (solo este cliente)"
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+                  <h3 className="text-sm font-semibold text-gray-900">Tarifa fija por extra (opcional)</h3>
+                  <div className="flex flex-wrap gap-2">
+                    <Link href="/catalogos/extras/nuevo">
+                      <Button type="button" variant="secondary" size="sm">
+                        + Crear extra (catálogo)
+                      </Button>
+                    </Link>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => cargarCatalogos()}
+                      disabled={loadingCatalogos}
+                    >
+                      Actualizar lista
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-600 mb-4">
+                  Nota: “Crear extra” crea el extra para todos los clientes. El precio fijo de este cliente se define acá abajo.
+                </p>
+                {loadingCatalogos ? (
+                  <p className="text-sm text-gray-500">Cargando extras...</p>
+                ) : extras.length === 0 ? (
+                  <p className="text-sm text-gray-500">No hay extras en el catálogo.</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {extras.map((ex) => (
+                      <Input
+                        key={ex.id}
+                        id={`extra-${ex.id}`}
+                        label={`${ex.nombre} (catálogo: ${formatCurrency(Number(ex.precio))})`}
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.montosFijosExtras[ex.id]?.toString() ?? ''}
+                        onChange={(e) => {
+                          const value = e.target.value
+                          setFormData((prev) => {
+                            const next = { ...prev.montosFijosExtras }
+                            if (!value) {
+                              delete next[ex.id]
+                            } else {
+                              next[ex.id] = Number(value)
+                            }
+                            return { ...prev, montosFijosExtras: next }
+                          })
+                        }}
+                        placeholder="Precio fijo (solo este cliente)"
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           <Textarea
             id="observaciones"

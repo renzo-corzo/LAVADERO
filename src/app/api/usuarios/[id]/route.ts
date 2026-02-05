@@ -88,10 +88,19 @@ export async function PUT(
     // Verificar que el usuario existe
     const usuarioExistente = await prisma.usuario.findUnique({
       where: { id: params.id },
+      select: { id: true, usuario: true, rol: true, activo: true },
     })
 
     if (!usuarioExistente) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+    }
+
+    // Evitar escalamiento: los usuarios del portal (CLIENTE) se gestionan desde Clientes -> Acceso Portal
+    if (usuarioExistente.rol === 'CLIENTE') {
+      return NextResponse.json(
+        { error: 'Este usuario pertenece al portal del cliente. Gestioná su acceso desde Clientes → Acceso Portal.' },
+        { status: 400 }
+      )
     }
 
     // Verificar que el username no esté ocupado por otro usuario

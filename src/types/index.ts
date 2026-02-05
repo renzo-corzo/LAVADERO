@@ -5,7 +5,7 @@
 
 // Roles de usuario
 // Nota: En Prisma se usa "DUENO" (sin Ñ), pero en TypeScript mantenemos "DUEÑO" para mejor UX
-export type UserRole = 'DUENO' | 'ENCARGADO' | 'LAVADOR'
+export type UserRole = 'DUENO' | 'ENCARGADO' | 'LAVADOR' | 'CLIENTE'
 
 // Estados de Orden de Trabajo
 export type OTEstado = 'EN_COLA' | 'EN_PROCESO' | 'LISTO' | 'ENTREGADO' | 'CANCELADO'
@@ -30,6 +30,10 @@ export interface Cliente {
   telefono?: string
   email?: string
   descuentoPorcentaje?: number // Porcentaje de descuento (ej: 10 para 10% off)
+  trabajoExterno?: boolean
+  usaMontosFijos?: boolean
+  montosFijosServicios?: Record<string, number> | null
+  montosFijosExtras?: Record<string, number> | null
   prioridad: number // Mayor número = mayor prioridad
   activo: boolean
   observaciones?: string
@@ -43,6 +47,7 @@ export interface Usuario {
   nombre: string
   usuario: string
   rol: UserRole
+  clienteId?: string | null
   activo: boolean
   createdAt: Date
   updatedAt: Date
@@ -83,6 +88,7 @@ export interface OrdenTrabajo {
   nombreCliente?: string // Nuevo: nombre del cliente (opcional en BD temporalmente para migración)
   telefonoCliente?: string // Nuevo: teléfono del cliente (opcional en BD temporalmente para migración)
   horarioDeseado?: Date // Nuevo: horario en que quiere tenerlo listo
+  esExterna?: boolean
   clienteId?: string // Cliente fijo (concesionaria), null para walk-in
   cliente?: Cliente // Cliente relacionado
   servicioId: string

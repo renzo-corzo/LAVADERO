@@ -144,8 +144,17 @@ export async function PUT(
       justificacionPrecio,
     } = body
 
+    // Determinar si es OT externa por el cliente asociado
+    let cliente: any = null
+    if (otActual.clienteId) {
+      cliente = await prisma.cliente.findUnique({
+        where: { id: otActual.clienteId },
+      })
+    }
+    const esExterna = Boolean(cliente?.trabajoExterno)
+
     // Validaciones
-    if (!servicioId || !patente || !nombreCliente || !telefonoCliente || !horarioDeseado) {
+    if (!servicioId || !patente || !nombreCliente || !telefonoCliente || (!esExterna && !horarioDeseado)) {
       return NextResponse.json(
         { error: 'Servicio, patente, nombre del cliente, teléfono, horario deseado y al menos un empleado son obligatorios' },
         { status: 400 }
@@ -191,10 +200,41 @@ export async function PUT(
     }
 
     // Calcular total
-    let total = Number(servicio.precio)
+
+    const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+      typeof v === 'object' && v !== null && !Array.isArray(v)
+
+    const asNumberRecord = (v: unknown): Record<string, number> => {
+      if (!isPlainObject(v)) return {}
+      const out: Record<string, number> = {}
+      for (const [k, val] of Object.entries(v)) {
+        if (typeof val === 'number' && Number.isFinite(val)) out[k] = val
+      }
+      return out
+    }
+
+    const usaMontosFijos = Boolean(cliente?.usaMontosFijos)
+    const montosFijosServicios = asNumberRecord(cliente?.montosFijosServicios)
+    const montosFijosExtras = asNumberRecord(cliente?.montosFijosExtras)
+
+    let total = 0
+    const precioServicioFinal = usaMontosFijos
+      ? montosFijosServicios[servicioId] ?? Number(servicio.precio)
+      : Number(servicio.precio)
+    total += Number(precioServicioFinal)
+
     extras.forEach((extra) => {
-      total += Number(extra.precio)
+      const precioExtraFinal = usaMontosFijos
+        ? montosFijosExtras[extra.id] ?? Number(extra.precio)
+        : Number(extra.precio)
+      total += Number(precioExtraFinal)
     })
+
+    // Aplicar descuento SOLO si NO usa montos fijos
+    if (!usaMontosFijos && cliente && cliente.descuentoPorcentaje) {
+      const descuento = (total * cliente.descuentoPorcentaje) / 100
+      total = total - descuento
+    }
 
     // Si hay precio ajustado, usar ese
     if (precioAjustado !== undefined && precioAjustado !== null) {
@@ -217,13 +257,14 @@ export async function PUT(
       // Actualizar OT
       const otActualizada = await tx.ordenTrabajo.update({
         where: { id: params.id },
-        data: {
+        data: ({
           patente: patente.trim(),
           tipoVehiculo: tipoVehiculo || null,
           descripcionVehiculo: descripcionVehiculo || null,
           nombreCliente: nombreCliente.trim(),
           telefonoCliente: telefonoCliente.trim(),
-          horarioDeseado: horarioDeseado ? new Date(horarioDeseado) : null,
+          horarioDeseado: esExterna ? null : (horarioDeseado ? new Date(horarioDeseado) : null),
+          esExterna,
           servicioId,
           observaciones: observaciones || null,
           total,
@@ -234,7 +275,7 @@ export async function PUT(
               extraId,
             })),
           },
-        },
+        } as any),
         include: {
           servicio: true,
           extras: {
@@ -271,17 +312,20 @@ export async function PUT(
     const pendiente = Number(ot.total) - totalPagado
 
     // Formatear respuesta
+    const otAny = ot as any
     const otFormateada = {
-      ...ot,
-      extras: ot.extras.map((e) => e.extra),
-      precio: Number(ot.total),
+      ...otAny,
+      extras: (otAny.extras || []).map((e: any) => e.extra),
+      precio: Number(otAny.total),
       totalPagado,
       pendiente,
       estaPagada: pendiente <= 0,
-      servicio: {
-        ...ot.servicio,
-        precio: Number(ot.servicio.precio),
-      },
+      servicio: otAny.servicio
+        ? {
+            ...otAny.servicio,
+            precio: Number(otAny.servicio.precio),
+          }
+        : undefined,
     }
 
     return NextResponse.json(otFormateada)

@@ -84,7 +84,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { nombre, tipo, telefono, email, descuentoPorcentaje, prioridad, observaciones } = validationResult.data
+    const {
+      nombre,
+      tipo,
+      telefono,
+      email,
+      descuentoPorcentaje,
+      trabajoExterno,
+      usaMontosFijos,
+      montosFijosServicios,
+      montosFijosExtras,
+      prioridad,
+      observaciones,
+    } = validationResult.data
 
     // Verificar que no exista un cliente con el mismo nombre
     const clienteExistente = await prisma.cliente.findUnique({
@@ -105,7 +117,11 @@ export async function POST(request: NextRequest) {
         tipo,
         telefono: telefono?.trim() || null,
         email: email && email.trim() ? email.trim() : null,
-        descuentoPorcentaje: descuentoPorcentaje || null,
+        descuentoPorcentaje: usaMontosFijos ? null : descuentoPorcentaje || null,
+        trabajoExterno: Boolean(trabajoExterno),
+        usaMontosFijos: Boolean(usaMontosFijos),
+        montosFijosServicios: usaMontosFijos ? (montosFijosServicios ?? {}) : undefined,
+        montosFijosExtras: usaMontosFijos ? (montosFijosExtras ?? {}) : undefined,
         prioridad: prioridad || 0,
         observaciones: observaciones?.trim() || null,
         activo: true,
