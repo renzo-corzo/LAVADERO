@@ -44,6 +44,7 @@ interface OrdenTrabajoConDetalle {
  */
 export function calcularMontoComision(
   config: ConfigComision,
+  servicioId: string,
   totalOT: number,
   precioServicio: number,
   extras: Array<{ precio: number; id: string }>,
@@ -61,16 +62,14 @@ export function calcularMontoComision(
     // Modelo B: Porcentaje sobre el total de la OT
     montoComision = (totalOT * config.porcentaje) / 100
   } else {
-    // Modelo A: Por porcentaje por ítem (servicio y extras)
-    // Comisión por servicio
+    // Modelo A: mapa porcentajePorServicio indexado por servicioId / extraId
     const porcentajeServicio =
-      porcentajePorServicio?.[config.empleadoId] || config.porcentaje
+      porcentajePorServicio?.[servicioId] ?? config.porcentaje
     montoComision += (precioServicio * porcentajeServicio) / 100
 
-    // Comisión por extras
     for (const extra of extras) {
       const porcentajeExtra =
-        porcentajePorServicio?.[extra.id] || config.porcentaje
+        porcentajePorServicio?.[extra.id] ?? config.porcentaje
       montoComision += (extra.precio * porcentajeExtra) / 100
     }
   }
@@ -93,7 +92,6 @@ export async function calcularComisiones(otId: string): Promise<void> {
   })
 
   if (comisionesExistentes.length > 0) {
-    console.log(`[comisiones] Ya existen comisiones para OT ${otId}, no se recalculan`)
     return
   }
 
@@ -114,23 +112,18 @@ export async function calcularComisiones(otId: string): Promise<void> {
 
   // Verificar que esté ENTREGADA
   if (ot.estado !== 'ENTREGADO') {
-    console.log(`[comisiones] OT ${otId} no está ENTREGADA, estado: ${ot.estado}`)
     return
   }
 
   // Verificar que esté completamente PAGADA
   const totalPagado = ot.pagos.reduce((sum, pago) => sum + Number(pago.monto), 0)
   if (totalPagado < Number(ot.total)) {
-    console.log(
-      `[comisiones] OT ${otId} no está completamente pagada. Total: ${ot.total}, Pagado: ${totalPagado}`
-    )
     return
   }
 
   // Obtener empleados asignados
   const empleadosIds = ot.empleados.map((e) => e.empleadoId)
   if (empleadosIds.length === 0) {
-    console.log(`[comisiones] OT ${otId} no tiene empleados asignados`)
     return
   }
 
@@ -143,7 +136,6 @@ export async function calcularComisiones(otId: string): Promise<void> {
   })
 
   if (configs.length === 0) {
-    console.log(`[comisiones] No hay configuraciones activas para los empleados de OT ${otId}`)
     return
   }
 
@@ -160,6 +152,7 @@ export async function calcularComisiones(otId: string): Promise<void> {
   const comisionesACrear = configs.map((config) => {
     const monto = calcularMontoComision(
       config,
+      ot.servicio.id,
       totalOT,
       precioServicio,
       extras,
@@ -186,11 +179,8 @@ export async function calcularComisiones(otId: string): Promise<void> {
         )
       )
 
-      console.log(
-        `[comisiones] ✅ Comisiones calculadas para OT ${otId}: ${comisionesACrear.length} comisiones creadas`
-      )
     } catch (error) {
-      console.error(`[comisiones] ❌ Error en transacción para OT ${otId}:`, error)
+      console.error('[comisiones] Error en transacción al crear comisiones')
       throw error // Relanzar para que se maneje arriba
     }
   }
@@ -204,7 +194,7 @@ export async function verificarYCalcularComisiones(otId: string): Promise<void> 
   try {
     await calcularComisiones(otId)
   } catch (error) {
-    console.error(`[comisiones] Error al calcular comisiones para OT ${otId}:`, error)
+    console.error('[comisiones] Error al calcular comisiones')
     // No lanzamos el error para que no afecte el flujo principal
   }
 }

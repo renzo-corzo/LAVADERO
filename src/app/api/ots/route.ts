@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
-import { hasPermission } from '@/lib/auth'
+import { getOtAccessScope, hasPermission } from '@/lib/auth'
 import { crearOTSchema } from '@/lib/validations'
 
 export async function GET(request: NextRequest) {
@@ -18,8 +18,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    // Solo ENCARGADO y DUENO pueden ver OTs
-    if (!hasPermission(session.user.role, 'ot:view')) {
+    const otScope = getOtAccessScope(session.user.role)
+    if (otScope === 'none') {
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
     }
 
@@ -29,6 +29,11 @@ export async function GET(request: NextRequest) {
     const incluirExternas = searchParams.get('incluirExternas') === 'true'
 
     const where: any = {}
+
+    // LAVADOR: solo OTs donde figura asignado en orden_trabajo_empleados
+    if (otScope === 'assigned') {
+      where.empleados = { some: { empleadoId: session.user.id } }
+    }
 
     if (estado) {
       where.estado = estado
@@ -133,8 +138,6 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    console.log('[API OTs POST] Body recibido:', JSON.stringify(body, null, 2))
-    console.log('[API OTs POST] Session user:', { id: session.user.id, role: session.user.role })
 
     // Validación con Zod
     const validationResult = crearOTSchema.safeParse(body)
@@ -154,6 +157,7 @@ export async function POST(request: NextRequest) {
     const {
       servicioId,
       extrasIds = [],
+      empleadosIds,
       patente,
       tipoVehiculo,
       descripcionVehiculo,
@@ -174,6 +178,21 @@ export async function POST(request: NextRequest) {
     if (!servicio || !servicio.activo) {
       return NextResponse.json(
         { error: 'Servicio no encontrado o inactivo' },
+        { status: 400 }
+      )
+    }
+
+    const lavadoresValidos = await prisma.usuario.findMany({
+      where: {
+        id: { in: empleadosIds },
+        rol: 'LAVADOR',
+        activo: true,
+      },
+      select: { id: true },
+    })
+    if (lavadoresValidos.length !== empleadosIds.length) {
+      return NextResponse.json(
+        { error: 'Debe asignar solo lavadores activos válidos' },
         { status: 400 }
       )
     }
@@ -274,10 +293,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Crear OT con transacción
-    console.log('[API OTs POST] Iniciando creación de OT...')
     const ot = await prisma.$transaction(async (tx) => {
-      console.log('[API OTs POST] Creando OT en BD...')
       const nuevaOT = await tx.ordenTrabajo.create({
         data: ({
           fechaIngreso: new Date(),
@@ -301,12 +317,24 @@ export async function POST(request: NextRequest) {
               extraId,
             })),
           },
+          empleados: {
+            create: empleadosIds.map((empleadoId: string) => ({
+              empleadoId,
+            })),
+          },
         } as any),
         include: {
           servicio: true,
           extras: {
             include: {
               extra: true,
+            },
+          },
+          empleados: {
+            include: {
+              empleado: {
+                select: { id: true, nombre: true },
+              },
             },
           },
         },
@@ -343,13 +371,12 @@ export async function POST(request: NextRequest) {
       return nuevaOT
     })
 
-    console.log('[API OTs POST] OT creada exitosamente:', ot.id)
-
     // Formatear respuesta
     const otAny = ot as any
     const otFormateada = {
       ...otAny,
       extras: (otAny.extras || []).map((e: any) => e.extra),
+      empleados: (otAny.empleados || []).map((e: any) => e.empleado),
       precio: Number(otAny.total),
       servicio: otAny.servicio
         ? {
@@ -361,14 +388,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(otFormateada, { status: 201 })
   } catch (error: any) {
-    console.error('❌ [API OTs POST] Error al crear OT:', error)
-    console.error('❌ [API OTs POST] Error details:', {
-      message: error?.message,
-      code: error?.code,
-      meta: error?.meta,
-      stack: error?.stack?.split('\n').slice(0, 10).join('\n'), // Solo primeras 10 líneas
-    })
-    
+    console.error('[API OTs POST] Error al crear OT:', error?.message ?? error)
+
     // En desarrollo, retornar más detalles
     const errorMessage = process.env.NODE_ENV === 'development' 
       ? error?.message || 'Error desconocido'

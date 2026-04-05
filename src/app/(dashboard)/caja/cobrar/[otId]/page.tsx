@@ -92,9 +92,10 @@ export default function RegistrarPagoPage() {
     }
 
     if (medioPago === 'TRANSFERENCIA' && !referencia.trim()) {
-      if (!confirm('¿Desea continuar sin referencia de transferencia?')) {
-        return
-      }
+      alert(
+        'La referencia es obligatoria para transferencia. Indique CBU, alias o número de operación.'
+      )
+      return
     }
 
     try {
@@ -123,7 +124,12 @@ export default function RegistrarPagoPage() {
         router.push('/tablero')
       } else {
         const data = await response.json()
-        alert(`Error: ${data.error || 'No se pudo registrar el pago'}`)
+        const base = data.error || 'No se pudo registrar el pago'
+        const fromDetails =
+          Array.isArray(data.details) && data.details.length > 1
+            ? '\n' + data.details.map((d: { message: string }) => d.message).join('\n')
+            : ''
+        alert(`Error: ${base}${fromDetails}`)
       }
     } catch (error) {
       console.error('Error al registrar pago:', error)
@@ -252,16 +258,18 @@ export default function RegistrarPagoPage() {
           {medioPago === 'TRANSFERENCIA' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Referencia (opcional)
+                Referencia de la transferencia *
               </label>
               <Input
                 type="text"
                 value={referencia}
                 onChange={(e) => setReferencia(e.target.value)}
                 placeholder="CBU, alias, número de operación..."
+                required
+                aria-required
               />
               <p className="text-xs text-gray-500 mt-1">
-                Recomendado para facilitar la conciliación
+                Obligatorio para identificar el pago en el banco
               </p>
             </div>
           )}
@@ -270,7 +278,13 @@ export default function RegistrarPagoPage() {
             <Button
               type="submit"
               variant="primary"
-              disabled={guardando || !monto || Number(monto) <= 0 || Number(monto) > pendiente}
+              disabled={
+                guardando ||
+                !monto ||
+                Number(monto) <= 0 ||
+                Number(monto) > pendiente ||
+                (medioPago === 'TRANSFERENCIA' && !referencia.trim())
+              }
             >
               {guardando ? 'Registrando...' : 'Registrar Pago'}
             </Button>

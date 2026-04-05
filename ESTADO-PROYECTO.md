@@ -23,7 +23,7 @@
 ### 4. Órdenes de Trabajo
 - ✅ Crear OT rápida
 - ✅ Selección de servicios y extras
-- ✅ Asignación de empleados
+- ✅ Asignación de lavadores al crear OT (persistencia en `orden_trabajo_empleados`, obligatoria en API)
 - ✅ Cálculo automático de total
 - ✅ Campos obligatorios: patente, nombre cliente, teléfono cliente
 - ✅ Campo opcional: tipo de vehículo
@@ -50,7 +50,7 @@
 
 ### 7. Cambio de Estado de OT (US-006)
 - ✅ Cambio de estado funcional desde tablero
-- ✅ Validación de transiciones por rol
+- ✅ Validación de transiciones por rol (lavador: hasta LISTO; entrega solo encargado/dueño)
 - ✅ Registro en historial de estados
 - ✅ Prompt para registrar pago al entregar
 - ✅ Integración con cálculo de comisiones
@@ -60,7 +60,7 @@
 - ✅ Pagos parciales soportados
 - ✅ Medios de pago: EFECTIVO y TRANSFERENCIA
 - ✅ Cálculo automático de pendiente
-- ✅ Campo de referencia para transferencias
+- ✅ Referencia obligatoria para transferencias (validación API + caja)
 - ✅ Auto-población de monto pendiente
 - ✅ Redirección a tablero después de pago
 - ✅ Validación de OT completamente pagada

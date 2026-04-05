@@ -38,6 +38,13 @@ export default withAuth(
       }
     }
 
+    // Configuración de comisiones: solo DUEÑO (04-NAVEGACION-Y-PERMISOS.md)
+    if (path.startsWith('/comisiones/configurar')) {
+      if (role !== 'DUENO') {
+        return NextResponse.redirect(new URL('/comisiones', req.url))
+      }
+    }
+
     // Rutas para ENCARGADO y DUENO (no LAVADOR)
     if (
       path.startsWith('/caja') ||
@@ -72,6 +79,7 @@ export const config = {
     '/tablero/:path*',
     '/kiosco/:path*',
     '/ots/:path*',
+    '/clientes/:path*',
     '/caja/:path*',
     '/comisiones/:path*',
     '/reportes/:path*',

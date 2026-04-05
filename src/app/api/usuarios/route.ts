@@ -1,6 +1,6 @@
 /**
  * API Route: Usuarios
- * GET: Listar usuarios (con filtros)
+ * GET: Listar usuarios (restringido por rol)
  * POST: Crear nuevo usuario (solo DUEÑO)
  */
 
@@ -19,50 +19,41 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
+    const role = session.user.role
+    if (role === 'CLIENTE' || role === 'LAVADOR') {
+      return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
+    }
+
     const searchParams = request.nextUrl.searchParams
-    const rol = searchParams.get('rol')
+    const rolParam = searchParams.get('rol')
     const incluirInactivos = searchParams.get('incluirInactivos') === 'true'
     const incluirClientes = searchParams.get('incluirClientes') === 'true'
 
-    // Construir where clause
-    const where: any = {}
-    
-    // Si no es para selección de empleados, verificar permisos
-    if (!rol && !incluirInactivos) {
-      // Si no hay filtros, solo mostrar activos por defecto
-      where.activo = true
-    } else {
-      if (!incluirInactivos && !rol) {
-        where.activo = true
+    if (role === 'ENCARGADO') {
+      if (rolParam !== 'LAVADOR' || incluirInactivos || incluirClientes) {
+        return NextResponse.json(
+          { error: 'Sin permisos: solo se permite listar lavadores activos (rol=LAVADOR)' },
+          { status: 403 }
+        )
       }
     }
 
-    if (rol) {
-      where.rol = rol
-      // Para selección de empleados, solo activos
-      if (!incluirInactivos) {
-        where.activo = true
-      }
-    }
+    const where: Record<string, unknown> = {}
 
-    // Por defecto, NO incluir usuarios del portal (rol=CLIENTE) en ABM de usuarios
-    // Se gestionan desde Clientes -> Acceso Portal.
-    if (!rol && !incluirClientes) {
+    if (rolParam) {
+      where.rol = rolParam
+    } else if (!incluirClientes) {
       where.rol = { not: 'CLIENTE' }
     }
 
-    // Para gestión de usuarios (sin filtro de rol), verificar permisos
-    // Si es para el tablero/filtros, permitir a todos los roles autenticados ver usuarios activos
-    // Si es para gestión completa (con incluirInactivos), solo DUEÑO
-    if (!rol) {
-      if (incluirInactivos) {
-        // Solo DUEÑO puede ver usuarios inactivos
-        if (!hasPermission(session.user.role, 'usuario:view')) {
-          return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
-        }
+    if (!incluirInactivos) {
+      where.activo = true
+    }
+
+    if (role === 'DUENO') {
+      if (incluirInactivos && !hasPermission(role, 'usuario:view')) {
+        return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
       }
-      // Si no se pide incluir inactivos, cualquier usuario autenticado puede ver usuarios activos
-      // (útil para filtros del tablero)
     }
 
     const usuarios = await prisma.usuario.findMany({
@@ -102,7 +93,6 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
 
-    // Validación con Zod
     const validationResult = crearUsuarioSchema.safeParse(body)
     if (!validationResult.success) {
       return NextResponse.json(
@@ -120,7 +110,6 @@ export async function POST(request: NextRequest) {
     const { nombre, usuario: username, password, rol } = validationResult.data
     const activo = body.activo !== undefined ? body.activo : true
 
-    // Verificar que el usuario no exista
     const usuarioExistente = await prisma.usuario.findUnique({
       where: { usuario: username },
     })
@@ -132,10 +121,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Hashear contraseña
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    // Crear usuario
     const nuevoUsuario = await prisma.usuario.create({
       data: {
         nombre: nombre.trim(),
@@ -154,7 +141,6 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Registrar en log de auditoría
     await prisma.auditoriaLog.create({
       data: {
         usuarioId: session.user.id,
@@ -178,4 +164,3 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-

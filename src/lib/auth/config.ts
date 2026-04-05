@@ -8,6 +8,16 @@ import { prisma } from '@/lib/db/client'
 import { compare } from 'bcryptjs'
 import { UserRole } from '@/types'
 
+function isAllowedPostgresUrl(raw: string): boolean {
+  const url = raw.trim()
+  return (
+    url.startsWith('postgresql://') ||
+    url.startsWith('postgres://') ||
+    url.startsWith('prisma+postgres://') ||
+    url.startsWith('prisma+postgresql://')
+  )
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -18,46 +28,48 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         try {
-          console.log('🔐 [AUTH] Intento de login para usuario:', credentials?.usuario)
-          console.log('🔐 [AUTH] DATABASE_URL existe:', !!process.env.DATABASE_URL)
-          console.log('🔐 [AUTH] DATABASE_URL primer carácter:', process.env.DATABASE_URL?.[0] || 'VACÍA')
-          console.log('🔐 [AUTH] DATABASE_URL primeros 20 chars:', process.env.DATABASE_URL?.substring(0, 20) || 'VACÍA')
-          console.log('🔐 [AUTH] NEXTAUTH_SECRET configurado:', !!process.env.NEXTAUTH_SECRET)
-          console.log('🔐 [AUTH] NEXTAUTH_URL:', process.env.NEXTAUTH_URL)
-          
-          if (!process.env.DATABASE_URL || !process.env.DATABASE_URL.startsWith('postgresql://') && !process.env.DATABASE_URL.startsWith('postgres://')) {
-            console.error('❌ [AUTH] DATABASE_URL inválida o vacía. Valor actual:', process.env.DATABASE_URL || 'VACÍA')
-            throw new Error('DATABASE_URL no configurada correctamente en Vercel')
+          const dbUrl = process.env.DATABASE_URL?.trim() ?? ''
+          if (!dbUrl || !isAllowedPostgresUrl(dbUrl)) {
+            console.error(
+              '[AUTH] rechazo_login motivo=DATABASE_URL_invalida (revisar .env vs variables de entorno del sistema)'
+            )
+            throw new Error('DATABASE_URL no configurada correctamente')
           }
 
           if (!credentials?.usuario || !credentials?.password) {
-            console.log('❌ [AUTH] Credenciales faltantes')
+            console.error('[AUTH] rechazo_login motivo=credenciales_vacias')
+            return null
+          }
+
+          const usuarioLogin = credentials.usuario.trim()
+          if (!usuarioLogin) {
+            console.error('[AUTH] rechazo_login motivo=usuario_solo_espacios')
             return null
           }
 
           const user = await prisma.usuario.findUnique({
             where: {
-              usuario: credentials.usuario,
+              usuario: usuarioLogin,
             },
           })
 
-          console.log('👤 [AUTH] Usuario encontrado:', user ? `Sí (${user.nombre}, activo: ${user.activo})` : 'No')
-
-          if (!user || !user.activo) {
-            console.log('❌ [AUTH] Usuario no encontrado o inactivo')
+          if (!user) {
+            console.error('[AUTH] rechazo_login motivo=usuario_no_encontrado usuario=', usuarioLogin)
             return null
           }
 
-          // Verificar contraseña
+          if (!user.activo) {
+            console.error('[AUTH] rechazo_login motivo=usuario_inactivo usuario=', usuarioLogin)
+            return null
+          }
+
           const isValidPassword = await compare(credentials.password, user.password)
-          console.log('🔑 [AUTH] Contraseña válida:', isValidPassword)
 
           if (!isValidPassword) {
-            console.log('❌ [AUTH] Contraseña incorrecta')
+            console.error('[AUTH] rechazo_login motivo=password_incorrecta usuario=', usuarioLogin)
             return null
           }
 
-          console.log('✅ [AUTH] Login exitoso para:', user.usuario)
           return {
             id: user.id,
             name: user.nombre,
@@ -65,8 +77,8 @@ export const authOptions: NextAuthOptions = {
             role: user.rol,
             clienteId: user.clienteId ?? null,
           }
-        } catch (error) {
-          console.error('❌ [AUTH] Error en authorize:', error)
+        } catch {
+          console.error('[AUTH] rechazo_login motivo=error_interno')
           return null
         }
       },

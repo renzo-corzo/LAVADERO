@@ -10,9 +10,9 @@
 - **RN-002**: La fecha/hora de ingreso se registra automáticamente al crear la OT (puede editarse solo por ENCARGADO/DUEÑO)
 - **RN-003**: El servicio principal es **obligatorio** en toda OT
 - **RN-004**: Los extras son **opcionales** y pueden ser múltiples
-- **RN-005**: La patente es **opcional**, pero debe ingresarse una descripción del vehículo si no hay patente
-- **RN-006**: El tipo de vehículo (chico/mediano/camioneta) es **obligatorio**
-- **RN-007**: Al menos un empleado debe ser asignado a la OT
+- **RN-005**: La patente es **obligatoria** en la implementación actual (formulario y API `crearOTSchema`)
+- **RN-006**: El tipo de vehículo (chico/mediano/camioneta) es **opcional** en la implementación actual
+- **RN-007**: Al menos un **lavador** debe ser asignado a la OT (`empleadosIds` persistidos en `orden_trabajo_empleados`)
 - **RN-008**: El total de la OT se calcula automáticamente: precio servicio + suma de precios de extras
 - **RN-009**: El precio puede ajustarse manualmente solo por ENCARGADO/DUEÑO, requiriendo justificación obligatoria
 
@@ -31,7 +31,7 @@
 - **RN-011**: EN_COLA → CANCELADO (permitido para: ENCARGADO, DUEÑO, requiere motivo obligatorio)
 - **RN-012**: EN_PROCESO → LISTO (permitido para: LAVADOR, ENCARGADO, DUEÑO)
 - **RN-013**: EN_PROCESO → CANCELADO (permitido para: ENCARGADO, DUEÑO, requiere motivo obligatorio)
-- **RN-014**: LISTO → ENTREGADO (permitido para: ENCARGADO, DUEÑO, puede registrar cobro al mismo tiempo)
+- **RN-014**: LISTO → ENTREGADO (permitido para: **ENCARGADO, DUEÑO**; el lavador no entrega ni cobra en el sistema)
 - **RN-015**: LISTO → CANCELADO (permitido solo para: DUEÑO, requiere motivo obligatorio y justificación especial)
 - **RN-016**: No se permite volver a un estado anterior (ej: LISTO → EN_PROCESO)
 - **RN-017**: ENTREGADO es estado final, no puede cambiarse (excepto por ajustes administrativos especiales)
@@ -67,7 +67,7 @@
 - **RN-028**: Un pago debe estar asociado a una OT específica
 - **RN-029**: Los medios de pago permitidos en MVP son: **EFECTIVO** y **TRANSFERENCIA**
 - **RN-030**: El monto del pago es obligatorio y debe ser un número positivo
-- **RN-031**: Si el medio de pago es TRANSFERENCIA, se recomienda (pero no es obligatorio) ingresar una referencia (CBU, alias, número de operación)
+- **RN-031**: Si el medio de pago es TRANSFERENCIA, la **referencia es obligatoria** (CBU, alias, número de operación), validado en API y formulario de caja
 - **RN-032**: La fecha/hora del pago se registra automáticamente (puede editarse por ENCARGADO/DUEÑO)
 - **RN-033**: Se registra automáticamente el usuario que realizó el pago
 

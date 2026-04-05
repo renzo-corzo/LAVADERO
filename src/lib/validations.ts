@@ -9,6 +9,9 @@ import { z } from 'zod'
 export const crearOTSchema = z.object({
   servicioId: z.string().min(1, 'El servicio es obligatorio'),
   extrasIds: z.array(z.string()).default([]),
+  empleadosIds: z
+    .array(z.string().min(1))
+    .min(1, 'Debe asignar al menos un lavador'),
   patente: z.string().min(1, 'La patente es obligatoria').max(10).trim(),
   tipoVehiculo: z.enum(['chico', 'mediano', 'camioneta']).nullish(),
   descripcionVehiculo: z.string().optional().or(z.literal('')),
@@ -64,13 +67,31 @@ export const cambiarEstadoOTLoteSchema = z.object({
   path: ['motivo'],
 })
 
-// Schema para registrar pago
-export const registrarPagoSchema = z.object({
-  ordenTrabajoId: z.string().min(1),
-  monto: z.number().positive('El monto debe ser positivo'),
-  medioPago: z.enum(['EFECTIVO', 'TRANSFERENCIA']),
-  referencia: z.string().optional(),
-})
+// Schema para registrar pago (transferencia exige referencia no vacía)
+export const registrarPagoSchema = z
+  .object({
+    ordenTrabajoId: z.string().min(1),
+    monto: z.number().positive('El monto debe ser positivo'),
+    medioPago: z.enum(['EFECTIVO', 'TRANSFERENCIA']),
+    referencia: z.union([z.string(), z.null(), z.undefined()]).optional(),
+  })
+  .transform((data) => {
+    const ref =
+      data.referencia == null || data.referencia === ''
+        ? null
+        : String(data.referencia).trim() || null
+    return { ...data, referencia: ref }
+  })
+  .superRefine((data, ctx) => {
+    if (data.medioPago === 'TRANSFERENCIA' && !data.referencia) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          'La referencia es obligatoria para pagos por transferencia (CBU, alias u número de operación).',
+        path: ['referencia'],
+      })
+    }
+  })
 
 // Schema para crear servicio
 export const crearServicioSchema = z.object({

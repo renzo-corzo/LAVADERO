@@ -19,62 +19,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    // Verificar permisos: ENCARGADO/DUENO tienen pago:view, LAVADOR tiene pago:view:assigned
-    if (!hasPermission(session.user.role, 'pago:view') && !hasPermission(session.user.role, 'pago:view:assigned')) {
+    if (!hasPermission(session.user.role, 'pago:view')) {
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
     }
 
     const searchParams = request.nextUrl.searchParams
-    const otId = searchParams.get('otId')
+    const otIdRaw = searchParams.get('otId')
+    const otId = otIdRaw?.trim() || null
 
-    const where: any = {}
+    const where: Record<string, unknown> = {}
     if (otId) {
       where.ordenTrabajoId = otId
-      
-      // Si es LAVADOR, verificar que está asignado a esta OT
-      if (session.user.role === 'LAVADOR') {
-        const ot = await prisma.ordenTrabajo.findUnique({
-          where: { id: otId },
-          include: {
-            empleados: {
-              include: {
-                empleado: {
-                  select: { id: true },
-                },
-              },
-            },
-          },
-        })
-        
-        if (!ot) {
-          return NextResponse.json(
-            { error: 'Orden de trabajo no encontrada' },
-            { status: 404 }
-          )
-        }
-        
-        const estaAsignado = ot.empleados.some(
-          (e) => e.empleado.id === session.user.id
-        )
-        
-        if (!estaAsignado) {
-          return NextResponse.json(
-            { error: 'Sin permisos para ver pagos de esta OT' },
-            { status: 403 }
-          )
-        }
-      }
-    } else {
-      // Si no hay otId y es LAVADOR, solo mostrar pagos de OTs asignadas
-      if (session.user.role === 'LAVADOR') {
-        const otsAsignadas = await prisma.ordenTrabajoEmpleado.findMany({
-          where: { empleadoId: session.user.id },
-          select: { ordenTrabajoId: true },
-        })
-        
-        const idsOTs = otsAsignadas.map((oe) => oe.ordenTrabajoId)
-        where.ordenTrabajoId = { in: idsOTs }
-      }
     }
 
     const pagos = await prisma.pago.findMany({
@@ -100,27 +55,29 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // Formatear respuesta
-    const pagosFormateados = pagos.map((pago) => ({
-      id: pago.id,
-      otId: pago.ordenTrabajoId,
-      ot: {
+    const pagosFormateados = pagos.map((pago) => {
+      const otResumen = {
         id: pago.ordenTrabajo.id,
         patente: pago.ordenTrabajo.patente,
         descripcionVehiculo: pago.ordenTrabajo.descripcionVehiculo,
         total: Number(pago.ordenTrabajo.total),
-      },
-      monto: Number(pago.monto),
-      medioPago: pago.medioPago,
-      referencia: pago.referencia,
-      fechaHora: pago.fechaHora,
-      usuarioId: pago.usuarioId,
-      usuario: {
-        id: pago.usuario.id,
-        nombre: pago.usuario.nombre,
-      },
-      createdAt: pago.createdAt,
-    }))
+      }
+      return {
+        id: pago.id,
+        otId: pago.ordenTrabajoId,
+        ot: otResumen,
+        monto: Number(pago.monto),
+        medioPago: pago.medioPago,
+        referencia: pago.referencia,
+        fechaHora: pago.fechaHora,
+        usuarioId: pago.usuarioId,
+        usuario: {
+          id: pago.usuario.id,
+          nombre: pago.usuario.nombre,
+        },
+        createdAt: pago.createdAt,
+      }
+    })
 
     return NextResponse.json(pagosFormateados)
   } catch (error) {
@@ -148,32 +105,21 @@ export async function POST(request: NextRequest) {
     // Validación con Zod
     const validationResult = registrarPagoSchema.safeParse(body)
     if (!validationResult.success) {
-      return NextResponse.json(
-        { 
-          error: 'Datos inválidos',
-          details: validationResult.error.errors.map(e => ({
-            field: e.path.join('.'),
-            message: e.message,
-          })),
-        },
-        { status: 400 }
-      )
+      const details = validationResult.error.errors.map((e) => ({
+        field: e.path.join('.') || 'general',
+        message: e.message,
+      }))
+      const errorMessage =
+        details.length === 1
+          ? details[0].message
+          : `Datos inválidos: ${details.map((d) => d.message).join(' · ')}`
+      return NextResponse.json({ error: errorMessage, details }, { status: 400 })
     }
 
     const { ordenTrabajoId, monto, medioPago, referencia } = validationResult.data
 
-    // Verificar que la OT existe
     const ot = await prisma.ordenTrabajo.findUnique({
       where: { id: ordenTrabajoId },
-      include: {
-        empleados: {
-          include: {
-            empleado: {
-              select: { id: true },
-            },
-          },
-        },
-      },
     })
 
     if (!ot) {
@@ -181,19 +127,6 @@ export async function POST(request: NextRequest) {
         { error: 'Orden de trabajo no encontrada' },
         { status: 404 }
       )
-    }
-
-    // Si es LAVADOR, verificar que está asignado a esta OT
-    if (session.user.role === 'LAVADOR') {
-      const estaAsignado = ot.empleados.some(
-        (e) => e.empleado.id === session.user.id
-      )
-      if (!estaAsignado) {
-        return NextResponse.json(
-          { error: 'Sin permisos para registrar pagos de esta OT' },
-          { status: 403 }
-        )
-      }
     }
 
     // Crear pago con transacción

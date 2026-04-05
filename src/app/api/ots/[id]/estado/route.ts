@@ -7,8 +7,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
-import { hasPermission } from '@/lib/auth'
 import { isValidEstadoTransition } from '@/lib/reglas-negocio'
+import { hasEstadoTransitionPermission } from '@/lib/auth'
 import { verificarYCalcularComisiones } from '@/lib/comisiones'
 import { cambiarEstadoOTSchema } from '@/lib/validations'
 
@@ -41,9 +41,11 @@ export async function PUT(
 
     const { nuevoEstado, motivo } = validationResult.data
 
-    // Obtener OT actual
     const otActual = await prisma.ordenTrabajo.findUnique({
       where: { id: params.id },
+      include: {
+        empleados: { select: { empleadoId: true } },
+      },
     })
 
     if (!otActual) {
@@ -53,7 +55,13 @@ export async function PUT(
       )
     }
 
-    // Validar transición
+    if (session.user.role === 'LAVADOR') {
+      const asignado = otActual.empleados.some((e) => e.empleadoId === session.user.id)
+      if (!asignado) {
+        return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
+      }
+    }
+
     const validacion = isValidEstadoTransition(
       otActual.estado as any,
       nuevoEstado as any,
@@ -61,18 +69,24 @@ export async function PUT(
     )
 
     if (!validacion.valid) {
-      console.error(`[estado-route] Transición inválida: ${otActual.estado} → ${nuevoEstado} para rol ${session.user.role}`, validacion.reason)
+      console.error('[estado-route] Transición inválida')
       return NextResponse.json(
         { error: validacion.reason || 'Transición de estado no permitida' },
         { status: 400 }
       )
     }
 
-    console.log(`[estado-route] Transición válida: ${otActual.estado} → ${nuevoEstado} para rol ${session.user.role}`)
+    if (
+      !hasEstadoTransitionPermission(
+        session.user.role,
+        otActual.estado as any,
+        nuevoEstado as any
+      )
+    ) {
+      return NextResponse.json({ error: 'Sin permisos para esta transición' }, { status: 403 })
+    }
 
-    // Actualizar estado con transacción
     const ot = await prisma.$transaction(async (tx) => {
-      // Actualizar OT
       const otActualizada = await tx.ordenTrabajo.update({
         where: { id: params.id },
         data: {

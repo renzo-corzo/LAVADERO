@@ -20,7 +20,7 @@ export default function NuevaOTPage() {
   const router = useRouter()
   const { data: session } = useSession()
 
-  // LAVADOR ahora puede crear OTs (pero no puede editar ni cancelar)
+  // Solo DUEÑO/ENCARGADO llegan aquí (middleware redirige LAVADOR)
   const [loading, setLoading] = useState(false)
   const [loadingCatalogos, setLoadingCatalogos] = useState(true)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -43,6 +43,8 @@ export default function NuevaOTPage() {
 
   const [servicios, setServicios] = useState<Servicio[]>([])
   const [extras, setExtras] = useState<Extra[]>([])
+  const [lavadores, setLavadores] = useState<Usuario[]>([])
+  const [loadingLavadores, setLoadingLavadores] = useState(false)
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null)
   const [loadingClientes, setLoadingClientes] = useState(false)
@@ -62,6 +64,7 @@ export default function NuevaOTPage() {
     observaciones: '',
     precioAjustado: '',
     justificacionPrecio: '',
+    empleadosIds: [] as string[],
   })
 
   useEffect(() => {
@@ -134,6 +137,27 @@ export default function NuevaOTPage() {
     if (session && (session.user.role === 'DUENO' || session.user.role === 'ENCARGADO')) {
       cargarClientes()
     }
+  }, [session])
+
+  useEffect(() => {
+    const cargarLavadores = async () => {
+      if (!session || (session.user.role !== 'DUENO' && session.user.role !== 'ENCARGADO')) {
+        return
+      }
+      try {
+        setLoadingLavadores(true)
+        const response = await fetch('/api/usuarios?rol=LAVADOR')
+        if (response.ok) {
+          const data = (await response.json()) as Usuario[]
+          setLavadores(data)
+        }
+      } catch (e) {
+        console.error('Error al cargar lavadores:', e)
+      } finally {
+        setLoadingLavadores(false)
+      }
+    }
+    cargarLavadores()
   }, [session])
 
   const clienteUsaMontosFijos =
@@ -412,6 +436,9 @@ export default function NuevaOTPage() {
     if (!formData.servicioId) {
       newErrors.servicioId = 'El servicio es obligatorio'
     }
+    if (!formData.empleadosIds || formData.empleadosIds.length === 0) {
+      newErrors.empleadosIds = 'Debe asignar al menos un lavador'
+    }
     // tipoVehiculo ahora es opcional, no se valida
     if (formData.precioAjustado && !formData.justificacionPrecio) {
       newErrors.justificacionPrecio = 'Justificación requerida para precio ajustado'
@@ -432,6 +459,7 @@ export default function NuevaOTPage() {
         },
         body: JSON.stringify({
           ...formData,
+          empleadosIds: formData.empleadosIds,
           tipoVehiculo: formData.tipoVehiculo || null,
           clienteId: formData.tipoCliente === 'FIJO' && formData.clienteId ? formData.clienteId : null,
           precioAjustado: formData.precioAjustado ? parseFloat(formData.precioAjustado) : null,
@@ -497,6 +525,15 @@ export default function NuevaOTPage() {
         ? formData.extrasIds.filter((id) => id !== extraId)
         : [...formData.extrasIds, extraId],
     })
+  }
+
+  const toggleLavador = (id: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      empleadosIds: prev.empleadosIds.includes(id)
+        ? prev.empleadosIds.filter((x) => x !== id)
+        : [...prev.empleadosIds, id],
+    }))
   }
 
 
@@ -925,6 +962,37 @@ export default function NuevaOTPage() {
                       </span>
                     </label>
                   ))}
+                </div>
+              )}
+            </Card>
+
+            <Card title="Asignación de lavadores *">
+              {loadingLavadores ? (
+                <p className="text-sm text-gray-500">Cargando equipo...</p>
+              ) : lavadores.length === 0 ? (
+                <p className="text-sm text-amber-700">
+                  No hay usuarios con rol LAVADOR activos. Cree uno en Usuarios o active un lavador existente.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {lavadores.map((lav) => (
+                    <label
+                      key={lav.id}
+                      className="flex items-center p-3 border rounded hover:bg-gray-50 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.empleadosIds.includes(lav.id)}
+                        onChange={() => toggleLavador(lav.id)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <span className="ml-3 font-medium">{lav.nombre}</span>
+                      <span className="ml-2 text-gray-500 text-sm">({lav.usuario})</span>
+                    </label>
+                  ))}
+                  {errors.empleadosIds && (
+                    <p className="text-sm text-red-600">{errors.empleadosIds}</p>
+                  )}
                 </div>
               )}
             </Card>

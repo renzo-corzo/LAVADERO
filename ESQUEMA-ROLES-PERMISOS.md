@@ -356,21 +356,17 @@ Auditoría                  │ █████ │ ███       │         
 
 ### Inconsistencias Detectadas
 
-1. **LAVADOR y Creación de OTs:**
-   - El código (`src/lib/auth.ts`) asigna permiso `ot:create` a LAVADOR
-   - La documentación (`04-NAVEGACION-Y-PERMISOS.md`) indica que LAVADOR NO puede crear OTs
-   - **Recomendación:** Verificar y corregir según el requerimiento de negocio
+1. **LAVADOR:** sin `ot:create`, `pago:create` ni `pago:view`; `getOtAccessScope` → **`assigned`** (solo OTs donde figura en `orden_trabajo_empleados`); puede `EN_COLA→EN_PROCESO` y `EN_PROCESO→LISTO` si está asignado; **no** entrega (`LISTO→ENTREGADO` solo ENCARGADO/DUEÑO). APIs de planificación solo con alcance `all`.
 
-2. **LAVADOR y Registro de Pagos:**
-   - El código asigna permiso `pago:create` a LAVADOR
-   - La documentación indica que LAVADOR NO puede registrar pagos
-   - **Recomendación:** Verificar y corregir según el requerimiento de negocio
+2. **Clientes (API):** permisos `cliente:view|create|edit|delete` para DUEÑO y ENCARGADO; ya no se reutiliza `usuario:*` en rutas de clientes (evita 403 con menú habilitado).
+
+3. **ENCARGADO y configuración de comisiones:** retirado `comision:config` del rol ENCARGADO; coincide con `04-NAVEGACION-Y-PERMISOS.md` y con el middleware de `/comisiones/configurar` (solo DUEÑO).
 
 ### Permisos Especiales
 
 - **DUEÑO** tiene un permiso especial `'*'` que otorga acceso a TODO
 - **ENCARGADO** puede editar OTs solo en estados `EN_COLA` o `EN_PROCESO`
-- **LAVADOR** solo ve OTs asignadas a él (relación `OrdenTrabajoEmpleado`)
+- **LAVADOR** ve solo OTs asignadas (`assigned`); debe estar en `orden_trabajo_empleados` para listar, ver detalle y cambiar estado permitido
 
 ---
 
@@ -378,35 +374,14 @@ Auditoría                  │ █████ │ ███       │         
 
 ### Definición en `src/lib/auth.ts`
 
-```typescript
-const permissions: Record<UserRole, string[]> = {
-  DUENO: ['*'], // Todos los permisos
-  ENCARGADO: [
-    'ot:create',
-    'ot:edit',
-    'ot:view',
-    'ot:cancel',
-    'pago:create',
-    'pago:view',
-    'cierre:create',
-    'cierre:view',
-    'comision:view',
-    'comision:liquidar',
-    'comision:config',
-    'reporte:view',
-    'servicio:manage',
-  ],
-  LAVADOR: [
-    'ot:create',        // ⚠️ Inconsistente con documentación
-    'ot:view:assigned',
-    'ot:change-state:process',
-    'ot:change-state:ready',
-    'ot:change-state:delivered',
-    'pago:view:assigned',
-    'pago:create',      // ⚠️ Inconsistente con documentación
-  ],
-}
-```
+Ver la definición actual en `src/lib/auth.ts` (`hasPermission`, `hasEstadoTransitionPermission`, `getOtAccessScope`). Resumen:
+
+- **DUENO:** `*`
+- **ENCARGADO:** incluye `ot:change-state:process|ready|delivered`, `pago:*`, `ot:view`, etc.
+- **LAVADOR:** solo `ot:change-state:process` y `ot:change-state:ready`
+- **CLIENTE:** `portal:report:view`
+
+`getOtAccessScope`: `ot:view` → `all`; rol `LAVADOR` → `assigned`; si no → `none`.
 
 ---
 

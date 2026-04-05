@@ -1,6 +1,6 @@
 # Sistema Lavadero de Autos - MVP
 
-Sistema web + PWA para gestión operativa y control de caja de un lavadero de autos.
+Sistema web + PWA para gestión operativa y control de caja de un lavadero de autos. Si el repositorio es **público**, no subas `.env` ni credenciales; revisá `SECURITY-ROTATION.md`.
 
 ## 📋 Documentación
 
@@ -18,7 +18,7 @@ La especificación funcional completa está disponible en los siguientes documen
 
 - Node.js 18+ 
 - npm o yarn
-- Base de datos (PostgreSQL recomendado, SQLite para desarrollo)
+- PostgreSQL (el schema Prisma está alineado a **PostgreSQL**; no está soportado SQLite sin adaptar enums y migraciones)
 
 ### Instalación
 
@@ -28,7 +28,7 @@ npm install
 
 # Configurar variables de entorno
 # Crear archivo .env y configurar DATABASE_URL
-# Ver env.example como referencia
+# Ver .env.example como referencia
 
 # Ejecutar migraciones de base de datos
 npm run db:migrate

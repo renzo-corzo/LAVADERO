@@ -192,7 +192,7 @@
 | Cierre de Caja | ❌ Sin acceso | - |
 | Configurar Comisiones | ❌ Sin acceso | - |
 | Liquidar Comisiones | ❌ Sin acceso | - |
-| Reportes | ✅ Limitado | Ver solo reporte de sus propias comisiones pendientes |
+| Reportes | ❌ Sin acceso | Middleware redirige; sin rutas de reportes para LAVADOR |
 | ABM Servicios/Extras | ❌ Sin acceso | - |
 | ABM Usuarios | ❌ Sin acceso | - |
 | Configuración | ❌ Sin acceso | - |

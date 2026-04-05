@@ -45,9 +45,15 @@ export function isValidEstadoTransition(
     return { valid: false, reason: 'Solo ENCARGADO o DUEÑO pueden cancelar' }
   }
 
-  // LISTO → ENTREGADO (LAVADOR, ENCARGADO, DUENO)
+  // LISTO → ENTREGADO (solo ENCARGADO y DUEÑO — cobro/entrega administrativa)
   if (estadoActual === 'LISTO' && estadoNuevo === 'ENTREGADO') {
-    return { valid: true } // Permitido para todos los roles autenticados
+    if (userRole === 'ENCARGADO' || userRole === 'DUENO') {
+      return { valid: true }
+    }
+    return {
+      valid: false,
+      reason: 'Solo ENCARGADO o DUEÑO pueden marcar la OT como entregada',
+    }
   }
 
   // LISTO → CANCELADO (solo DUENO, requiere motivo especial)

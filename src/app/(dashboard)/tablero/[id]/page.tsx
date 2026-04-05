@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -21,16 +22,26 @@ interface OTDetalle extends OrdenTrabajo {
 export default function OTDetallePage() {
   const params = useParams()
   const router = useRouter()
+  const { data: session, status: sessionStatus } = useSession()
   const otId = params.id as string
-  
+  const esLavador = session?.user?.role === 'LAVADOR'
+
   const [ot, setOT] = useState<OTDetalle | null>(null)
   const [loading, setLoading] = useState(true)
   const [pagos, setPagos] = useState<Pago[]>([])
 
   useEffect(() => {
     cargarDetalle()
-    cargarPagos()
   }, [otId])
+
+  useEffect(() => {
+    if (sessionStatus === 'loading') return
+    if (esLavador) {
+      setPagos([])
+      return
+    }
+    cargarPagos()
+  }, [otId, esLavador, sessionStatus])
 
   const cargarDetalle = async () => {
     try {
@@ -57,9 +68,12 @@ export default function OTDetallePage() {
       if (response.ok) {
         const data = await response.json()
         setPagos(data)
+      } else {
+        setPagos([])
       }
     } catch (error) {
       console.error('Error al cargar pagos:', error)
+      setPagos([])
     }
   }
 
@@ -77,8 +91,8 @@ export default function OTDetallePage() {
 
       if (response.ok) {
         // Si se marca como ENTREGADO, ofrecer registrar pago
-        if (nuevoEstado === 'ENTREGADO') {
-          cargarDetalle() // Recargar datos actualizados
+        if (nuevoEstado === 'ENTREGADO' && !esLavador) {
+          cargarDetalle()
           const quierePagar = confirm('¿Desea registrar el pago ahora?')
           if (quierePagar) {
             router.push(`/caja/cobrar/${otId}`)
@@ -98,7 +112,9 @@ export default function OTDetallePage() {
     }
   }
 
-  const totalPagado = pagos.reduce((sum, p) => sum + p.monto, 0)
+  const totalPagado = esLavador
+    ? Number((ot as OTDetalle & { totalPagado?: number })?.totalPagado ?? 0)
+    : pagos.reduce((sum, p) => sum + p.monto, 0)
   const pendiente = ot ? ot.precio - totalPagado : 0
 
   if (loading) {
@@ -292,7 +308,7 @@ export default function OTDetallePage() {
                   Marcar como Listo
                 </Button>
               )}
-              {ot.estado === 'LISTO' && (
+              {ot.estado === 'LISTO' && !esLavador && (
                 <Button
                   type="button"
                   variant="primary"
@@ -310,7 +326,7 @@ export default function OTDetallePage() {
           <Card>
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-bold">Pagos</h2>
-              {ot.estado !== 'CANCELADO' && pendiente > 0 && (
+              {!esLavador && ot.estado !== 'CANCELADO' && pendiente > 0 && (
                 <Button 
                   type="button"
                   size="sm" 
@@ -344,7 +360,11 @@ export default function OTDetallePage() {
               </div>
             </div>
 
-            {pagos.length > 0 ? (
+            {esLavador ? (
+              <p className="text-sm text-gray-500 text-center py-2">
+                Resumen de cobro visible arriba; el detalle de pagos es solo para encargado o dueño.
+              </p>
+            ) : pagos.length > 0 ? (
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {pagos.map((pago) => (
                   <div key={pago.id} className="p-2 bg-gray-50 rounded text-sm">
