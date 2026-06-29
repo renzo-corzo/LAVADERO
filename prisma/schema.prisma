@@ -90,7 +90,7 @@ model Usuario {
 model Servicio {
   id              String        @id @default(cuid())
   nombre          String        @unique
-  precio          Float
+  precio          Decimal       @db.Decimal(12, 2)
   duracionEstimada Int?         // en minutos
   tipoVehiculo    TipoVehiculo?
   activo          Boolean       @default(true)
@@ -107,7 +107,7 @@ model Servicio {
 model Extra {
   id              String        @id @default(cuid())
   nombre          String        @unique
-  precio          Float
+  precio          Decimal       @db.Decimal(12, 2)
   duracionEstimada Int?         // en minutos
   activo          Boolean       @default(true)
   descripcion     String?
@@ -161,8 +161,8 @@ model OrdenTrabajo {
   servicioId          String
   observaciones       String?
   estado              OTEstado    @default(EN_COLA)
-  total               Float
-  precioAjustado      Float? // si se ajusta manualmente
+  total               Decimal     @db.Decimal(12, 2)
+  precioAjustado      Decimal?    @db.Decimal(12, 2) // si se ajusta manualmente
   justificacionPrecio String?
   usuarioCreadorId    String
   createdAt           DateTime    @default(now())
@@ -232,7 +232,7 @@ model EstadoHistorial {
 model Pago {
   id            String      @id @default(cuid())
   ordenTrabajoId String
-  monto         Float
+  monto         Decimal     @db.Decimal(12, 2)
   medioPago     MedioPago
   referencia    String?     // para transferencias (CBU, alias, número de operación)
   fechaHora     DateTime    @default(now())
@@ -254,9 +254,9 @@ model CierreCaja {
   fechaDesde        DateTime
   fechaHasta        DateTime
   fechaCierre       DateTime    @default(now())
-  totalEfectivo     Float
-  totalTransferencia Float
-  totalGeneral      Float
+  totalEfectivo     Decimal     @db.Decimal(12, 2)
+  totalTransferencia Decimal    @db.Decimal(12, 2)
+  totalGeneral      Decimal     @db.Decimal(12, 2)
   observaciones     String?
   usuarioId         String
   createdAt         DateTime    @default(now())
@@ -287,7 +287,7 @@ model Comision {
   id                    String          @id @default(cuid())
   ordenTrabajoId        String
   empleadoId            String
-  monto                 Float
+  monto                 Decimal         @db.Decimal(12, 2)
   porcentaje            Float // porcentaje aplicado
   estado                ComisionEstado  @default(PENDIENTE)
   fechaGeneracion       DateTime        @default(now())
@@ -328,7 +328,7 @@ model LiquidacionComision {
   fechaDesde    DateTime
   fechaHasta    DateTime
   fechaLiquidacion DateTime @default(now())
-  montoTotal    Float
+  montoTotal    Decimal     @db.Decimal(12, 2)
   usuarioId     String
   createdAt     DateTime    @default(now())
 
