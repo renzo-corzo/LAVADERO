@@ -7,6 +7,14 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import { prisma } from '@/lib/db/client'
 import { compare } from 'bcryptjs'
 import { UserRole } from '@/types'
+import {
+  checkLoginRateLimit,
+  registrarFalloLogin,
+  registrarLoginExitoso,
+} from './rate-limit'
+
+/** Error de login con mensaje seguro para mostrar al usuario (rate limit, config). */
+class LoginError extends Error {}
 
 function isAllowedPostgresUrl(raw: string): boolean {
   const url = raw.trim()
@@ -26,14 +34,16 @@ export const authOptions: NextAuthOptions = {
         usuario: { label: 'Usuario', type: 'text' },
         password: { label: 'Contraseña', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         try {
           const dbUrl = process.env.DATABASE_URL?.trim() ?? ''
           if (!dbUrl || !isAllowedPostgresUrl(dbUrl)) {
             console.error(
               '[AUTH] rechazo_login motivo=DATABASE_URL_invalida (revisar .env vs variables de entorno del sistema)'
             )
-            throw new Error('DATABASE_URL no configurada correctamente')
+            throw new LoginError(
+              'El servicio no está disponible en este momento. Intentá más tarde.'
+            )
           }
 
           if (!credentials?.usuario || !credentials?.password) {
@@ -47,6 +57,24 @@ export const authOptions: NextAuthOptions = {
             return null
           }
 
+          // Clave de rate limit: usuario + IP de origen (best-effort detrás de proxy).
+          const ip =
+            (req?.headers?.['x-forwarded-for'] as string | undefined)
+              ?.split(',')[0]
+              ?.trim() ||
+            (req?.headers?.['x-real-ip'] as string | undefined) ||
+            'desconocida'
+          const claveRate = `${usuarioLogin.toLowerCase()}|${ip}`
+
+          const limite = checkLoginRateLimit(claveRate)
+          if (!limite.allowed) {
+            const segundos = Math.ceil((limite.retryAfterMs ?? 0) / 1000)
+            console.error('[AUTH] rechazo_login motivo=rate_limit')
+            throw new LoginError(
+              `Demasiados intentos fallidos. Esperá ${segundos} segundos antes de reintentar.`
+            )
+          }
+
           const user = await prisma.usuario.findUnique({
             where: {
               usuario: usuarioLogin,
@@ -54,21 +82,25 @@ export const authOptions: NextAuthOptions = {
           })
 
           if (!user) {
-            console.error('[AUTH] rechazo_login motivo=usuario_no_encontrado usuario=', usuarioLogin)
+            registrarFalloLogin(claveRate)
+            console.error('[AUTH] rechazo_login motivo=usuario_no_encontrado')
             return null
           }
 
           if (!user.activo) {
-            console.error('[AUTH] rechazo_login motivo=usuario_inactivo usuario=', usuarioLogin)
+            console.error('[AUTH] rechazo_login motivo=usuario_inactivo')
             return null
           }
 
           const isValidPassword = await compare(credentials.password, user.password)
 
           if (!isValidPassword) {
-            console.error('[AUTH] rechazo_login motivo=password_incorrecta usuario=', usuarioLogin)
+            registrarFalloLogin(claveRate)
+            console.error('[AUTH] rechazo_login motivo=password_incorrecta')
             return null
           }
+
+          registrarLoginExitoso(claveRate)
 
           return {
             id: user.id,
@@ -77,7 +109,10 @@ export const authOptions: NextAuthOptions = {
             role: user.rol,
             clienteId: user.clienteId ?? null,
           }
-        } catch {
+        } catch (error) {
+          // Solo propagamos errores controlados (rate limit, servicio no disponible)
+          // con mensaje seguro. Cualquier otro error interno se oculta al cliente.
+          if (error instanceof LoginError) throw error
           console.error('[AUTH] rechazo_login motivo=error_interno')
           return null
         }

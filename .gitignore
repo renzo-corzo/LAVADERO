@@ -26,6 +26,12 @@ yarn-error.log*
 .env*.local
 .env
 
+# Notas de despliegue con secretos/credenciales (nunca commitear)
+VARIABLES-*.txt
+VARIABLES-*.md
+VALORES-*.txt
+URL-VERCEL-*.txt
+
 # Vercel
 .vercel
 

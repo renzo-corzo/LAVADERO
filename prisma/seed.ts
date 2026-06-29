@@ -8,11 +8,31 @@ import { hash } from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
+// El seed crea credenciales conocidas: NUNCA debe correr contra producción.
+if (process.env.NODE_ENV === 'production') {
+  console.error('❌ El seed está deshabilitado con NODE_ENV=production. Aborta.')
+  process.exit(1)
+}
+
+/**
+ * Resuelve la contraseña de un usuario seed.
+ * Prioriza la variable de entorno; si no existe usa un default solo apto para desarrollo local.
+ */
+function resolveSeedPassword(envVar: string, fallback: string): string {
+  const fromEnv = process.env[envVar]?.trim()
+  if (fromEnv) return fromEnv
+  console.warn(
+    `⚠️  ${envVar} no definida: usando contraseña por defecto solo para desarrollo local. ` +
+      `Definí ${envVar} en tu .env para una clave propia.`
+  )
+  return fallback
+}
+
 async function main() {
   console.log('🌱 Iniciando seed...')
 
-  // Hashear contraseña por defecto: "admin123"
-  const hashedPassword = await hash('admin123', 10)
+  const adminPassword = resolveSeedPassword('SEED_ADMIN_PASSWORD', 'admin123')
+  const hashedPassword = await hash(adminPassword, 10)
 
   // Crear usuario DUEÑO por defecto
   const dueno = await prisma.usuario.upsert({
@@ -27,10 +47,8 @@ async function main() {
     },
   })
 
-  console.log('✅ Usuario admin creado:')
-  console.log('   Usuario: admin')
-  console.log('   Contraseña: admin123')
-  console.log('   ⚠️  IMPORTANTE: Cambiar la contraseña después del primer login')
+  console.log('✅ Usuario admin creado (usuario: admin)')
+  console.log('   ⚠️  Cambiá la contraseña después del primer login')
 
   // Crear servicios de ejemplo
   const servicios = await Promise.all([
@@ -75,7 +93,10 @@ async function main() {
   console.log('✅ Servicios creados:', servicios.length)
 
   // Crear usuario ENCARGADO de ejemplo
-  const encargadoPassword = await hash('encargado123', 10)
+  const encargadoPassword = await hash(
+    resolveSeedPassword('SEED_ENCARGADO_PASSWORD', 'encargado123'),
+    10
+  )
   const encargado = await prisma.usuario.upsert({
     where: { usuario: 'encargado' },
     update: {},
@@ -87,10 +108,13 @@ async function main() {
       activo: true,
     },
   })
-  console.log('✅ Usuario encargado creado (usuario: encargado, contraseña: encargado123)')
+  console.log('✅ Usuario encargado creado (usuario: encargado)')
 
   // Crear usuario LAVADOR de ejemplo
-  const lavadorPassword = await hash('lavador123', 10)
+  const lavadorPassword = await hash(
+    resolveSeedPassword('SEED_LAVADOR_PASSWORD', 'lavador123'),
+    10
+  )
   const lavador = await prisma.usuario.upsert({
     where: { usuario: 'lavador' },
     update: {},
@@ -102,7 +126,7 @@ async function main() {
       activo: true,
     },
   })
-  console.log('✅ Usuario lavador creado (usuario: lavador, contraseña: lavador123)')
+  console.log('✅ Usuario lavador creado (usuario: lavador)')
 
   // Crear extras de ejemplo
   const extras = await Promise.all([
