@@ -145,18 +145,23 @@ export const configComisionSchema = z.object({
   activo: z.boolean().default(true),
 })
 
+// Acepta fecha simple (YYYY-MM-DD de <input type="date">), datetime ISO o Date.
+const fechaFlexible = z
+  .union([z.string().min(1), z.date()])
+  .refine((v) => !isNaN(new Date(v).getTime()), 'Fecha inválida')
+
 // Schema para liquidar comisiones
 export const liquidarComisionesSchema = z.object({
   empleadoId: z.string().min(1),
-  fechaDesde: z.string().datetime().or(z.date()),
-  fechaHasta: z.string().datetime().or(z.date()),
-  comisionesIds: z.array(z.string()).min(1, 'Debe seleccionar al menos una comisión'),
+  fechaDesde: fechaFlexible,
+  fechaHasta: fechaFlexible,
+  comisionesIds: z.array(z.string().min(1)).min(1, 'Debe seleccionar al menos una comisión'),
 })
 
 // Schema para cierre de caja
 export const cierreCajaSchema = z.object({
-  fechaDesde: z.string().datetime().or(z.date()),
-  fechaHasta: z.string().datetime().or(z.date()),
+  fechaDesde: fechaFlexible,
+  fechaHasta: fechaFlexible,
   otsIds: z.array(z.string()).min(1, 'Debe incluir al menos una OT'),
   observaciones: z.string().optional(),
 })

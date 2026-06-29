@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { liquidarComisionesSchema } from '@/lib/validations'
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,14 +22,23 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { empleadoId, fechaDesde, fechaHasta } = body
 
-    if (!empleadoId || !fechaDesde || !fechaHasta) {
+    // Validación con Zod (incluye comisionesIds: solo se liquida lo seleccionado)
+    const validationResult = liquidarComisionesSchema.safeParse(body)
+    if (!validationResult.success) {
       return NextResponse.json(
-        { error: 'Faltan campos requeridos: empleadoId, fechaDesde, fechaHasta' },
+        {
+          error: 'Datos inválidos',
+          details: validationResult.error.errors.map((e) => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        },
         { status: 400 }
       )
     }
+
+    const { empleadoId, fechaDesde, fechaHasta, comisionesIds } = validationResult.data
 
     // Validar que el empleado existe
     const empleado = await prisma.usuario.findUnique({
@@ -39,7 +49,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Empleado no encontrado' }, { status: 404 })
     }
 
-    // Validar fechas
+    // Validar fechas (se guardan como metadatos del período de la liquidación)
     const desde = new Date(fechaDesde)
     const hasta = new Date(fechaHasta)
     hasta.setHours(23, 59, 59, 999)
@@ -51,31 +61,35 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Obtener comisiones pendientes del empleado en el período
-    const comisionesPendientes = await prisma.comision.findMany({
+    // Obtener SOLO las comisiones seleccionadas, exigiendo que pertenezcan al
+    // empleado y estén PENDIENTE (evita liquidar comisiones de otro empleado o ya liquidadas).
+    const comisionesIdsUnicos = Array.from(new Set(comisionesIds))
+    const comisionesSeleccionadas = await prisma.comision.findMany({
       where: {
+        id: { in: comisionesIdsUnicos },
         empleadoId,
         estado: 'PENDIENTE',
-        fechaGeneracion: {
-          gte: desde,
-          lte: hasta,
-        },
       },
     })
 
-    if (comisionesPendientes.length === 0) {
+    if (comisionesSeleccionadas.length !== comisionesIdsUnicos.length) {
+      const encontradas = new Set(comisionesSeleccionadas.map((c) => c.id))
+      const invalidas = comisionesIdsUnicos.filter((id) => !encontradas.has(id))
       return NextResponse.json(
-        { error: 'No hay comisiones pendientes para liquidar en el período seleccionado' },
+        {
+          error:
+            'Algunas comisiones no existen, no pertenecen al empleado o ya fueron liquidadas',
+          invalidas,
+        },
         { status: 400 }
       )
     }
 
     // Calcular monto total
-    const montoTotal = comisionesPendientes.reduce((sum, c) => sum + Number(c.monto), 0)
+    const montoTotal = comisionesSeleccionadas.reduce((sum, c) => sum + Number(c.monto), 0)
 
-    // Crear liquidación y actualizar comisiones en una transacción
+    // Crear liquidación, actualizar comisiones y auditar en una sola transacción
     const liquidacion = await prisma.$transaction(async (tx) => {
-      // Crear liquidación
       const nuevaLiquidacion = await tx.liquidacionComision.create({
         data: {
           empleadoId,
@@ -86,44 +100,50 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      // Actualizar comisiones a LIQUIDADA y asociarlas a la liquidación
-      for (const comision of comisionesPendientes) {
-        await tx.comision.update({
-          where: { id: comision.id },
-          data: {
-            estado: 'LIQUIDADA',
-            fechaLiquidacion: new Date(),
-            usuarioLiquidacionId: session.user.id,
-          },
-        })
+      // Marcar como LIQUIDADA solo las pendientes (condición en el where para
+      // blindar ante carreras: si otra liquidación las tomó, updateMany afecta 0).
+      const actualizadas = await tx.comision.updateMany({
+        where: {
+          id: { in: comisionesIdsUnicos },
+          empleadoId,
+          estado: 'PENDIENTE',
+        },
+        data: {
+          estado: 'LIQUIDADA',
+          fechaLiquidacion: new Date(),
+          usuarioLiquidacionId: session.user.id,
+        },
+      })
 
-        // Asociar comisión a la liquidación
-        await tx.liquidacionComisionComision.create({
-          data: {
-            liquidacionId: nuevaLiquidacion.id,
-            comisionId: comision.id,
-          },
-        })
+      if (actualizadas.count !== comisionesIdsUnicos.length) {
+        // Alguien liquidó parte en paralelo: abortar toda la transacción.
+        throw new Error('Conflicto de concurrencia al liquidar comisiones')
       }
 
-      return nuevaLiquidacion
-    })
+      await tx.liquidacionComisionComision.createMany({
+        data: comisionesIdsUnicos.map((comisionId) => ({
+          liquidacionId: nuevaLiquidacion.id,
+          comisionId,
+        })),
+      })
 
-    // Registrar en log de auditoría
-    await prisma.auditoriaLog.create({
-      data: {
-        usuarioId: session.user.id,
-        accion: 'COMISIONES_LIQUIDADAS',
-        entidad: 'LiquidacionComision',
-        entidadId: liquidacion.id,
-        datos: JSON.stringify({
-          empleadoId,
-          fechaDesde,
-          fechaHasta,
-          montoTotal,
-          cantidadComisiones: comisionesPendientes.length,
-        }),
-      },
+      await tx.auditoriaLog.create({
+        data: {
+          usuarioId: session.user.id,
+          accion: 'COMISIONES_LIQUIDADAS',
+          entidad: 'LiquidacionComision',
+          entidadId: nuevaLiquidacion.id,
+          datos: JSON.stringify({
+            empleadoId,
+            fechaDesde: desde.toISOString(),
+            fechaHasta: hasta.toISOString(),
+            montoTotal,
+            cantidadComisiones: comisionesIdsUnicos.length,
+          }),
+        },
+      })
+
+      return nuevaLiquidacion
     })
 
     return NextResponse.json({
@@ -132,7 +152,7 @@ export async function POST(request: NextRequest) {
       fechaDesde: desde,
       fechaHasta: hasta,
       montoTotal: Number(montoTotal),
-      cantidadComisiones: comisionesPendientes.length,
+      cantidadComisiones: comisionesIdsUnicos.length,
     })
   } catch (error) {
     console.error('Error al liquidar comisiones:', error)

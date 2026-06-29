@@ -131,6 +131,9 @@ export default function LiquidarComisionesPage() {
           empleadoId: empleadoSeleccionado,
           fechaDesde,
           fechaHasta,
+          // Liquidamos exactamente las comisiones mostradas (el servidor valida que
+          // sigan pendientes y pertenezcan al empleado).
+          comisionesIds: comisionesPendientes.map((c) => c.id),
         }),
       })
 

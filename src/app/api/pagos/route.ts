@@ -12,6 +12,9 @@ import { hasPermission } from '@/lib/auth'
 import { verificarYCalcularComisiones } from '@/lib/comisiones'
 import { registrarPagoSchema } from '@/lib/validations'
 
+/** Error de validación de pago que se traduce a HTTP 400 (mensaje seguro para el usuario). */
+class PagoInvalidoError extends Error {}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -129,9 +132,40 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Crear pago con transacción
-    const pago = await prisma.$transaction(async (tx) => {
-      const nuevoPago = await tx.pago.create({
+    // No se cobran OTs canceladas
+    if (ot.estado === 'CANCELADO') {
+      return NextResponse.json(
+        { error: 'No se puede registrar un pago sobre una OT cancelada' },
+        { status: 400 }
+      )
+    }
+
+    // Tolerancia para redondeos de Float (centavos)
+    const EPSILON = 0.01
+
+    // Crear pago con transacción. La validación de saldo se hace DENTRO de la
+    // transacción para evitar sobrepagos por condiciones de carrera (dos cobros
+    // simultáneos que individualmente "entran" pero juntos exceden el total).
+    let pago
+    try {
+      pago = await prisma.$transaction(async (tx) => {
+        const pagosPrevios = await tx.pago.findMany({
+          where: { ordenTrabajoId },
+          select: { monto: true },
+        })
+        const totalPagado = pagosPrevios.reduce((sum, p) => sum + Number(p.monto), 0)
+        const pendiente = Number(ot.total) - totalPagado
+
+        if (pendiente <= EPSILON) {
+          throw new PagoInvalidoError('La OT ya está completamente pagada')
+        }
+        if (monto > pendiente + EPSILON) {
+          throw new PagoInvalidoError(
+            `El monto excede el saldo pendiente ($${pendiente.toFixed(2)})`
+          )
+        }
+
+        const nuevoPago = await tx.pago.create({
         data: {
           ordenTrabajoId,
           monto,
@@ -176,6 +210,12 @@ export async function POST(request: NextRequest) {
 
       return nuevoPago
     })
+    } catch (err) {
+      if (err instanceof PagoInvalidoError) {
+        return NextResponse.json({ error: err.message }, { status: 400 })
+      }
+      throw err
+    }
 
     // Verificar si después de este pago, la OT está completamente pagada y ENTREGADA
     // para calcular comisiones
