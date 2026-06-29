@@ -85,7 +85,9 @@ export async function getCurrentSession() {
 }
 
 /**
- * Obtener usuario actual desde sesión
+ * Obtener usuario actual desde sesión.
+ * Devuelve solo lo que el JWT/sesión realmente contiene (no fabrica datos:
+ * `usuario` y `activo` no viven en el token, por eso no se exponen aquí).
  */
 export async function getCurrentUser() {
   const session = await getCurrentSession()
@@ -96,8 +98,7 @@ export async function getCurrentUser() {
   return {
     id: session.user.id,
     nombre: session.user.name || '',
-    usuario: '',
     rol: session.user.role,
-    activo: true,
+    clienteId: session.user.clienteId ?? null,
   }
 }

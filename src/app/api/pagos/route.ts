@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
         data: {
           ordenTrabajoId,
           monto,
-          medioPago: medioPago as any,
+          medioPago,
           referencia: referencia || null,
           // Usamos siempre la fecha/hora actual para el registro del pago
           fechaHora: new Date(),

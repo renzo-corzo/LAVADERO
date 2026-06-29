@@ -96,7 +96,7 @@ export async function PUT(request: NextRequest) {
         // Validar cada transición secuencial (permite "saltear" en la UI, pero aplicamos pasos intermedios)
         let prev = estadoActual
         for (const next of pasos) {
-          const validacion = isValidEstadoTransition(prev, next, session.user.role as any)
+          const validacion = isValidEstadoTransition(prev, next, session.user.role)
           if (!validacion.valid) {
             errores.push({
               id: ot.id,
@@ -127,14 +127,14 @@ export async function PUT(request: NextRequest) {
         for (const next of plan.pasos) {
           await tx.ordenTrabajo.update({
             where: { id: plan.id },
-            data: { estado: next as any },
+            data: { estado: next },
           })
 
           await tx.estadoHistorial.create({
             data: {
               ordenTrabajoId: plan.id,
-              estadoAnterior: prev as any,
-              estadoNuevo: next as any,
+              estadoAnterior: prev,
+              estadoNuevo: next,
               usuarioId: session.user.id,
               fechaHora: new Date(),
             },

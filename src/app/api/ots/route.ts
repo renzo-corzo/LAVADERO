@@ -9,6 +9,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { getOtAccessScope, hasPermission } from '@/lib/auth'
+import { calcularTotalOT } from '@/lib/reglas-negocio'
 import { crearOTSchema } from '@/lib/validations'
 
 export async function GET(request: NextRequest) {
@@ -246,63 +247,33 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Calcular total
-    const isPlainObject = (v: unknown): v is Record<string, unknown> =>
-      typeof v === 'object' && v !== null && !Array.isArray(v)
-
-    const asNumberRecord = (v: unknown): Record<string, number> => {
-      if (!isPlainObject(v)) return {}
-      const out: Record<string, number> = {}
-      for (const [k, val] of Object.entries(v)) {
-        if (typeof val === 'number' && Number.isFinite(val)) out[k] = val
-      }
-      return out
+    // La justificación es obligatoria si se ajusta el precio manualmente
+    if (precioAjustado !== undefined && precioAjustado !== null && !justificacionPrecio) {
+      return NextResponse.json(
+        { error: 'Justificación requerida si se ajusta el precio' },
+        { status: 400 }
+      )
     }
 
-    const usaMontosFijos = Boolean(cliente?.usaMontosFijos)
-    const montosFijosServicios = asNumberRecord(cliente?.montosFijosServicios)
-    const montosFijosExtras = asNumberRecord(cliente?.montosFijosExtras)
-
-    let total = 0
-    const precioServicioFinal = usaMontosFijos
-      ? montosFijosServicios[servicioId] ?? Number(servicio.precio)
-      : Number(servicio.precio)
-    total += Number(precioServicioFinal)
-
-    extras.forEach((extra) => {
-      const precioExtraFinal = usaMontosFijos
-        ? montosFijosExtras[extra.id] ?? Number(extra.precio)
-        : Number(extra.precio)
-      total += Number(precioExtraFinal)
+    // Calcular total con la regla compartida (montos fijos / descuento / ajuste)
+    const total = calcularTotalOT({
+      servicioId,
+      precioServicio: Number(servicio.precio),
+      extras: extras.map((e) => ({ id: e.id, precio: Number(e.precio) })),
+      cliente,
+      precioAjustado,
     })
-
-    // Aplicar descuento del cliente SOLO si NO usa montos fijos
-    if (!usaMontosFijos && cliente && cliente.descuentoPorcentaje) {
-      const descuento = (total * cliente.descuentoPorcentaje) / 100
-      total = total - descuento
-    }
-
-    // Si hay precio ajustado, usar ese (sobrescribe el descuento)
-    if (precioAjustado !== undefined && precioAjustado !== null) {
-      total = precioAjustado
-      if (!justificacionPrecio) {
-        return NextResponse.json(
-          { error: 'Justificación requerida si se ajusta el precio' },
-          { status: 400 }
-        )
-      }
-    }
 
     const ot = await prisma.$transaction(async (tx) => {
       const nuevaOT = await tx.ordenTrabajo.create({
-        data: ({
+        data: {
           fechaIngreso: new Date(),
-          patente: patente?.trim() || '',
+          patente: patente.trim(),
           tipoVehiculo: tipoVehiculo || null,
           descripcionVehiculo: descripcionVehiculo?.trim() || null,
-          nombreCliente: nombreCliente?.trim() || null,
-          telefonoCliente: telefonoCliente?.trim() || null,
-          horarioDeseado: esExterna ? null : (horarioDeseado ? new Date(horarioDeseado as any) : null),
+          nombreCliente: nombreCliente.trim(),
+          telefonoCliente: telefonoCliente.trim(),
+          horarioDeseado: esExterna ? null : (horarioDeseado ?? null),
           esExterna,
           clienteId: clienteId || null,
           servicioId,
@@ -322,7 +293,7 @@ export async function POST(request: NextRequest) {
               empleadoId,
             })),
           },
-        } as any),
+        },
         include: {
           servicio: true,
           extras: {

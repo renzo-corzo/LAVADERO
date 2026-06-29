@@ -9,7 +9,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
-import { canEditOT } from '@/lib/reglas-negocio'
+import { canEditOT, calcularTotalOT } from '@/lib/reglas-negocio'
+import { editarOTSchema } from '@/lib/validations'
 
 export async function GET(
   request: NextRequest,
@@ -130,6 +131,21 @@ export async function PUT(
     }
 
     const body = await request.json()
+
+    const validationResult = editarOTSchema.safeParse(body)
+    if (!validationResult.success) {
+      return NextResponse.json(
+        {
+          error: 'Datos inválidos',
+          details: validationResult.error.errors.map((e) => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        },
+        { status: 400 }
+      )
+    }
+
     const {
       servicioId,
       extrasIds = [],
@@ -142,42 +158,30 @@ export async function PUT(
       observaciones,
       precioAjustado,
       justificacionPrecio,
-    } = body
+    } = validationResult.data
 
-    // Determinar si es OT externa por el cliente asociado
-    let cliente: any = null
-    if (otActual.clienteId) {
-      cliente = await prisma.cliente.findUnique({
-        where: { id: otActual.clienteId },
-      })
-    }
+    // El cliente y "esExterna" se derivan de la OT existente (no cambian al editar)
+    const cliente = otActual.clienteId
+      ? await prisma.cliente.findUnique({ where: { id: otActual.clienteId } })
+      : null
     const esExterna = Boolean(cliente?.trabajoExterno)
 
-    // Validaciones
-    if (!servicioId || !patente || !nombreCliente || !telefonoCliente || (!esExterna && !horarioDeseado)) {
+    // El horario es obligatorio salvo en OTs externas
+    if (!esExterna && !horarioDeseado) {
       return NextResponse.json(
-        { error: 'Servicio, patente, nombre del cliente, teléfono, horario deseado y al menos un empleado son obligatorios' },
-        { status: 400 }
-      )
-    }
-    
-    // Validar que patente no esté vacío
-    if (!patente.trim()) {
-      return NextResponse.json(
-        { error: 'La patente es obligatoria y no puede estar vacía' },
-        { status: 400 }
-      )
-    }
-    
-    // Validar que nombre y teléfono no estén vacíos
-    if (!nombreCliente.trim() || !telefonoCliente.trim()) {
-      return NextResponse.json(
-        { error: 'El nombre y teléfono del cliente son obligatorios' },
+        { error: 'El horario deseado es obligatorio para OTs en lavadero' },
         { status: 400 }
       )
     }
 
-    // Recalcular total si cambió servicio o extras
+    // La justificación es obligatoria si se ajusta el precio
+    if (precioAjustado !== undefined && precioAjustado !== null && !justificacionPrecio) {
+      return NextResponse.json(
+        { error: 'Justificación requerida si se ajusta el precio' },
+        { status: 400 }
+      )
+    }
+
     const servicio = await prisma.servicio.findUnique({
       where: { id: servicioId },
     })
@@ -189,7 +193,7 @@ export async function PUT(
       )
     }
 
-    let extras: any[] = []
+    let extras: { id: string; precio: unknown }[] = []
     if (extrasIds.length > 0) {
       extras = await prisma.extra.findMany({
         where: {
@@ -197,55 +201,23 @@ export async function PUT(
           activo: true,
         },
       })
-    }
 
-    // Calcular total
-
-    const isPlainObject = (v: unknown): v is Record<string, unknown> =>
-      typeof v === 'object' && v !== null && !Array.isArray(v)
-
-    const asNumberRecord = (v: unknown): Record<string, number> => {
-      if (!isPlainObject(v)) return {}
-      const out: Record<string, number> = {}
-      for (const [k, val] of Object.entries(v)) {
-        if (typeof val === 'number' && Number.isFinite(val)) out[k] = val
-      }
-      return out
-    }
-
-    const usaMontosFijos = Boolean(cliente?.usaMontosFijos)
-    const montosFijosServicios = asNumberRecord(cliente?.montosFijosServicios)
-    const montosFijosExtras = asNumberRecord(cliente?.montosFijosExtras)
-
-    let total = 0
-    const precioServicioFinal = usaMontosFijos
-      ? montosFijosServicios[servicioId] ?? Number(servicio.precio)
-      : Number(servicio.precio)
-    total += Number(precioServicioFinal)
-
-    extras.forEach((extra) => {
-      const precioExtraFinal = usaMontosFijos
-        ? montosFijosExtras[extra.id] ?? Number(extra.precio)
-        : Number(extra.precio)
-      total += Number(precioExtraFinal)
-    })
-
-    // Aplicar descuento SOLO si NO usa montos fijos
-    if (!usaMontosFijos && cliente && cliente.descuentoPorcentaje) {
-      const descuento = (total * cliente.descuentoPorcentaje) / 100
-      total = total - descuento
-    }
-
-    // Si hay precio ajustado, usar ese
-    if (precioAjustado !== undefined && precioAjustado !== null) {
-      total = parseFloat(precioAjustado)
-      if (!justificacionPrecio) {
+      if (extras.length !== extrasIds.length) {
         return NextResponse.json(
-          { error: 'Justificación requerida si se ajusta el precio' },
+          { error: 'Uno o más extras no encontrados o inactivos' },
           { status: 400 }
         )
       }
     }
+
+    // Calcular total con la regla compartida (montos fijos / descuento / ajuste)
+    const total = calcularTotalOT({
+      servicioId,
+      precioServicio: Number(servicio.precio),
+      extras: extras.map((e) => ({ id: e.id, precio: Number(e.precio) })),
+      cliente,
+      precioAjustado,
+    })
 
     // Actualizar OT con transacción
     const ot = await prisma.$transaction(async (tx) => {
@@ -257,25 +229,25 @@ export async function PUT(
       // Actualizar OT
       const otActualizada = await tx.ordenTrabajo.update({
         where: { id: params.id },
-        data: ({
+        data: {
           patente: patente.trim(),
           tipoVehiculo: tipoVehiculo || null,
-          descripcionVehiculo: descripcionVehiculo || null,
+          descripcionVehiculo: descripcionVehiculo?.trim() || null,
           nombreCliente: nombreCliente.trim(),
           telefonoCliente: telefonoCliente.trim(),
-          horarioDeseado: esExterna ? null : (horarioDeseado ? new Date(horarioDeseado) : null),
+          horarioDeseado: esExterna ? null : (horarioDeseado ?? null),
           esExterna,
           servicioId,
           observaciones: observaciones || null,
           total,
-          precioAjustado: precioAjustado ? parseFloat(precioAjustado) : null,
+          precioAjustado: precioAjustado ?? null,
           justificacionPrecio: justificacionPrecio || null,
           extras: {
             create: extrasIds.map((extraId: string) => ({
               extraId,
             })),
           },
-        } as any),
+        },
         include: {
           servicio: true,
           extras: {

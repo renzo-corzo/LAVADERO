@@ -36,6 +36,13 @@ export const crearOTSchema = z.object({
   justificacionPrecio: z.string().nullish().transform((v) => (v === '' ? undefined : v)),
 })
 
+// Schema para editar OT: mismos campos que crear, pero el cliente y los
+// empleados asignados no se modifican en la edición.
+export const editarOTSchema = crearOTSchema.omit({
+  empleadosIds: true,
+  clienteId: true,
+})
+
 // Schema para cambiar estado de OT
 export const cambiarEstadoOTSchema = z.object({
   nuevoEstado: z.enum(['EN_COLA', 'EN_PROCESO', 'LISTO', 'ENTREGADO', 'CANCELADO']),

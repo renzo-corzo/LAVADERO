@@ -63,8 +63,8 @@ export async function PUT(
     }
 
     const validacion = isValidEstadoTransition(
-      otActual.estado as any,
-      nuevoEstado as any,
+      otActual.estado,
+      nuevoEstado,
       session.user.role
     )
 
@@ -79,8 +79,8 @@ export async function PUT(
     if (
       !hasEstadoTransitionPermission(
         session.user.role,
-        otActual.estado as any,
-        nuevoEstado as any
+        otActual.estado,
+        nuevoEstado
       )
     ) {
       return NextResponse.json({ error: 'Sin permisos para esta transición' }, { status: 403 })
@@ -90,7 +90,7 @@ export async function PUT(
       const otActualizada = await tx.ordenTrabajo.update({
         where: { id: params.id },
         data: {
-          estado: nuevoEstado as any,
+          estado: nuevoEstado,
         },
         include: {
           servicio: true,
@@ -116,8 +116,8 @@ export async function PUT(
       await tx.estadoHistorial.create({
         data: {
           ordenTrabajoId: params.id,
-          estadoAnterior: otActual.estado as any,
-          estadoNuevo: nuevoEstado as any,
+          estadoAnterior: otActual.estado,
+          estadoNuevo: nuevoEstado,
           usuarioId: session.user.id,
           fechaHora: new Date(),
         },

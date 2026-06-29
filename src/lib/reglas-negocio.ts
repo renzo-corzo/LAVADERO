@@ -95,17 +95,68 @@ export function canCancelOT(estado: OTEstado, userRole: UserRole): boolean {
   return userRole === 'ENCARGADO' || userRole === 'DUENO'
 }
 
+/** Datos de personalización de precio del cliente (concesionaria). */
+export interface ClientePricing {
+  usaMontosFijos?: boolean | null
+  montosFijosServicios?: unknown // Json: { [servicioId]: number }
+  montosFijosExtras?: unknown // Json: { [extraId]: number }
+  descuentoPorcentaje?: number | null
+}
+
+const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v)
+
+/** Convierte un Json arbitrario en un mapa { clave: number } descartando valores no numéricos. */
+function asNumberRecord(v: unknown): Record<string, number> {
+  if (!isPlainObject(v)) return {}
+  const out: Record<string, number> = {}
+  for (const [k, val] of Object.entries(v)) {
+    if (typeof val === 'number' && Number.isFinite(val)) out[k] = val
+  }
+  return out
+}
+
 /**
- * Calcular total de una OT
+ * Calcula el total de una OT aplicando, en este orden de prioridad:
+ *  1. precioAjustado (override manual) si viene definido.
+ *  2. Montos fijos por servicio/extra del cliente (si usaMontosFijos).
+ *  3. Precio de catálogo + descuento porcentual del cliente.
+ *
+ * Fuente única de verdad usada tanto al crear como al editar una OT.
  */
-export function calcularTotalOT(
-  precioServicio: number,
-  preciosExtras: number[],
-  precioAjustado?: number
-): number {
-  if (precioAjustado !== undefined) {
+export function calcularTotalOT(params: {
+  servicioId: string
+  precioServicio: number
+  extras: Array<{ id: string; precio: number }>
+  cliente?: ClientePricing | null
+  precioAjustado?: number | null
+}): number {
+  const { servicioId, precioServicio, extras, cliente, precioAjustado } = params
+
+  // El precio ajustado manual sobrescribe cualquier otra regla.
+  if (precioAjustado !== undefined && precioAjustado !== null) {
     return precioAjustado
   }
-  return precioServicio + preciosExtras.reduce((sum, precio) => sum + precio, 0)
+
+  const usaMontosFijos = Boolean(cliente?.usaMontosFijos)
+  const montosFijosServicios = asNumberRecord(cliente?.montosFijosServicios)
+  const montosFijosExtras = asNumberRecord(cliente?.montosFijosExtras)
+
+  let total = usaMontosFijos
+    ? montosFijosServicios[servicioId] ?? precioServicio
+    : precioServicio
+
+  for (const extra of extras) {
+    total += usaMontosFijos
+      ? montosFijosExtras[extra.id] ?? extra.precio
+      : extra.precio
+  }
+
+  // El descuento porcentual aplica solo si NO usa montos fijos.
+  if (!usaMontosFijos && cliente?.descuentoPorcentaje) {
+    total -= (total * cliente.descuentoPorcentaje) / 100
+  }
+
+  return total
 }
 

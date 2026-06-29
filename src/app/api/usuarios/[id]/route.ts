@@ -122,7 +122,7 @@ export async function PUT(
       data: {
         nombre: nombre.trim(),
         usuario: username.trim(),
-        rol: rol as any,
+        rol,
         activo: activo !== undefined ? activo : usuarioExistente.activo,
       },
       select: {

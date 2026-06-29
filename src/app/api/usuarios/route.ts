@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
         nombre: nombre.trim(),
         usuario: username.trim(),
         password: hashedPassword,
-        rol: rol as any,
+        rol,
         activo: activo !== undefined ? activo : true,
       },
       select: {
