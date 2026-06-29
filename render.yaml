@@ -1,7 +1,16 @@
+databases:
+  - name: lavadero-db
+    databaseName: lavadero
+    user: lavadero
+    plan: free # cambiar a "starter" para datos persistentes (la free expira a los ~90 días)
+    region: virginia # región más cercana a Argentina; usar la misma que el web service
+
 services:
   - type: web
     name: lavadero
     env: node
+    region: virginia
+    plan: free
     buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
@@ -9,10 +18,15 @@ services:
         value: production
       - key: NPM_CONFIG_PRODUCTION
         value: "false"
+      # Render inyecta automáticamente la cadena de conexión de la base de arriba.
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: lavadero-db
+          property: connectionString
+      # Generar con: openssl rand -base64 32 (cargar como secreto en el dashboard)
       - key: NEXTAUTH_SECRET
         sync: false
+      # URL pública del servicio (ej: https://lavadero.onrender.com)
       - key: NEXTAUTH_URL
         sync: false
 
