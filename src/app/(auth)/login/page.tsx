@@ -31,7 +31,14 @@ export default function LoginPage() {
       })
 
       if (result?.error) {
-        setError('Usuario o contraseña incorrectos')
+        // NextAuth devuelve 'CredentialsSignin' cuando authorize retorna null
+        // (usuario/clave inválidos). Si es otro mensaje, viene de un throw nuestro
+        // (rate limit, servicio no disponible) y debe mostrarse tal cual.
+        setError(
+          result.error === 'CredentialsSignin'
+            ? 'Usuario o contraseña incorrectos'
+            : result.error
+        )
       } else {
         // Redirigir según rol
         const session = await getSession()
@@ -63,7 +70,10 @@ export default function LoginPage() {
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            <div
+              role="alert"
+              className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded"
+            >
               {error}
             </div>
           )}
@@ -78,6 +88,8 @@ export default function LoginPage() {
                 name="usuario"
                 type="text"
                 required
+                autoFocus
+                autoComplete="username"
                 value={usuario}
                 onChange={(e) => setUsuario(e.target.value)}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
@@ -94,6 +106,7 @@ export default function LoginPage() {
                 name="password"
                 type="password"
                 required
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"

@@ -10,6 +10,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
+import { toast } from 'sonner'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { formatCurrency, formatDateTime, formatHorarioDeseado, getTimeElapsed } from '@/lib/utils'
@@ -38,6 +39,7 @@ export default function TableroPage() {
     ENTREGADO: [],
   })
   const [loading, setLoading] = useState(true)
+  const [errorCarga, setErrorCarga] = useState<string | null>(null)
   const [mostrarExternas, setMostrarExternas] = useState(false)
   const [seleccionadasIds, setSeleccionadasIds] = useState<string[]>([])
   const [estadoLote, setEstadoLote] = useState<'EN_PROCESO' | 'LISTO' | 'ENTREGADO'>('LISTO')
@@ -100,6 +102,7 @@ export default function TableroPage() {
 
     try {
       setLoading(true)
+      setErrorCarga(null)
       const params = new URLSearchParams()
       if (filtroFecha) {
         params.append('fecha', filtroFecha)
@@ -132,9 +135,15 @@ export default function TableroPage() {
         setSeleccionadasIds((prev) => prev.filter((id) => idsVisibles.has(id)))
       } else {
         console.error('Error al cargar OTs:', response.status, response.statusText)
+        setErrorCarga(
+          response.status === 403
+            ? 'No tenés permisos para ver el tablero.'
+            : 'No se pudieron cargar las órdenes de trabajo. Reintentá.'
+        )
       }
     } catch (error) {
       console.error('Error al cargar OTs:', error)
+      setErrorCarga('Error de conexión al cargar el tablero. Verificá tu red y reintentá.')
     } finally {
       setLoading(false)
     }
@@ -192,11 +201,11 @@ export default function TableroPage() {
         }, 300)
       } else {
         const data = await response.json()
-        alert(`Error: ${data.error || 'No se pudo cambiar el estado'}`)
+        toast.error(data.error || 'No se pudo cambiar el estado')
       }
     } catch (error) {
       console.error('Error al cambiar estado:', error)
-      alert('Error al cambiar el estado de la OT')
+      toast.error('Error al cambiar el estado de la OT')
     }
   }
 
@@ -226,7 +235,7 @@ export default function TableroPage() {
       const data = await response.json().catch(() => ({}))
 
       if (!response.ok) {
-        alert(`Error: ${data?.error || 'No se pudo cambiar el estado en lote'}`)
+        toast.error(data?.error || 'No se pudo cambiar el estado en lote')
         return
       }
 
@@ -234,16 +243,18 @@ export default function TableroPage() {
       const failedCount = Number(data?.failedCount || 0)
 
       if (failedCount > 0) {
-        alert(`Listo: ${updatedCount} actualizadas. ${failedCount} no se pudieron actualizar (transición no permitida).`)
+        toast.warning(`${updatedCount} actualizadas`, {
+          description: `${failedCount} no se pudieron actualizar (transición no permitida).`,
+        })
       } else {
-        alert(`Listo: ${updatedCount} OTs actualizadas.`)
+        toast.success(`${updatedCount} OTs actualizadas`)
       }
 
       limpiarSeleccion()
       setTimeout(() => cargarOTs(), 300)
     } catch (error) {
       console.error('Error al cambiar estado en lote:', error)
-      alert('Error al cambiar estado en lote')
+      toast.error('Error al cambiar estado en lote')
     } finally {
       setAplicandoLote(false)
     }
@@ -490,6 +501,18 @@ export default function TableroPage() {
         {loading && (
           <div className="flex items-center justify-center h-64">
             <p className="text-gray-500">Cargando tablero...</p>
+          </div>
+        )}
+
+        {!loading && errorCarga && (
+          <div
+            role="alert"
+            className="mb-6 flex items-center justify-between gap-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700"
+          >
+            <span>{errorCarga}</span>
+            <Button variant="secondary" size="sm" onClick={() => cargarOTs()}>
+              Reintentar
+            </Button>
           </div>
         )}
 

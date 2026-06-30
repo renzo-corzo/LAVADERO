@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Toaster } from 'sonner'
 import { SessionProvider } from '@/components/providers/SessionProvider'
 import './globals.css'
 
@@ -64,6 +65,7 @@ export default function RootLayout({
       </head>
       <body>
         <SessionProvider>{children}</SessionProvider>
+        <Toaster richColors position="top-right" closeButton />
       </body>
     </html>
   )

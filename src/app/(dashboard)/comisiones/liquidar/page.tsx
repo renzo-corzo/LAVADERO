@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -109,12 +110,12 @@ export default function LiquidarComisionesPage() {
 
   const handleLiquidar = async () => {
     if (!empleadoSeleccionado || !fechaDesde || !fechaHasta) {
-      alert('Por favor completa todos los campos')
+      toast.error('Por favor completa todos los campos')
       return
     }
 
     if (comisionesPendientes.length === 0) {
-      alert('No hay comisiones pendientes para liquidar en el período seleccionado')
+      toast.error('No hay comisiones pendientes para liquidar en el período seleccionado')
       return
     }
 
@@ -139,17 +140,17 @@ export default function LiquidarComisionesPage() {
 
       if (response.ok) {
         const data = await response.json()
-        alert(
-          `✅ Liquidación realizada correctamente\nMonto total: ${formatCurrency(data.montoTotal)}\nComisiones liquidadas: ${data.cantidadComisiones}`
-        )
+        toast.success('Liquidación realizada correctamente', {
+          description: `Monto total: ${formatCurrency(data.montoTotal)} · Comisiones: ${data.cantidadComisiones}`,
+        })
         router.push('/comisiones')
       } else {
         const error = await response.json()
-        alert(`Error: ${error.error || 'Error al liquidar comisiones'}`)
+        toast.error(error.error || 'Error al liquidar comisiones')
       }
     } catch (error) {
       console.error('Error al liquidar comisiones:', error)
-      alert('Error al liquidar las comisiones')
+      toast.error('Error al liquidar las comisiones')
     } finally {
       setLiquidando(false)
     }
