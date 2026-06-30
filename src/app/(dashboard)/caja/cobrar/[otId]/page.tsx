@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -58,7 +59,7 @@ export default function RegistrarPagoPage() {
         const dataOT = await responseOT.json()
         setOT(dataOT)
       } else {
-        alert('Error al cargar la OT')
+        toast.error('Error al cargar la OT')
         router.push('/tablero')
         return
       }
@@ -69,7 +70,7 @@ export default function RegistrarPagoPage() {
       }
     } catch (error) {
       console.error('Error al cargar datos:', error)
-      alert('Error al cargar datos')
+      toast.error('Error al cargar datos')
     } finally {
       setLoading(false)
     }
@@ -82,17 +83,17 @@ export default function RegistrarPagoPage() {
     e.preventDefault()
 
     if (!monto || Number(monto) <= 0) {
-      alert('Ingrese un monto válido')
+      toast.error('Ingrese un monto válido')
       return
     }
 
     if (Number(monto) > pendiente) {
-      alert(`El monto no puede ser mayor al pendiente (${formatCurrency(pendiente)})`)
+      toast.error(`El monto no puede ser mayor al pendiente (${formatCurrency(pendiente)})`)
       return
     }
 
     if (medioPago === 'TRANSFERENCIA' && !referencia.trim()) {
-      alert(
+      toast.error(
         'La referencia es obligatoria para transferencia. Indique CBU, alias o número de operación.'
       )
       return
@@ -116,9 +117,9 @@ export default function RegistrarPagoPage() {
         const nuevoPendiente = pendiente - Number(monto)
         
         if (nuevoPendiente <= 0) {
-          alert('Pago registrado exitosamente. La OT está completamente pagada.')
+          toast.success('Pago registrado', { description: 'La OT está completamente pagada.' })
         } else {
-          alert('Pago registrado exitosamente')
+          toast.success('Pago registrado exitosamente')
         }
         // Redirigir al tablero para continuar trabajando
         router.push('/tablero')
@@ -127,13 +128,13 @@ export default function RegistrarPagoPage() {
         const base = data.error || 'No se pudo registrar el pago'
         const fromDetails =
           Array.isArray(data.details) && data.details.length > 1
-            ? '\n' + data.details.map((d: { message: string }) => d.message).join('\n')
-            : ''
-        alert(`Error: ${base}${fromDetails}`)
+            ? data.details.map((d: { message: string }) => d.message).join(' · ')
+            : undefined
+        toast.error(base, fromDetails ? { description: fromDetails } : undefined)
       }
     } catch (error) {
       console.error('Error al registrar pago:', error)
-      alert('Error al registrar el pago')
+      toast.error('Error al registrar el pago')
     } finally {
       setGuardando(false)
     }

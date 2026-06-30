@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { formatCurrency } from '@/lib/utils'
@@ -49,10 +50,14 @@ export default function ServiciosPage() {
 
       if (response.ok) {
         cargarServicios()
+        toast.success('Servicio desactivado')
+      } else {
+        const error = await response.json().catch(() => ({}))
+        toast.error(error.error || 'No se pudo desactivar el servicio')
       }
     } catch (error) {
       console.error('Error al desactivar servicio:', error)
-      alert('Error al desactivar servicio')
+      toast.error('Error al desactivar servicio')
     }
   }
 

@@ -1,13 +1,21 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Toaster } from 'sonner'
 import { SessionProvider } from '@/components/providers/SessionProvider'
 import './globals.css'
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+  themeColor: '#0070f3',
+}
 
 export const metadata: Metadata = {
   title: 'Lavadero Sistema',
   description: 'Sistema de gestión para lavadero de autos',
   manifest: '/manifest.json',
-  themeColor: '#0070f3',
   icons: {
     icon: [
       { url: '/favicon.svg', type: 'image/svg+xml' },
@@ -17,13 +25,6 @@ export const metadata: Metadata = {
     apple: [
       { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
     ],
-  },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-    viewportFit: 'cover',
   },
   appleWebApp: {
     capable: true,

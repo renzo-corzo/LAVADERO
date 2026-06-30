@@ -8,6 +8,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -142,7 +143,7 @@ export default function EditarClientePage() {
       const response = await fetch(`/api/clientes/${clienteId}`)
 
       if (response.status === 404) {
-        alert('Cliente no encontrado')
+        toast.error('Cliente no encontrado')
         router.push('/clientes')
         return
       }

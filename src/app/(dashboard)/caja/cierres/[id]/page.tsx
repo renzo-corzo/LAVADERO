@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
@@ -71,12 +72,12 @@ export default function CierreDetallePage() {
         const data = await response.json()
         setCierre(data)
       } else {
-        alert('Error al cargar el cierre')
+        toast.error('Error al cargar el cierre')
         router.push('/caja')
       }
     } catch (error) {
       console.error('Error al cargar detalle:', error)
-      alert('Error al cargar el cierre')
+      toast.error('Error al cargar el cierre')
     } finally {
       setLoading(false)
     }

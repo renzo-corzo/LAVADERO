@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { formatCurrency } from '@/lib/utils'
@@ -50,10 +51,14 @@ export default function ExtrasPage() {
 
       if (response.ok) {
         cargarExtras()
+        toast.success('Extra desactivado')
+      } else {
+        const error = await response.json().catch(() => ({}))
+        toast.error(error.error || 'No se pudo desactivar el extra')
       }
     } catch (error) {
       console.error('Error al desactivar extra:', error)
-      alert('Error al desactivar extra')
+      toast.error('Error al desactivar extra')
     }
   }
 

@@ -8,6 +8,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -380,12 +381,12 @@ export default function NuevaOTPage() {
         const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }))
         console.error('[nueva-ot] Error al cargar horarios:', response.status, errorData)
         setHorariosDelDia(null)
-        alert(`Error al cargar horarios: ${errorData.error || 'Error desconocido'}`)
+        toast.error(`Error al cargar horarios: ${errorData.error || 'Error desconocido'}`)
       }
     } catch (error) {
       console.error('[nueva-ot] Error al cargar horarios disponibles:', error)
       setHorariosDelDia(null)
-      alert('Error al cargar horarios disponibles. Por favor, recarga la página.')
+      toast.error('Error al cargar horarios disponibles. Por favor, recargá la página.')
     }
   }
 
@@ -507,9 +508,9 @@ export default function NuevaOTPage() {
         }
         setErrors(newErrors)
         const msg = details.length > 0
-          ? details.map((d: { field?: string; message?: string }) => `${d.field || 'Campo'}: ${d.message}`).join('\n')
+          ? details.map((d: { field?: string; message?: string }) => `${d.field || 'Campo'}: ${d.message}`).join(' · ')
           : data.error
-        alert(`Error: ${msg}`)
+        toast.error('No se pudo crear la OT', { description: msg })
       }
     } catch (error) {
       setErrors({ submit: 'Error al crear orden de trabajo' })

@@ -6,6 +6,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -58,7 +59,7 @@ export default function ReportesPage() {
 
   const handleVerReporte = (tipo: TipoReporte) => {
     if (!fechaDesde || !fechaHasta) {
-      alert('Por favor selecciona las fechas')
+      toast.error('Por favor seleccioná las fechas')
       return
     }
     console.log('Mostrando reporte:', tipo)
@@ -237,11 +238,11 @@ function ReporteVentas({ fechaDesde, fechaHasta, clienteId }: { fechaDesde: stri
       } else {
         const errorData = await response.json()
         console.error('[ReporteVentas] Error en respuesta:', errorData)
-        alert(`Error al cargar el reporte: ${errorData.error || 'Error desconocido'}`)
+        toast.error(`Error al cargar el reporte: ${errorData.error || 'Error desconocido'}`)
       }
     } catch (error) {
       console.error('Error al cargar reporte de ventas:', error)
-      alert('Error al cargar el reporte. Revisa la consola para más detalles.')
+      toast.error('Error al cargar el reporte. Revisá la consola para más detalles.')
     } finally {
       setLoading(false)
     }

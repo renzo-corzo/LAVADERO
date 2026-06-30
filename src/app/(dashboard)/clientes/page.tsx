@@ -9,6 +9,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import type { Cliente } from '@/types'
@@ -37,7 +38,7 @@ export default function ClientesPage() {
       const response = await fetch(`/api/clientes?${params.toString()}`)
       
       if (response.status === 403) {
-        alert('No tienes permisos para gestionar clientes.')
+        toast.error('No tenés permisos para gestionar clientes.')
         router.push('/dashboard')
         return
       }
@@ -48,7 +49,7 @@ export default function ClientesPage() {
       }
     } catch (error) {
       console.error('Error al cargar clientes:', error)
-      alert('Error al cargar clientes')
+      toast.error('Error al cargar clientes')
     } finally {
       setLoading(false)
     }
@@ -66,14 +67,14 @@ export default function ClientesPage() {
 
       if (response.ok) {
         cargarClientes()
-        alert('Cliente desactivado correctamente')
+        toast.success('Cliente desactivado correctamente')
       } else {
         const error = await response.json()
-        alert(error.error || 'Error al desactivar cliente')
+        toast.error(error.error || 'Error al desactivar cliente')
       }
     } catch (error) {
       console.error('Error al desactivar cliente:', error)
-      alert('Error al desactivar cliente')
+      toast.error('Error al desactivar cliente')
     }
   }
 

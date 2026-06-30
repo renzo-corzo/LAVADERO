@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { formatCurrency, formatDateTime, formatHorarioDeseado } from '@/lib/utils'
@@ -51,12 +52,12 @@ export default function OTDetallePage() {
         const data = await response.json()
         setOT(data)
       } else {
-        alert('Error al cargar la OT')
+        toast.error('Error al cargar la OT')
         router.push('/tablero')
       }
     } catch (error) {
       console.error('Error al cargar detalle:', error)
-      alert('Error al cargar la OT')
+      toast.error('Error al cargar la OT')
     } finally {
       setLoading(false)
     }
@@ -104,11 +105,11 @@ export default function OTDetallePage() {
         router.push('/tablero')
       } else {
         const data = await response.json()
-        alert(`Error: ${data.error || 'No se pudo cambiar el estado'}`)
+        toast.error(data.error || 'No se pudo cambiar el estado')
       }
     } catch (error) {
       console.error('Error al cambiar estado:', error)
-      alert('Error al cambiar el estado')
+      toast.error('Error al cambiar el estado')
     }
   }
 

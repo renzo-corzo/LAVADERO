@@ -8,6 +8,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -37,7 +38,7 @@ export default function CerrarCajaPage() {
 
   const cargarResumen = async () => {
     if (!fechaDesde || !fechaHasta) {
-      alert('Seleccione ambas fechas')
+      toast.error('Seleccione ambas fechas')
       return
     }
 
@@ -52,11 +53,11 @@ export default function CerrarCajaPage() {
         setMostrandoResumen(true)
       } else {
         const error = await response.json()
-        alert(`Error: ${error.error || 'No se pudo cargar el resumen'}`)
+        toast.error(error.error || 'No se pudo cargar el resumen')
       }
     } catch (error) {
       console.error('Error al cargar resumen:', error)
-      alert('Error al cargar el resumen')
+      toast.error('Error al cargar el resumen')
     } finally {
       setCargandoResumen(false)
     }
@@ -64,12 +65,12 @@ export default function CerrarCajaPage() {
 
   const handleCerrarCaja = async () => {
     if (!fechaDesde || !fechaHasta) {
-      alert('Seleccione ambas fechas')
+      toast.error('Seleccione ambas fechas')
       return
     }
 
     if (!resumen || resumen.resumen.totalGeneral === 0) {
-      alert('No hay pagos en el período seleccionado')
+      toast.error('No hay pagos en el período seleccionado')
       return
     }
 
@@ -91,15 +92,17 @@ export default function CerrarCajaPage() {
 
       if (response.ok) {
         const data = await response.json()
-        alert(`Cierre de caja creado exitosamente.\nTotal: ${formatCurrency(data.totalGeneral)}`)
+        toast.success('Cierre de caja creado', {
+          description: `Total: ${formatCurrency(data.totalGeneral)}`,
+        })
         router.push(`/caja/cierres/${data.id}`)
       } else {
         const error = await response.json()
-        alert(`Error: ${error.error || 'No se pudo crear el cierre'}`)
+        toast.error(error.error || 'No se pudo crear el cierre')
       }
     } catch (error) {
       console.error('Error al cerrar caja:', error)
-      alert('Error al crear el cierre de caja')
+      toast.error('Error al crear el cierre de caja')
     } finally {
       setLoading(false)
     }

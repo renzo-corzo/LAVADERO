@@ -9,6 +9,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 
@@ -42,7 +43,7 @@ export default function UsuariosPage() {
       const response = await fetch(`/api/usuarios?${params.toString()}`)
       
       if (response.status === 403) {
-        alert('No tienes permisos para gestionar usuarios. Solo DUEÑO puede acceder.')
+        toast.error('No tenés permisos para gestionar usuarios. Solo DUEÑO puede acceder.')
         router.push('/dashboard')
         return
       }
@@ -61,7 +62,7 @@ export default function UsuariosPage() {
       }
     } catch (error) {
       console.error('Error al cargar usuarios:', error)
-      alert('Error al cargar usuarios')
+      toast.error('Error al cargar usuarios')
     } finally {
       setLoading(false)
     }
@@ -79,14 +80,14 @@ export default function UsuariosPage() {
 
       if (response.ok) {
         cargarUsuarios()
-        alert('Usuario desactivado correctamente')
+        toast.success('Usuario desactivado correctamente')
       } else {
         const error = await response.json()
-        alert(error.error || 'Error al desactivar usuario')
+        toast.error(error.error || 'Error al desactivar usuario')
       }
     } catch (error) {
       console.error('Error al desactivar usuario:', error)
-      alert('Error al desactivar usuario')
+      toast.error('Error al desactivar usuario')
     }
   }
 

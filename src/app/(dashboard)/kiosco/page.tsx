@@ -11,6 +11,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { formatCurrency, formatTime, getTimeElapsed } from '@/lib/utils'
 import type { OrdenTrabajo } from '@/types'
@@ -119,12 +120,12 @@ export default function KioscoPage() {
         }, 500)
       } else {
         const data = await response.json()
-        alert(`Error: ${data.error || 'No se pudo cambiar el estado'}`)
+        toast.error(data.error || 'No se pudo cambiar el estado')
         setProcesando(null)
       }
     } catch (error) {
       console.error('Error al cambiar estado:', error)
-      alert('Error al cambiar el estado')
+      toast.error('Error al cambiar el estado')
       setProcesando(null)
     }
   }

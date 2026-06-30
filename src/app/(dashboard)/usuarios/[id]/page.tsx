@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -59,7 +60,7 @@ export default function EditarUsuarioPage() {
       const response = await fetch(`/api/usuarios/${id}`)
       
       if (response.status === 403) {
-        alert('No tienes permisos para editar usuarios. Solo DUEÑO puede acceder.')
+        toast.error('No tenés permisos para editar usuarios. Solo DUEÑO puede acceder.')
         router.push('/usuarios')
         return
       }
@@ -74,12 +75,12 @@ export default function EditarUsuarioPage() {
         })
       } else {
         const error = await response.json()
-        alert(error.error || 'Error al cargar usuario')
+        toast.error(error.error || 'Error al cargar usuario')
         router.push('/usuarios')
       }
     } catch (error) {
       console.error('Error al cargar usuario:', error)
-      alert('Error al cargar usuario')
+      toast.error('Error al cargar usuario')
       router.push('/usuarios')
     } finally {
       setLoading(false)
@@ -166,7 +167,7 @@ export default function EditarUsuarioPage() {
       const data = await response.json()
 
       if (response.ok) {
-        alert('Contraseña actualizada correctamente')
+        toast.success('Contraseña actualizada correctamente')
         setMostrarCambiarPassword(false)
         setPasswordData({ nuevaPassword: '', confirmPassword: '' })
       } else {

@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -87,7 +88,7 @@ export default function ConfigurarComisionesPage() {
     if (!config) return
 
     if (config.porcentaje < 0 || config.porcentaje > 100) {
-      alert('El porcentaje debe estar entre 0 y 100')
+      toast.error('El porcentaje debe estar entre 0 y 100')
       return
     }
 
@@ -106,15 +107,15 @@ export default function ConfigurarComisionesPage() {
       })
 
       if (response.ok) {
-        alert('✅ Configuración guardada correctamente')
+        toast.success('Configuración guardada correctamente')
         await cargarDatos()
       } else {
         const error = await response.json()
-        alert(`Error: ${error.error || 'Error al guardar'}`)
+        toast.error(error.error || 'Error al guardar')
       }
     } catch (error) {
       console.error('Error al guardar configuración:', error)
-      alert('Error al guardar la configuración')
+      toast.error('Error al guardar la configuración')
     } finally {
       setSaving(null)
     }
