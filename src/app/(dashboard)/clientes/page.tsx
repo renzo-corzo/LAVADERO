@@ -9,6 +9,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Button } from '@/components/ui/Button'
@@ -18,44 +19,42 @@ import type { Cliente } from '@/types'
 export default function ClientesPage() {
   const router = useRouter()
   const confirm = useConfirm()
-  const [clientes, setClientes] = useState<Cliente[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
   const [filtroTipo, setFiltroTipo] = useState<string | null>(null)
   const [filtroActivo, setFiltroActivo] = useState<string | null>(null)
 
-  useEffect(() => {
-    cargarClientes()
-  }, [filtroTipo, filtroActivo])
-
-  const cargarClientes = async () => {
-    try {
-      setLoading(true)
+  const {
+    data: clientes = [],
+    isLoading: loading,
+    error,
+  } = useQuery<Cliente[], Error & { status?: number }>({
+    queryKey: ['clientes', { tipo: filtroTipo, activo: filtroActivo }],
+    queryFn: async () => {
       const params = new URLSearchParams()
-      if (filtroTipo) {
-        params.append('tipo', filtroTipo)
-      }
-      if (filtroActivo !== null) {
-        params.append('activo', filtroActivo)
-      }
-      const response = await fetch(`/api/clientes?${params.toString()}`)
-      
-      if (response.status === 403) {
-        toast.error('No tenés permisos para gestionar clientes.')
-        router.push('/dashboard')
-        return
-      }
+      if (filtroTipo) params.append('tipo', filtroTipo)
+      if (filtroActivo !== null) params.append('activo', filtroActivo)
 
-      if (response.ok) {
-        const data = await response.json()
-        setClientes(data.clientes || [])
+      const response = await fetch(`/api/clientes?${params.toString()}`)
+      if (!response.ok) {
+        const err = new Error('Error al cargar clientes') as Error & { status?: number }
+        err.status = response.status
+        throw err
       }
-    } catch (error) {
-      console.error('Error al cargar clientes:', error)
+      const data = await response.json()
+      return (data.clientes ?? []) as Cliente[]
+    },
+  })
+
+  // Manejo de errores de la consulta (403 redirige, resto notifica)
+  useEffect(() => {
+    if (!error) return
+    if (error.status === 403) {
+      toast.error('No tenés permisos para gestionar clientes.')
+      router.push('/dashboard')
+    } else {
       toast.error('Error al cargar clientes')
-    } finally {
-      setLoading(false)
     }
-  }
+  }, [error, router])
 
   const handleDesactivar = async (id: string, nombre: string) => {
     const ok = await confirm({
@@ -72,7 +71,7 @@ export default function ClientesPage() {
       })
 
       if (response.ok) {
-        cargarClientes()
+        queryClient.invalidateQueries({ queryKey: ['clientes'] })
         toast.success('Cliente desactivado correctamente')
       } else {
         const error = await response.json()

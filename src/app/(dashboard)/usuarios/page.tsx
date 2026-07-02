@@ -9,6 +9,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Button } from '@/components/ui/Button'
@@ -27,48 +28,44 @@ interface Usuario {
 export default function UsuariosPage() {
   const router = useRouter()
   const confirm = useConfirm()
-  const [usuarios, setUsuarios] = useState<Usuario[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
   const [filtroActivo, setFiltroActivo] = useState<string | null>(null)
 
-  useEffect(() => {
-    cargarUsuarios()
-  }, [filtroActivo])
-
-  const cargarUsuarios = async () => {
-    try {
-      setLoading(true)
+  const {
+    data: usuarios = [],
+    isLoading: loading,
+    error,
+  } = useQuery<Usuario[], Error & { status?: number }>({
+    queryKey: ['usuarios', { activo: filtroActivo }],
+    queryFn: async () => {
       const params = new URLSearchParams()
-      if (filtroActivo !== null) {
-        params.append('incluirInactivos', 'true')
-      }
-      const response = await fetch(`/api/usuarios?${params.toString()}`)
-      
-      if (response.status === 403) {
-        toast.error('No tenés permisos para gestionar usuarios. Solo DUEÑO puede acceder.')
-        router.push('/dashboard')
-        return
-      }
+      if (filtroActivo !== null) params.append('incluirInactivos', 'true')
 
-      if (response.ok) {
-        let data = await response.json()
-        
-        // Filtrar por activo si corresponde
-        if (filtroActivo !== null) {
-          data = data.filter((u: Usuario) => 
-            filtroActivo === 'true' ? u.activo : !u.activo
-          )
-        }
-        
-        setUsuarios(data)
+      const response = await fetch(`/api/usuarios?${params.toString()}`)
+      if (!response.ok) {
+        const err = new Error('Error al cargar usuarios') as Error & { status?: number }
+        err.status = response.status
+        throw err
       }
-    } catch (error) {
-      console.error('Error al cargar usuarios:', error)
+      const data = (await response.json()) as Usuario[]
+      // Filtrar por activo si corresponde
+      if (filtroActivo !== null) {
+        return data.filter((u) => (filtroActivo === 'true' ? u.activo : !u.activo))
+      }
+      return data
+    },
+  })
+
+  // Manejo de errores de la consulta (403 redirige, resto notifica)
+  useEffect(() => {
+    if (!error) return
+    if (error.status === 403) {
+      toast.error('No tenés permisos para gestionar usuarios. Solo DUEÑO puede acceder.')
+      router.push('/dashboard')
+    } else {
       toast.error('Error al cargar usuarios')
-    } finally {
-      setLoading(false)
     }
-  }
+  }, [error, router])
 
   const handleDesactivar = async (id: string, nombre: string) => {
     const ok = await confirm({
@@ -85,7 +82,7 @@ export default function UsuariosPage() {
       })
 
       if (response.ok) {
-        cargarUsuarios()
+        queryClient.invalidateQueries({ queryKey: ['usuarios'] })
         toast.success('Usuario desactivado correctamente')
       } else {
         const error = await response.json()

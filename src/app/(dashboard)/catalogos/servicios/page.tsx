@@ -5,8 +5,9 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Button } from '@/components/ui/Button'
@@ -16,29 +17,21 @@ import type { Servicio } from '@/types'
 
 export default function ServiciosPage() {
   const confirm = useConfirm()
-  const [servicios, setServicios] = useState<Servicio[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
   const [filtroActivo, setFiltroActivo] = useState<string | null>(null)
 
-  useEffect(() => {
-    cargarServicios()
-  }, [filtroActivo])
-
-  const cargarServicios = async () => {
-    try {
-      setLoading(true)
+  const {
+    data: servicios = [],
+    isLoading: loading,
+  } = useQuery<Servicio[]>({
+    queryKey: ['servicios', { activo: filtroActivo }],
+    queryFn: async () => {
       const params = filtroActivo ? `?activo=${filtroActivo}` : ''
       const response = await fetch(`/api/servicios${params}`)
-      if (response.ok) {
-        const data = await response.json()
-        setServicios(data)
-      }
-    } catch (error) {
-      console.error('Error al cargar servicios:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+      if (!response.ok) throw new Error('Error al cargar servicios')
+      return (await response.json()) as Servicio[]
+    },
+  })
 
   const handleDesactivar = async (id: string) => {
     const ok = await confirm({
@@ -55,7 +48,7 @@ export default function ServiciosPage() {
       })
 
       if (response.ok) {
-        cargarServicios()
+        queryClient.invalidateQueries({ queryKey: ['servicios'] })
         toast.success('Servicio desactivado')
       } else {
         const error = await response.json().catch(() => ({}))

@@ -6,8 +6,9 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Button } from '@/components/ui/Button'
@@ -17,29 +18,21 @@ import type { Extra } from '@/types'
 
 export default function ExtrasPage() {
   const confirm = useConfirm()
-  const [extras, setExtras] = useState<Extra[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
   const [filtroActivo, setFiltroActivo] = useState<string | null>(null)
 
-  useEffect(() => {
-    cargarExtras()
-  }, [filtroActivo])
-
-  const cargarExtras = async () => {
-    try {
-      setLoading(true)
+  const {
+    data: extras = [],
+    isLoading: loading,
+  } = useQuery<Extra[]>({
+    queryKey: ['extras', { activo: filtroActivo }],
+    queryFn: async () => {
       const params = filtroActivo ? `?activo=${filtroActivo}` : ''
       const response = await fetch(`/api/extras${params}`)
-      if (response.ok) {
-        const data = await response.json()
-        setExtras(data)
-      }
-    } catch (error) {
-      console.error('Error al cargar extras:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+      if (!response.ok) throw new Error('Error al cargar extras')
+      return (await response.json()) as Extra[]
+    },
+  })
 
   const handleDesactivar = async (id: string) => {
     const ok = await confirm({
@@ -56,7 +49,7 @@ export default function ExtrasPage() {
       })
 
       if (response.ok) {
-        cargarExtras()
+        queryClient.invalidateQueries({ queryKey: ['extras'] })
         toast.success('Extra desactivado')
       } else {
         const error = await response.json().catch(() => ({}))
