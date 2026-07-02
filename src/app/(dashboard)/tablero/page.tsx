@@ -5,9 +5,10 @@
 
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
@@ -34,14 +35,7 @@ export default function TableroPage() {
   const [mounted, setMounted] = useState(false) // Para evitar problemas de hidratación
   const [esMovil, setEsMovil] = useState(false)
   const [mostrarKanban, setMostrarKanban] = useState(false)
-  const [ots, setOTs] = useState<OTsPorEstado>({
-    EN_COLA: [],
-    EN_PROCESO: [],
-    LISTO: [],
-    ENTREGADO: [],
-  })
-  const [loading, setLoading] = useState(true)
-  const [errorCarga, setErrorCarga] = useState<string | null>(null)
+  const queryClient = useQueryClient()
   const [mostrarExternas, setMostrarExternas] = useState(false)
   const [seleccionadasIds, setSeleccionadasIds] = useState<string[]>([])
   const [estadoLote, setEstadoLote] = useState<'EN_PROCESO' | 'LISTO' | 'ENTREGADO'>('LISTO')
@@ -89,88 +83,71 @@ export default function TableroPage() {
     }
   }, [mounted, searchParams])
 
-  // Función para cargar OTs (usando useCallback para estabilidad)
-  const cargarOTs = useCallback(async () => {
-    // No cargar OTs si no está montado o si estamos en modo menú móvil
-    if (!mounted) {
-      return
-    }
-    
-    // Si es móvil y no se muestra el kanban, no cargar OTs
-    if (esMovil && !mostrarKanban) {
-      setLoading(false)
-      return
-    }
+  // Fetch de OTs con React Query: caché + auto-refresh cada 15s.
+  // Solo habilitado tras montar y cuando el kanban está visible (en móvil se
+  // muestra el menú, no el tablero).
+  const consultaHabilitada = mounted && (!esMovil || mostrarKanban)
 
-    try {
-      setLoading(true)
-      setErrorCarga(null)
+  const {
+    data: listaOTs,
+    error,
+    isFetching,
+    refetch,
+  } = useQuery<OrdenTrabajo[], Error & { status?: number }>({
+    queryKey: ['ots', { fecha: filtroFecha, externas: mostrarExternas }],
+    enabled: consultaHabilitada,
+    refetchInterval: consultaHabilitada ? 15_000 : false,
+    queryFn: async () => {
       const params = new URLSearchParams()
-      if (filtroFecha) {
-        params.append('fecha', filtroFecha)
-      }
-      if (mostrarExternas) {
-        params.append('incluirExternas', 'true')
-      }
-      params.append('_t', Date.now().toString())
+      if (filtroFecha) params.append('fecha', filtroFecha)
+      if (mostrarExternas) params.append('incluirExternas', 'true')
 
-      const response = await fetch(`/api/ots?${params.toString()}`, {
-        cache: 'no-store',
-      })
-      if (response.ok) {
-        const data = await response.json()
-        const otsPorEstado: OTsPorEstado = {
-          EN_COLA: [],
-          EN_PROCESO: [],
-          LISTO: [],
-          ENTREGADO: [],
-        }
-        data.forEach((ot: OrdenTrabajo) => {
-          if (otsPorEstado[ot.estado as keyof OTsPorEstado]) {
-            otsPorEstado[ot.estado as keyof OTsPorEstado].push(ot)
-          }
-        })
-        setOTs(otsPorEstado)
-
-        // Mantener selección solo para OTs que siguen visibles
-        const idsVisibles = new Set<string>((data as OrdenTrabajo[]).map((ot) => ot.id))
-        setSeleccionadasIds((prev) => prev.filter((id) => idsVisibles.has(id)))
-      } else {
-        console.error('Error al cargar OTs:', response.status, response.statusText)
-        setErrorCarga(
-          response.status === 403
-            ? 'No tenés permisos para ver el tablero.'
-            : 'No se pudieron cargar las órdenes de trabajo. Reintentá.'
-        )
+      const response = await fetch(`/api/ots?${params.toString()}`, { cache: 'no-store' })
+      if (!response.ok) {
+        const err = new Error('Error al cargar OTs') as Error & { status?: number }
+        err.status = response.status
+        throw err
       }
-    } catch (error) {
-      console.error('Error al cargar OTs:', error)
-      setErrorCarga('Error de conexión al cargar el tablero. Verificá tu red y reintentá.')
-    } finally {
-      setLoading(false)
+      return (await response.json()) as OrdenTrabajo[]
+    },
+  })
+
+  // Agrupar las OTs por estado para el kanban (memoizado sobre los datos crudos)
+  const ots = useMemo<OTsPorEstado>(() => {
+    const agrupadas: OTsPorEstado = { EN_COLA: [], EN_PROCESO: [], LISTO: [], ENTREGADO: [] }
+    for (const ot of listaOTs ?? []) {
+      if (agrupadas[ot.estado as keyof OTsPorEstado]) {
+        agrupadas[ot.estado as keyof OTsPorEstado].push(ot)
+      }
     }
-  }, [filtroFecha, esMovil, mostrarKanban, mounted, mostrarExternas])
+    return agrupadas
+  }, [listaOTs])
 
-  // Cargar OTs cuando cambian las dependencias (solo después de montar)
-  // Este hook SIEMPRE se ejecuta, sin importar el dispositivo
+  const loading = consultaHabilitada && !listaOTs && !error
+  const errorCarga = error
+    ? error.status === 403
+      ? 'No tenés permisos para ver el tablero.'
+      : error.status
+        ? 'No se pudieron cargar las órdenes de trabajo. Reintentá.'
+        : 'Error de conexión al cargar el tablero. Verificá tu red y reintentá.'
+    : null
+
+  // Mantener seleccionadas solo las OTs que siguen visibles tras cada recarga
   useEffect(() => {
-    if (!mounted) {
-      setLoading(false)
-      return
-    }
-    cargarOTs()
-  }, [mounted, cargarOTs])
+    if (!listaOTs) return
+    const idsVisibles = new Set(listaOTs.map((ot) => ot.id))
+    setSeleccionadasIds((prev) => prev.filter((id) => idsVisibles.has(id)))
+  }, [listaOTs])
 
   // Recargar si viene el parámetro recargar en la URL
-  // Este hook SIEMPRE se ejecuta
   useEffect(() => {
     if (!mounted || typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
     if (params.get('recargar') === 'true') {
-      cargarOTs()
+      refetch()
       window.history.replaceState({}, '', '/tablero')
     }
-  }, [mounted, cargarOTs])
+  }, [mounted, refetch])
 
   // ========== FUNCIONES DESPUÉS DE TODOS LOS HOOKS ==========
   const handleCambiarEstado = async (otId: string, nuevoEstado: string) => {
@@ -205,9 +182,7 @@ export default function TableroPage() {
             return
           }
         }
-        setTimeout(() => {
-          cargarOTs()
-        }, 300)
+        queryClient.invalidateQueries({ queryKey: ['ots'] })
       } else {
         const data = await response.json()
         toast.error(data.error || 'No se pudo cambiar el estado')
@@ -263,7 +238,7 @@ export default function TableroPage() {
       }
 
       limpiarSeleccion()
-      setTimeout(() => cargarOTs(), 300)
+      queryClient.invalidateQueries({ queryKey: ['ots'] })
     } catch (error) {
       console.error('Error al cambiar estado en lote:', error)
       toast.error('Error al cambiar estado en lote')
@@ -522,7 +497,7 @@ export default function TableroPage() {
             className="mb-6 flex items-center justify-between gap-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700"
           >
             <span>{errorCarga}</span>
-            <Button variant="secondary" size="sm" onClick={() => cargarOTs()}>
+            <Button variant="secondary" size="sm" onClick={() => refetch()}>
               Reintentar
             </Button>
           </div>
@@ -536,8 +511,8 @@ export default function TableroPage() {
           <p className="text-gray-600 mt-1">Gestiona las órdenes de trabajo del día</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => cargarOTs()} disabled={loading}>
-            {loading ? 'Cargando...' : '🔄 Recargar'}
+          <Button variant="secondary" onClick={() => refetch()} disabled={isFetching}>
+            {isFetching ? 'Cargando...' : '🔄 Recargar'}
           </Button>
           {(session?.user.role === 'ENCARGADO' || session?.user.role === 'DUENO') && (
             <Link href="/ots/nueva">

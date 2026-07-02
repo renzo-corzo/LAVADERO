@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Toaster } from 'sonner'
 import { SessionProvider } from '@/components/providers/SessionProvider'
+import { QueryProvider } from '@/components/providers/QueryProvider'
 import { ConfirmProvider } from '@/components/ui/ConfirmDialog'
 import './globals.css'
 
@@ -67,7 +68,9 @@ export default function RootLayout({
       </head>
       <body>
         <SessionProvider>
-          <ConfirmProvider>{children}</ConfirmProvider>
+          <QueryProvider>
+            <ConfirmProvider>{children}</ConfirmProvider>
+          </QueryProvider>
         </SessionProvider>
         <Toaster richColors position="top-right" closeButton />
       </body>
