@@ -10,12 +10,14 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import type { Cliente } from '@/types'
 
 export default function ClientesPage() {
   const router = useRouter()
+  const confirm = useConfirm()
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [loading, setLoading] = useState(true)
   const [filtroTipo, setFiltroTipo] = useState<string | null>(null)
@@ -56,9 +58,13 @@ export default function ClientesPage() {
   }
 
   const handleDesactivar = async (id: string, nombre: string) => {
-    if (!confirm(`¿Está seguro de desactivar al cliente "${nombre}"?`)) {
-      return
-    }
+    const ok = await confirm({
+      title: 'Desactivar cliente',
+      description: `El cliente "${nombre}" quedará inactivo.`,
+      variant: 'danger',
+      confirmText: 'Desactivar',
+    })
+    if (!ok) return
 
     try {
       const response = await fetch(`/api/clientes/${id}`, {

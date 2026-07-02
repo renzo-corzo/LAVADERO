@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 
@@ -25,6 +26,7 @@ interface Usuario {
 
 export default function UsuariosPage() {
   const router = useRouter()
+  const confirm = useConfirm()
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [loading, setLoading] = useState(true)
   const [filtroActivo, setFiltroActivo] = useState<string | null>(null)
@@ -69,9 +71,13 @@ export default function UsuariosPage() {
   }
 
   const handleDesactivar = async (id: string, nombre: string) => {
-    if (!confirm(`¿Está seguro de desactivar al usuario "${nombre}"?`)) {
-      return
-    }
+    const ok = await confirm({
+      title: 'Desactivar usuario',
+      description: `El usuario "${nombre}" quedará inactivo y no podrá iniciar sesión.`,
+      variant: 'danger',
+      confirmText: 'Desactivar',
+    })
+    if (!ok) return
 
     try {
       const response = await fetch(`/api/usuarios/${id}`, {

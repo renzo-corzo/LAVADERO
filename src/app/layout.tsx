@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Toaster } from 'sonner'
 import { SessionProvider } from '@/components/providers/SessionProvider'
+import { ConfirmProvider } from '@/components/ui/ConfirmDialog'
 import './globals.css'
 
 export const viewport: Viewport = {
@@ -65,7 +66,9 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body>
-        <SessionProvider>{children}</SessionProvider>
+        <SessionProvider>
+          <ConfirmProvider>{children}</ConfirmProvider>
+        </SessionProvider>
         <Toaster richColors position="top-right" closeButton />
       </body>
     </html>

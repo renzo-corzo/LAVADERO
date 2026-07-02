@@ -10,6 +10,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { formatCurrency, formatDateTime, formatHorarioDeseado } from '@/lib/utils'
@@ -23,6 +24,7 @@ interface OTDetalle extends OrdenTrabajo {
 export default function OTDetallePage() {
   const params = useParams()
   const router = useRouter()
+  const confirm = useConfirm()
   const { data: session, status: sessionStatus } = useSession()
   const otId = params.id as string
   const esLavador = session?.user?.role === 'LAVADOR'
@@ -79,9 +81,12 @@ export default function OTDetallePage() {
   }
 
   const handleCambiarEstado = async (nuevoEstado: string) => {
-    if (!confirm(`¿Cambiar estado a "${nuevoEstado}"?`)) {
-      return
-    }
+    const ok = await confirm({
+      title: 'Cambiar estado',
+      description: `La OT pasará a "${nuevoEstado}".`,
+      confirmText: 'Cambiar',
+    })
+    if (!ok) return
 
     try {
       const response = await fetch(`/api/ots/${otId}/estado`, {
@@ -94,7 +99,11 @@ export default function OTDetallePage() {
         // Si se marca como ENTREGADO, ofrecer registrar pago
         if (nuevoEstado === 'ENTREGADO' && !esLavador) {
           cargarDetalle()
-          const quierePagar = confirm('¿Desea registrar el pago ahora?')
+          const quierePagar = await confirm({
+            title: 'Registrar pago',
+            description: '¿Querés registrar el pago ahora?',
+            confirmText: 'Registrar pago',
+          })
           if (quierePagar) {
             router.push(`/caja/cobrar/${otId}`)
             return

@@ -9,12 +9,14 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { formatCurrency } from '@/lib/utils'
 import type { Extra } from '@/types'
 
 export default function ExtrasPage() {
+  const confirm = useConfirm()
   const [extras, setExtras] = useState<Extra[]>([])
   const [loading, setLoading] = useState(true)
   const [filtroActivo, setFiltroActivo] = useState<string | null>(null)
@@ -40,9 +42,13 @@ export default function ExtrasPage() {
   }
 
   const handleDesactivar = async (id: string) => {
-    if (!confirm('¿Está seguro de desactivar este extra?')) {
-      return
-    }
+    const ok = await confirm({
+      title: 'Desactivar extra',
+      description: 'El extra dejará de estar disponible para nuevas OTs.',
+      variant: 'danger',
+      confirmText: 'Desactivar',
+    })
+    if (!ok) return
 
     try {
       const response = await fetch(`/api/extras/${id}`, {

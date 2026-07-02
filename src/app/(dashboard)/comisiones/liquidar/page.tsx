@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -38,6 +39,7 @@ interface Comision {
 
 export default function LiquidarComisionesPage() {
   const router = useRouter()
+  const confirm = useConfirm()
   const [empleados, setEmpleados] = useState<Usuario[]>([])
   const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState<string>('')
   const [fechaDesde, setFechaDesde] = useState<string>('')
@@ -119,9 +121,12 @@ export default function LiquidarComisionesPage() {
       return
     }
 
-    if (!confirm('¿Confirmas la liquidación de estas comisiones? Esta acción no se puede deshacer.')) {
-      return
-    }
+    const ok = await confirm({
+      title: 'Confirmar liquidación',
+      description: 'Se liquidarán las comisiones seleccionadas. Esta acción no se puede deshacer.',
+      confirmText: 'Liquidar',
+    })
+    if (!ok) return
 
     try {
       setLiquidando(true)

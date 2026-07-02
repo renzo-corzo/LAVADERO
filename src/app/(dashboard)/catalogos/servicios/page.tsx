@@ -8,12 +8,14 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { formatCurrency } from '@/lib/utils'
 import type { Servicio } from '@/types'
 
 export default function ServiciosPage() {
+  const confirm = useConfirm()
   const [servicios, setServicios] = useState<Servicio[]>([])
   const [loading, setLoading] = useState(true)
   const [filtroActivo, setFiltroActivo] = useState<string | null>(null)
@@ -39,9 +41,13 @@ export default function ServiciosPage() {
   }
 
   const handleDesactivar = async (id: string) => {
-    if (!confirm('¿Está seguro de desactivar este servicio?')) {
-      return
-    }
+    const ok = await confirm({
+      title: 'Desactivar servicio',
+      description: 'El servicio dejará de estar disponible para nuevas OTs.',
+      variant: 'danger',
+      confirmText: 'Desactivar',
+    })
+    if (!ok) return
 
     try {
       const response = await fetch(`/api/servicios/${id}`, {

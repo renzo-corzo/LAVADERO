@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -17,6 +18,7 @@ import { formatCurrency, formatDateTime } from '@/lib/utils'
 
 export default function CerrarCajaPage() {
   const router = useRouter()
+  const confirm = useConfirm()
   const obtenerFechaLocal = (date: Date) => {
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -74,9 +76,12 @@ export default function CerrarCajaPage() {
       return
     }
 
-    if (!confirm('¿Confirma el cierre de caja? Este proceso no se puede deshacer.')) {
-      return
-    }
+    const ok = await confirm({
+      title: 'Confirmar cierre de caja',
+      description: 'Este proceso no se puede deshacer.',
+      confirmText: 'Cerrar caja',
+    })
+    if (!ok) return
 
     try {
       setLoading(true)

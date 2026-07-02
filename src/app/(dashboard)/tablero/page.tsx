@@ -11,6 +11,7 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { formatCurrency, formatDateTime, formatHorarioDeseado, getTimeElapsed } from '@/lib/utils'
@@ -29,6 +30,7 @@ export default function TableroPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { data: session } = useSession()
+  const confirm = useConfirm()
   const [mounted, setMounted] = useState(false) // Para evitar problemas de hidratación
   const [esMovil, setEsMovil] = useState(false)
   const [mostrarKanban, setMostrarKanban] = useState(false)
@@ -172,9 +174,12 @@ export default function TableroPage() {
 
   // ========== FUNCIONES DESPUÉS DE TODOS LOS HOOKS ==========
   const handleCambiarEstado = async (otId: string, nuevoEstado: string) => {
-    if (!confirm(`¿Cambiar estado a "${nuevoEstado}"?`)) {
-      return
-    }
+    const ok = await confirm({
+      title: 'Cambiar estado',
+      description: `La OT pasará a "${nuevoEstado}".`,
+      confirmText: 'Cambiar',
+    })
+    if (!ok) return
 
     try {
       const response = await fetch(`/api/ots/${otId}/estado`, {
@@ -190,7 +195,11 @@ export default function TableroPage() {
 
       if (response.ok) {
         if (nuevoEstado === 'ENTREGADO') {
-          const quierePagar = confirm('¿Desea registrar el pago ahora?')
+          const quierePagar = await confirm({
+            title: 'Registrar pago',
+            description: '¿Querés registrar el pago ahora?',
+            confirmText: 'Registrar pago',
+          })
           if (quierePagar) {
             router.push(`/caja/cobrar/${otId}`)
             return
@@ -217,9 +226,12 @@ export default function TableroPage() {
 
   const handleCambiarEstadoLote = async () => {
     if (seleccionadasIds.length === 0) return
-    if (!confirm(`¿Cambiar estado de ${seleccionadasIds.length} OTs externas a "${estadoLote}"?`)) {
-      return
-    }
+    const ok = await confirm({
+      title: 'Cambio de estado en lote',
+      description: `Se cambiarán ${seleccionadasIds.length} OTs externas a "${estadoLote}".`,
+      confirmText: 'Aplicar',
+    })
+    if (!ok) return
 
     try {
       setAplicandoLote(true)
