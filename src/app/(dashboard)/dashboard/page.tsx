@@ -5,9 +5,10 @@
 
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -26,77 +27,59 @@ export default function DashboardPage() {
   const router = useRouter()
   const { data: session } = useSession()
   const [esMovil, setEsMovil] = useState(false)
-  const [stats, setStats] = useState<DashboardStats>({
+
+  // Redirigir a /tablero en móvil
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const checkMobile = () => {
+      const isMobile = window.innerWidth < 1024 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      setEsMovil(isMobile)
+
+      // Redirigir inmediatamente si es móvil
+      if (isMobile) {
+        router.replace('/tablero')
+      }
+    }
+
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [router])
+
+  const { data: stats = {
     otsHoy: 0,
     otsEnCola: 0,
     otsEnProceso: 0,
     otsListas: 0,
     ventasHoy: 0,
     comisionesPendientes: 0,
-  })
-  const [loading, setLoading] = useState(true)
-
-  // Redirigir a /tablero en móvil
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    
-    const checkMobile = () => {
-      const isMobile = window.innerWidth < 1024 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-      setEsMovil(isMobile)
-      
-      // Redirigir inmediatamente si es móvil
-      if (isMobile) {
-        router.replace('/tablero')
-      }
-    }
-    
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [router])
-
-  const cargarEstadisticas = useCallback(async () => {
-    try {
-      setLoading(true)
+  }, isLoading } = useQuery<DashboardStats>({
+    queryKey: ['dashboard-stats'],
+    enabled: !esMovil,
+    refetchInterval: 30_000, // métricas del día casi en tiempo real
+    queryFn: async () => {
       const hoy = new Date()
-      const year = hoy.getFullYear()
-      const month = String(hoy.getMonth() + 1).padStart(2, '0')
-      const day = String(hoy.getDate()).padStart(2, '0')
-      const fechaStr = `${year}-${month}-${day}`
-      
-      // Obtener OTs del día usando el parámetro de fecha
-      const responseOTs = await fetch(`/api/ots?fecha=${fechaStr}`, {
-        cache: 'no-store', // Evitar cache para datos en tiempo real
-      })
-      
-      if (responseOTs.ok) {
-        const ots = await responseOTs.json()
-        
-        setStats({
-          otsHoy: ots.length,
-          otsEnCola: ots.filter((ot: any) => ot.estado === 'EN_COLA').length,
-          otsEnProceso: ots.filter((ot: any) => ot.estado === 'EN_PROCESO').length,
-          otsListas: ots.filter((ot: any) => ot.estado === 'LISTO').length,
-          ventasHoy: ots
-            .filter((ot: any) => ot.estado === 'ENTREGADO')
-            .reduce((sum: number, ot: any) => sum + Number(ot.precio || ot.total || 0), 0),
-          comisionesPendientes: 0, // TODO: implementar cuando tengamos comisiones
-        })
-      } else {
-        console.error('Error al cargar OTs:', responseOTs.status, responseOTs.statusText)
-      }
-    } catch (error) {
-      console.error('Error al cargar estadísticas:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+      const fechaStr = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`
 
-  useEffect(() => {
-    if (!esMovil) {
-      cargarEstadisticas()
-    }
-  }, [esMovil, cargarEstadisticas])
+      const response = await fetch(`/api/ots?fecha=${fechaStr}`, { cache: 'no-store' })
+      if (!response.ok) throw new Error('Error al cargar estadísticas')
+      const ots = (await response.json()) as Array<{ estado: string; precio?: number; total?: number }>
+
+      return {
+        otsHoy: ots.length,
+        otsEnCola: ots.filter((ot) => ot.estado === 'EN_COLA').length,
+        otsEnProceso: ots.filter((ot) => ot.estado === 'EN_PROCESO').length,
+        otsListas: ots.filter((ot) => ot.estado === 'LISTO').length,
+        ventasHoy: ots
+          .filter((ot) => ot.estado === 'ENTREGADO')
+          .reduce((sum, ot) => sum + Number(ot.precio || ot.total || 0), 0),
+        comisionesPendientes: 0,
+      }
+    },
+  })
+
+  const loading = !esMovil && isLoading
 
   // Si es móvil, no renderizar nada (se redirige)
   if (esMovil) {

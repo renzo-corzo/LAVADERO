@@ -5,7 +5,8 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -39,33 +40,19 @@ interface Comision {
 }
 
 export default function ComisionesPage() {
-  const [comisiones, setComisiones] = useState<Comision[]>([])
-  const [loading, setLoading] = useState(true)
   const [filtroEstado, setFiltroEstado] = useState<'TODAS' | 'PENDIENTE' | 'LIQUIDADA'>('TODAS')
 
-  useEffect(() => {
-    cargarComisiones()
-  }, [filtroEstado])
-
-  const cargarComisiones = async () => {
-    try {
-      setLoading(true)
+  const { data: comisiones = [], isLoading: loading } = useQuery<Comision[]>({
+    queryKey: ['comisiones', { estado: filtroEstado }],
+    queryFn: async () => {
       const params = new URLSearchParams()
-      if (filtroEstado !== 'TODAS') {
-        params.append('estado', filtroEstado)
-      }
+      if (filtroEstado !== 'TODAS') params.append('estado', filtroEstado)
 
       const response = await fetch(`/api/comisiones?${params.toString()}`)
-      if (response.ok) {
-        const data = await response.json()
-        setComisiones(data)
-      }
-    } catch (error) {
-      console.error('Error al cargar comisiones:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+      if (!response.ok) throw new Error('Error al cargar comisiones')
+      return (await response.json()) as Comision[]
+    },
+  })
 
   // Calcular resumen
   const totalPendiente = comisiones

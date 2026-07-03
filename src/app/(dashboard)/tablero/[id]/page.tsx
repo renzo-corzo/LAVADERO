@@ -5,9 +5,10 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
@@ -29,56 +30,38 @@ export default function OTDetallePage() {
   const otId = params.id as string
   const esLavador = session?.user?.role === 'LAVADOR'
 
-  const [ot, setOT] = useState<OTDetalle | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [pagos, setPagos] = useState<Pago[]>([])
+  const queryClient = useQueryClient()
 
-  useEffect(() => {
-    cargarDetalle()
-  }, [otId])
-
-  useEffect(() => {
-    if (sessionStatus === 'loading') return
-    if (esLavador) {
-      setPagos([])
-      return
-    }
-    cargarPagos()
-  }, [otId, esLavador, sessionStatus])
-
-  const cargarDetalle = async () => {
-    try {
-      setLoading(true)
+  const {
+    data: ot = null,
+    isLoading: loading,
+    error,
+  } = useQuery<OTDetalle>({
+    queryKey: ['ot', otId],
+    queryFn: async () => {
       const response = await fetch(`/api/ots/${otId}`)
-      if (response.ok) {
-        const data = await response.json()
-        setOT(data)
-      } else {
-        toast.error('Error al cargar la OT')
-        router.push('/tablero')
-      }
-    } catch (error) {
-      console.error('Error al cargar detalle:', error)
-      toast.error('Error al cargar la OT')
-    } finally {
-      setLoading(false)
-    }
-  }
+      if (!response.ok) throw new Error('Error al cargar la OT')
+      return (await response.json()) as OTDetalle
+    },
+  })
 
-  const cargarPagos = async () => {
-    try {
-      const response = await fetch(`/api/pagos?otId=${otId}`)
-      if (response.ok) {
-        const data = await response.json()
-        setPagos(data)
-      } else {
-        setPagos([])
-      }
-    } catch (error) {
-      console.error('Error al cargar pagos:', error)
-      setPagos([])
+  useEffect(() => {
+    if (error) {
+      toast.error('Error al cargar la OT')
+      router.push('/tablero')
     }
-  }
+  }, [error, router])
+
+  // Los lavadores no ven pagos: la consulta queda deshabilitada para ese rol.
+  const { data: pagos = [] } = useQuery<Pago[]>({
+    queryKey: ['pagos', otId],
+    enabled: !esLavador && sessionStatus !== 'loading',
+    queryFn: async () => {
+      const response = await fetch(`/api/pagos?otId=${otId}`)
+      if (!response.ok) return []
+      return (await response.json()) as Pago[]
+    },
+  })
 
   const handleCambiarEstado = async (nuevoEstado: string) => {
     const ok = await confirm({
@@ -96,9 +79,9 @@ export default function OTDetallePage() {
       })
 
       if (response.ok) {
+        queryClient.invalidateQueries({ queryKey: ['ot', otId] })
         // Si se marca como ENTREGADO, ofrecer registrar pago
         if (nuevoEstado === 'ENTREGADO' && !esLavador) {
-          cargarDetalle()
           const quierePagar = await confirm({
             title: 'Registrar pago',
             description: '¿Querés registrar el pago ahora?',
@@ -109,8 +92,7 @@ export default function OTDetallePage() {
             return
           }
         }
-        
-        cargarDetalle()
+
         router.push('/tablero')
       } else {
         const data = await response.json()

@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/Card'
@@ -21,22 +22,45 @@ export default function RegistrarPagoPage() {
   const router = useRouter()
   const otId = params.otId as string
 
-  const [ot, setOT] = useState<OrdenTrabajo | null>(null)
-  const [pagos, setPagos] = useState<Pago[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
   const [guardando, setGuardando] = useState(false)
 
   const [monto, setMonto] = useState('')
   const [medioPago, setMedioPago] = useState<MedioPago>('EFECTIVO')
   const [referencia, setReferencia] = useState('')
 
+  const {
+    data: ot = null,
+    isLoading: loading,
+    error,
+  } = useQuery<OrdenTrabajo>({
+    queryKey: ['ot', otId],
+    queryFn: async () => {
+      const response = await fetch(`/api/ots/${otId}`)
+      if (!response.ok) throw new Error('Error al cargar la OT')
+      return (await response.json()) as OrdenTrabajo
+    },
+  })
+
+  const { data: pagos = [] } = useQuery<Pago[]>({
+    queryKey: ['pagos', otId],
+    queryFn: async () => {
+      const response = await fetch(`/api/pagos?otId=${otId}`)
+      if (!response.ok) return []
+      return (await response.json()) as Pago[]
+    },
+  })
+
   useEffect(() => {
-    cargarDatos()
-  }, [otId])
+    if (error) {
+      toast.error('Error al cargar la OT')
+      router.push('/tablero')
+    }
+  }, [error, router])
 
   // Establecer monto automáticamente cuando se cargan los datos
   useEffect(() => {
-    if (ot && pagos.length >= 0) {
+    if (ot) {
       const totalPagado = pagos.reduce((sum, p) => sum + p.monto, 0)
       const pendiente = ot.precio - totalPagado
       // Solo establecer el monto si no hay uno ingresado y hay pendiente
@@ -46,35 +70,6 @@ export default function RegistrarPagoPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ot, pagos])
-
-  const cargarDatos = async () => {
-    try {
-      setLoading(true)
-      const [responseOT, responsePagos] = await Promise.all([
-        fetch(`/api/ots/${otId}`),
-        fetch(`/api/pagos?otId=${otId}`),
-      ])
-
-      if (responseOT.ok) {
-        const dataOT = await responseOT.json()
-        setOT(dataOT)
-      } else {
-        toast.error('Error al cargar la OT')
-        router.push('/tablero')
-        return
-      }
-
-      if (responsePagos.ok) {
-        const dataPagos = await responsePagos.json()
-        setPagos(dataPagos)
-      }
-    } catch (error) {
-      console.error('Error al cargar datos:', error)
-      toast.error('Error al cargar datos')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const totalPagado = pagos.reduce((sum, p) => sum + p.monto, 0)
   const pendiente = ot ? ot.precio - totalPagado : 0
@@ -113,9 +108,13 @@ export default function RegistrarPagoPage() {
       })
 
       if (response.ok) {
-        const data = await response.json()
         const nuevoPendiente = pendiente - Number(monto)
-        
+
+        // Refrescar OT, pagos y el tablero con los datos nuevos
+        queryClient.invalidateQueries({ queryKey: ['ot', otId] })
+        queryClient.invalidateQueries({ queryKey: ['pagos', otId] })
+        queryClient.invalidateQueries({ queryKey: ['ots'] })
+
         if (nuevoPendiente <= 0) {
           toast.success('Pago registrado', { description: 'La OT está completamente pagada.' })
         } else {

@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -33,17 +33,10 @@ interface CierreCaja {
 }
 
 export default function CajaPage() {
-  const [cierres, setCierres] = useState<CierreCaja[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    cargarCierres()
-  }, [])
-
-  const cargarCierres = async () => {
-    try {
-      setLoading(true)
-      // Cargar últimos 30 días por defecto
+  const { data: cierres = [], isLoading: loading } = useQuery<CierreCaja[]>({
+    queryKey: ['cierres', 'ultimos-30-dias'],
+    queryFn: async () => {
+      // Últimos 30 días por defecto
       const hasta = new Date()
       const desde = new Date()
       desde.setDate(desde.getDate() - 30)
@@ -51,16 +44,10 @@ export default function CajaPage() {
       const response = await fetch(
         `/api/cierres?desde=${desde.toISOString().split('T')[0]}&hasta=${hasta.toISOString().split('T')[0]}`
       )
-      if (response.ok) {
-        const data = await response.json()
-        setCierres(data)
-      }
-    } catch (error) {
-      console.error('Error al cargar cierres:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+      if (!response.ok) throw new Error('Error al cargar cierres')
+      return (await response.json()) as CierreCaja[]
+    },
+  })
 
   if (loading) {
     return (

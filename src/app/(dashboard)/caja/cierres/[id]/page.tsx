@@ -4,8 +4,9 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/Card'
@@ -57,31 +58,25 @@ export default function CierreDetallePage() {
   const router = useRouter()
   const cierreId = params.id as string
 
-  const [cierre, setCierre] = useState<CierreDetalle | null>(null)
-  const [loading, setLoading] = useState(true)
+  const {
+    data: cierre,
+    isLoading: loading,
+    error,
+  } = useQuery<CierreDetalle>({
+    queryKey: ['cierre', cierreId],
+    queryFn: async () => {
+      const response = await fetch(`/api/cierres/${cierreId}`)
+      if (!response.ok) throw new Error('Error al cargar el cierre')
+      return (await response.json()) as CierreDetalle
+    },
+  })
 
   useEffect(() => {
-    cargarDetalle()
-  }, [cierreId])
-
-  const cargarDetalle = async () => {
-    try {
-      setLoading(true)
-      const response = await fetch(`/api/cierres/${cierreId}`)
-      if (response.ok) {
-        const data = await response.json()
-        setCierre(data)
-      } else {
-        toast.error('Error al cargar el cierre')
-        router.push('/caja')
-      }
-    } catch (error) {
-      console.error('Error al cargar detalle:', error)
+    if (error) {
       toast.error('Error al cargar el cierre')
-    } finally {
-      setLoading(false)
+      router.push('/caja')
     }
-  }
+  }, [error, router])
 
   if (loading) {
     return (
