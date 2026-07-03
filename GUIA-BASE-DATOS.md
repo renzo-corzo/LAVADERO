@@ -194,11 +194,51 @@ Se han creado índices para optimizar consultas frecuentes:
 4. Crear funciones helper para queries comunes
 5. Implementar validaciones a nivel de schema si es necesario
 
+## 🧬 Migraciones versionadas (Prisma Migrate)
+
+El proyecto usa **migraciones versionadas** (carpeta `prisma/migrations/`), no `db push`.
+Esto deja el historial del esquema en git y hace los despliegues reproducibles.
+
+La migración inicial `00000000000000_init` es un **baseline** que representa el
+esquema completo actual (incluye el cambio de dinero a `Decimal(12,2)`).
+
+### Base de datos nueva (recomendado en desarrollo local)
+
+```bash
+# DATABASE_URL debe apuntar a una base VACÍA
+npm run db:migrate:deploy   # aplica todas las migraciones (crea las tablas)
+npm run db:seed             # datos iniciales (usa SEED_*_PASSWORD si están definidas)
+```
+
+### Base existente creada antes con `db push`
+
+Si la base ya tiene exactamente este esquema (ya corriste `db push` después de
+pasar dinero a `Decimal`), marcá el baseline como aplicado **sin re-ejecutar** el SQL:
+
+```bash
+npx prisma migrate resolve --applied 00000000000000_init
+```
+
+Si la base vieja todavía tiene columnas `Float` (fue creada antes del cambio a
+`Decimal`), NO la baselinees: partí de una base nueva con el bloque anterior.
+
+### Cambios de esquema a partir de ahora
+
+```bash
+# 1) editás prisma/schema.prisma
+# 2) generás y aplicás la migración en desarrollo:
+npm run db:migrate -- --name descripcion_del_cambio
+```
+
+`prisma db push` queda solo para prototipado rápido y descartable; para cambios
+que se commitean, usar siempre `migrate`.
+
 ## 📚 Recursos
 
 - [Documentación de Prisma](https://www.prisma.io/docs)
 - [Prisma con Next.js](https://www.prisma.io/docs/guides/deployment/deployment-guides/deploying-to-vercel)
 - [Prisma Migrate](https://www.prisma.io/docs/concepts/components/prisma-migrate)
+- [Baselining con una base existente](https://www.prisma.io/docs/guides/migrate/developing-with-prisma-migrate/add-prisma-migrate-to-a-project)
 
 
 
