@@ -4,30 +4,14 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
 import { signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 
 export function Header() {
   const { data: session } = useSession()
   const pathname = usePathname()
-  const router = useRouter()
-  const [menuAbierto, setMenuAbierto] = useState(false)
-  const [esMovil, setEsMovil] = useState(false)
-
-  // Detectar si es móvil
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const checkMobile = () => {
-      const isMobile = window.innerWidth < 1024
-      setEsMovil(isMobile)
-    }
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
 
   const handleSignOut = async () => {
     await signOut({ callbackUrl: '/login' })
@@ -104,10 +88,10 @@ export function Header() {
         {/* Barra superior */}
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-3">
-            {/* Botón volver al menú (solo móvil, solo si no estás en /tablero) */}
-            {esMovil && pathname !== '/tablero' && (
-              <Link href="/tablero">
-                <Button variant="secondary" size="sm" className="lg:hidden">
+            {/* Botón volver al menú (solo móvil vía CSS, y solo si no estás en /tablero) */}
+            {pathname !== '/tablero' && (
+              <Link href="/tablero" className="lg:hidden">
+                <Button variant="secondary" size="sm">
                   ← Menú
                 </Button>
               </Link>
