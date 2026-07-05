@@ -209,15 +209,7 @@ export default function DashboardPage() {
                 </div>
               </Button>
             </Link>
-            <Link href="/comisiones">
-              <Button variant="ghost" className="w-full justify-start h-auto py-3">
-                <span className="text-xl mr-2">💵</span>
-                <div className="text-left">
-                  <div className="font-medium">Comisiones</div>
-                  <div className="text-xs text-gray-500">Liquidaciones</div>
-                </div>
-              </Button>
-            </Link>
+            {/* Acceso a Comisiones oculto: negocio con sueldo fijo (ver Header.tsx) */}
           </div>
         </Card>
       </div>

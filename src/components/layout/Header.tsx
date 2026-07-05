@@ -55,13 +55,8 @@ export function Header() {
       roles: ['DUENO', 'ENCARGADO'],
       color: 'bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-200',
     },
-    {
-      href: '/comisiones',
-      label: 'Comisiones',
-      icon: '💵',
-      roles: ['DUENO', 'ENCARGADO'],
-      color: 'bg-teal-50 hover:bg-teal-100 text-teal-700 border-teal-200',
-    },
+    // Módulo de Comisiones oculto: el negocio usa sueldo fijo, no comisiones.
+    // Las páginas y la API siguen existiendo; solo se quita el acceso del menú.
     {
       href: '/reportes',
       label: 'Reportes',

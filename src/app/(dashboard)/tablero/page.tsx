@@ -416,12 +416,7 @@ export default function TableroPage() {
       icon: '💰',
       color: 'bg-yellow-500',
     },
-    {
-      href: '/comisiones',
-      label: 'Comisiones',
-      icon: '💵',
-      color: 'bg-teal-500',
-    },
+    // Comisiones oculto (negocio con sueldo fijo). Ver Header.tsx.
     {
       href: '/reportes',
       label: 'Reportes',

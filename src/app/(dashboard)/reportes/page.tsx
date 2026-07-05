@@ -127,8 +127,8 @@ export default function ReportesPage() {
         </div>
       </Card>
 
-      {/* Tipos de reportes */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      {/* Tipos de reportes (Comisiones oculto: negocio con sueldo fijo) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <Card className="hover:shadow-lg transition-shadow">
           <div className="text-center py-8">
             <div className="text-4xl mb-4">📊</div>
@@ -137,19 +137,6 @@ export default function ReportesPage() {
               Ventas por período, medios de pago y servicios más vendidos
             </p>
             <Button variant="primary" onClick={() => handleVerReporte('ventas')}>
-              Ver Reporte
-            </Button>
-          </div>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-shadow">
-          <div className="text-center py-8">
-            <div className="text-4xl mb-4">💰</div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Reporte de Comisiones</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Comisiones por empleado, pendientes y liquidadas
-            </p>
-            <Button variant="primary" onClick={() => handleVerReporte('comisiones')}>
               Ver Reporte
             </Button>
           </div>
@@ -181,18 +168,6 @@ export default function ReportesPage() {
                 </Button>
               </div>
               <ReporteVentas fechaDesde={fechaDesde} fechaHasta={fechaHasta} clienteId={clienteId || undefined} />
-            </Card>
-          )}
-
-          {tipoReporte === 'comisiones' && (
-            <Card>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Reporte de Comisiones</h2>
-                <Button variant="secondary" size="sm" onClick={() => setTipoReporte(null)}>
-                  ✕ Cerrar
-                </Button>
-              </div>
-              <ReporteComisiones fechaDesde={fechaDesde} fechaHasta={fechaHasta} clienteId={clienteId || undefined} />
             </Card>
           )}
 
