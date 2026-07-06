@@ -256,25 +256,25 @@ export default function TableroPage() {
       transition={{ duration: 0.3, delay: index * 0.05 }}
       whileHover={{ scale: 1.02, y: -2 }}
       whileTap={{ scale: 0.98 }}
-      className="bg-white border border-gray-200 rounded-xl p-4 mb-3 shadow-sm hover:shadow-lg transition-all cursor-pointer"
+      className="bg-white border border-aqua-line rounded-2xl p-4 mb-3 shadow-aqua hover:shadow-aqua-lg transition-all cursor-pointer"
       onClick={() => router.push(`/tablero/${ot.id}`)}
     >
       <div className="flex justify-between items-start mb-2">
         <div className="flex-1">
-          <div className="text-xl sm:text-lg font-bold text-gray-900 mb-1">
+          <div className="text-xl sm:text-lg font-bold text-ink mb-1 tracking-wide">
             {ot.patente}
           </div>
-          <div className="text-xs sm:text-xs text-gray-500">
+          <div className="text-xs sm:text-xs text-muted">
             {ot.nombreCliente} • {formatDateTime(new Date(ot.fechaIngreso))}
           </div>
           {ot.horarioDeseado && (
-            <div className="text-xs text-blue-600 mt-1">
+            <div className="text-xs text-brand-blue mt-1">
               ⏰ {formatHorarioDeseado(new Date(ot.horarioDeseado), new Date(ot.fechaIngreso))}
             </div>
           )}
           {ot.esExterna && (
             <div className="mt-2">
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-purple-100 text-purple-700">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-brand/10 text-brand">
                 OT externa
               </span>
             </div>
@@ -291,15 +291,15 @@ export default function TableroPage() {
                   type="checkbox"
                   checked={seleccionadasIds.includes(ot.id)}
                   onChange={() => toggleSeleccion(ot.id)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="h-4 w-4 accent-brand rounded"
                 />
                 Seleccionar
               </label>
             </div>
           )}
-          <div className="font-bold text-base sm:text-sm text-gray-900">{formatCurrency(ot.precio)}</div>
+          <div className="font-bold text-base sm:text-sm text-ink tabular-nums">{formatCurrency(ot.precio)}</div>
           {ot.estado === 'EN_PROCESO' && ot.fechaIngreso && (
-            <div className="text-xs text-gray-500">
+            <div className="text-xs text-muted">
               {getTimeElapsed(new Date(ot.fechaIngreso))}
             </div>
           )}
@@ -307,9 +307,9 @@ export default function TableroPage() {
       </div>
 
       <div className="mb-2">
-        <div className="text-sm text-gray-700 font-medium">{ot.servicio.nombre}</div>
+        <div className="text-sm text-ink font-medium">{ot.servicio.nombre}</div>
         {ot.extras && ot.extras.length > 0 && (
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-muted">
             +{ot.extras.length} extra{ot.extras.length > 1 ? 's' : ''}
           </div>
         )}
@@ -374,7 +374,7 @@ export default function TableroPage() {
           </Button>
         )}
         {ot.estado === 'ENTREGADO' && ot.estaPagada && (
-          <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">
+          <span className="px-2.5 py-1 bg-ok/15 text-ok rounded-full text-xs font-semibold">
             ✓ Pagada
           </span>
         )}
@@ -502,8 +502,8 @@ export default function TableroPage() {
           <>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Tablero Operativo</h1>
-          <p className="text-gray-600 mt-1">Gestiona las órdenes de trabajo del día</p>
+          <h1 className="text-2xl font-bold text-ink">Tablero operativo</h1>
+          <p className="text-muted mt-1">Gestioná las órdenes de trabajo del día</p>
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={() => refetch()} disabled={isFetching}>
@@ -520,19 +520,19 @@ export default function TableroPage() {
       <Card className="mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-ink mb-1.5">
               Fecha
             </label>
             <input
               type="date"
               value={filtroFecha}
               onChange={(e) => setFiltroFecha(e.target.value)}
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="block w-full px-3.5 py-2.5 bg-white border border-aqua-line rounded-xl text-ink transition focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand"
             />
           </div>
           {(session?.user.role === 'ENCARGADO' || session?.user.role === 'DUENO') && (
             <div className="flex items-end">
-              <label className="flex items-center gap-2 text-sm text-gray-700">
+              <label className="flex items-center gap-2 text-sm text-ink">
                 <input
                   type="checkbox"
                   checked={mostrarExternas}
@@ -543,7 +543,7 @@ export default function TableroPage() {
                       setSeleccionadasIds([])
                     }
                   }}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="h-4 w-4 accent-brand rounded"
                 />
                 Mostrar OTs externas (trabajo en planta)
               </label>
@@ -569,14 +569,14 @@ export default function TableroPage() {
       {mostrarExternas && seleccionadasIds.length > 0 && (
         <Card className="mb-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-            <div className="text-sm text-gray-700">
+            <div className="text-sm text-ink">
               <strong>{seleccionadasIds.length}</strong> OTs externas seleccionadas
             </div>
             <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
               <select
                 value={estadoLote}
                 onChange={(e) => setEstadoLote(e.target.value as any)}
-                className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                className="px-3.5 py-2.5 bg-white border border-aqua-line rounded-xl text-ink text-sm focus:outline-none focus:ring-2 focus:ring-brand/40"
                 disabled={aplicandoLote}
               >
                 <option value="EN_PROCESO">EN_PROCESO</option>
@@ -602,15 +602,15 @@ export default function TableroPage() {
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="bg-white rounded-xl p-4 min-w-[280px] border border-gray-200 shadow-sm border-t-4 border-t-gray-400"
+          className="bg-white rounded-2xl p-4 min-w-[280px] border border-aqua-line shadow-aqua border-t-4 border-t-brand-blue"
         >
           <div className="flex justify-between items-center mb-4">
-            <h2 className="font-bold text-gray-700">En Cola</h2>
-            <motion.span 
+            <h2 className="font-bold text-ink">En cola</h2>
+            <motion.span
               key={ots.EN_COLA.length}
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="bg-gray-200 text-gray-700 text-xs font-bold px-2 py-1 rounded-full"
+              className="bg-brand-blue/12 text-brand-blue text-xs font-bold px-2.5 py-1 rounded-full tabular-nums"
             >
               {ots.EN_COLA.length}
             </motion.span>
@@ -619,10 +619,10 @@ export default function TableroPage() {
             <div className="space-y-2">
               {ots.EN_COLA.map((ot, index) => renderTarjetaOT(ot, index))}
               {ots.EN_COLA.length === 0 && (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="text-center text-gray-400 py-8 text-sm"
+                  className="text-center text-muted py-8 text-sm"
                 >
                   No hay OTs en cola
                 </motion.div>
@@ -635,15 +635,15 @@ export default function TableroPage() {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white rounded-xl p-4 min-w-[280px] border border-gray-200 shadow-sm border-t-4 border-t-yellow-400"
+          className="bg-white rounded-2xl p-4 min-w-[280px] border border-aqua-line shadow-aqua border-t-4 border-t-warn"
         >
           <div className="flex justify-between items-center mb-4">
-            <h2 className="font-bold text-gray-700">En Proceso</h2>
-            <motion.span 
+            <h2 className="font-bold text-ink">En proceso</h2>
+            <motion.span
               key={ots.EN_PROCESO.length}
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="bg-yellow-200 text-yellow-800 text-xs font-bold px-2 py-1 rounded-full"
+              className="bg-warn/15 text-[#b9791a] text-xs font-bold px-2.5 py-1 rounded-full tabular-nums"
             >
               {ots.EN_PROCESO.length}
             </motion.span>
@@ -652,10 +652,10 @@ export default function TableroPage() {
             <div className="space-y-2">
               {ots.EN_PROCESO.map((ot, index) => renderTarjetaOT(ot, index))}
               {ots.EN_PROCESO.length === 0 && (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="text-center text-gray-400 py-8 text-sm"
+                  className="text-center text-muted py-8 text-sm"
                 >
                   No hay OTs en proceso
                 </motion.div>
@@ -668,15 +668,15 @@ export default function TableroPage() {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-white rounded-xl p-4 min-w-[280px] border border-gray-200 shadow-sm border-t-4 border-t-green-400"
+          className="bg-white rounded-2xl p-4 min-w-[280px] border border-aqua-line shadow-aqua border-t-4 border-t-ok"
         >
           <div className="flex justify-between items-center mb-4">
-            <h2 className="font-bold text-gray-700">Listo</h2>
-            <motion.span 
+            <h2 className="font-bold text-ink">Listo</h2>
+            <motion.span
               key={ots.LISTO.length}
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="bg-green-200 text-green-800 text-xs font-bold px-2 py-1 rounded-full"
+              className="bg-ok/15 text-[#0c8f68] text-xs font-bold px-2.5 py-1 rounded-full tabular-nums"
             >
               {ots.LISTO.length}
             </motion.span>
@@ -685,10 +685,10 @@ export default function TableroPage() {
             <div className="space-y-2">
               {ots.LISTO.map((ot, index) => renderTarjetaOT(ot, index))}
               {ots.LISTO.length === 0 && (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="text-center text-gray-400 py-8 text-sm"
+                  className="text-center text-muted py-8 text-sm"
                 >
                   No hay OTs listas
                 </motion.div>
@@ -701,15 +701,15 @@ export default function TableroPage() {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-white rounded-xl p-4 min-w-[280px] border border-gray-200 shadow-sm border-t-4 border-t-blue-400"
+          className="bg-white rounded-2xl p-4 min-w-[280px] border border-aqua-line shadow-aqua border-t-4 border-t-ink"
         >
           <div className="flex justify-between items-center mb-4">
-            <h2 className="font-bold text-gray-700">Entregado</h2>
-            <motion.span 
+            <h2 className="font-bold text-ink">Entregado</h2>
+            <motion.span
               key={ots.ENTREGADO.length}
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="bg-blue-200 text-blue-800 text-xs font-bold px-2 py-1 rounded-full"
+              className="bg-ink/10 text-ink text-xs font-bold px-2.5 py-1 rounded-full tabular-nums"
             >
               {ots.ENTREGADO.length}
             </motion.span>
@@ -718,10 +718,10 @@ export default function TableroPage() {
             <div className="space-y-2">
               {ots.ENTREGADO.map((ot, index) => renderTarjetaOT(ot, index))}
               {ots.ENTREGADO.length === 0 && (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="text-center text-gray-400 py-8 text-sm"
+                  className="text-center text-muted py-8 text-sm"
                 >
                   No hay OTs entregadas
                 </motion.div>
