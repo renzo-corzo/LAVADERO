@@ -52,7 +52,7 @@ export default function CajaPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">Cargando...</p>
+        <p className="text-muted">Cargando...</p>
       </div>
     )
   }
@@ -61,8 +61,8 @@ export default function CajaPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Caja y Cobros</h1>
-          <p className="text-gray-600 mt-1">Gestión de cierres de caja</p>
+          <h1 className="text-2xl font-bold text-ink">Caja y Cobros</h1>
+          <p className="text-muted mt-1">Gestión de cierres de caja</p>
         </div>
         <Link href="/caja/cerrar">
           <Button variant="primary">+ Nuevo Cierre</Button>
@@ -72,17 +72,17 @@ export default function CajaPage() {
       {/* Resumen rápido */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card>
-          <div className="text-sm text-gray-600 mb-1">Cierres este mes</div>
+          <div className="text-sm text-muted mb-1">Cierres este mes</div>
           <div className="text-2xl font-bold">{cierres.length}</div>
         </Card>
         <Card>
-          <div className="text-sm text-gray-600 mb-1">Total cierre más reciente</div>
-          <div className="text-2xl font-bold text-green-600">
+          <div className="text-sm text-muted mb-1">Total cierre más reciente</div>
+          <div className="text-2xl font-bold text-ok">
             {cierres.length > 0 ? formatCurrency(cierres[0].totalGeneral) : '$ 0,00'}
           </div>
         </Card>
         <Card>
-          <div className="text-sm text-gray-600 mb-1">Último cierre</div>
+          <div className="text-sm text-muted mb-1">Último cierre</div>
           <div className="text-lg font-medium">
             {cierres.length > 0
               ? formatDateTime(new Date(cierres[0].fechaCierre))
@@ -95,7 +95,7 @@ export default function CajaPage() {
       <Card>
         <h2 className="text-lg font-bold mb-4">Historial de Cierres</h2>
         {cierres.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-muted">
             <p className="mb-4">No hay cierres registrados</p>
             <Link href="/caja/cerrar">
               <Button variant="primary">Crear Primer Cierre</Button>
@@ -103,47 +103,47 @@ export default function CajaPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-aqua-line">
+              <thead className="bg-aqua-bg">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Período
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Fecha Cierre
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
                     Efectivo
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
                     Transferencia
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
                     Total
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     OTs
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Cerrado por
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
                     Acciones
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-aqua-line">
                 {cierres.map((cierre) => (
-                  <tr key={cierre.id} className="hover:bg-gray-50">
+                  <tr key={cierre.id} className="hover:bg-aqua-bg">
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div>
                         {new Date(cierre.fechaDesde).toLocaleDateString('es-AR')}
                       </div>
-                      <div className="text-gray-500">
+                      <div className="text-muted">
                         hasta {new Date(cierre.fechaHasta).toLocaleDateString('es-AR')}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                       {formatDateTime(new Date(cierre.fechaCierre))}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
@@ -158,7 +158,7 @@ export default function CajaPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {cierre.ots.length} OT{cierre.ots.length !== 1 ? 's' : ''}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                       {cierre.usuario.nombre}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

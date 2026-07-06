@@ -64,7 +64,7 @@ export default function ExtrasPage() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Extras</h1>
+        <h1 className="text-2xl font-bold text-ink">Extras</h1>
         <Link href="/catalogos/extras/nuevo">
           <Button variant="primary">Nuevo Extra</Button>
         </Link>
@@ -100,50 +100,50 @@ export default function ExtrasPage() {
         {loading ? (
           <p>Cargando...</p>
         ) : extras.length === 0 ? (
-          <p className="text-gray-500">No hay extras registrados</p>
+          <p className="text-muted">No hay extras registrados</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-aqua-line">
+              <thead className="bg-aqua-bg">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Nombre
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Precio
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Duración
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Estado
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
                     Acciones
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-aqua-line">
                 {extras.map((extra) => (
                   <tr key={extra.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{extra.nombre}</div>
+                      <div className="text-sm font-medium text-ink">{extra.nombre}</div>
                       {extra.descripcion && (
-                        <div className="text-sm text-gray-500">{extra.descripcion}</div>
+                        <div className="text-sm text-muted">{extra.descripcion}</div>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-ink">
                       {formatCurrency(Number(extra.precio))}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                       {extra.duracionEstimada ? `${extra.duracionEstimada} min` : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                           extra.activo
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
+                            ? 'bg-ok/15 text-[#0c8f68]'
+                            : 'bg-ink/10 text-ink'
                         }`}
                       >
                         {extra.activo ? 'Activo' : 'Inactivo'}
@@ -152,14 +152,14 @@ export default function ExtrasPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <Link
                         href={`/catalogos/extras/${extra.id}`}
-                        className="text-blue-600 hover:text-blue-900 mr-4"
+                        className="text-brand hover:text-brand-dark mr-4"
                       >
                         Editar
                       </Link>
                       {extra.activo && (
                         <button
                           onClick={() => handleDesactivar(extra.id)}
-                          className="text-red-600 hover:text-red-900"
+                          className="text-danger hover:text-danger"
                         >
                           Desactivar
                         </button>

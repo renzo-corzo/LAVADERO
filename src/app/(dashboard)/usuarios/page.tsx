@@ -105,17 +105,17 @@ export default function UsuariosPage() {
 
   const getRolColor = (rol: string) => {
     const colors: Record<string, string> = {
-      DUENO: 'bg-purple-100 text-purple-800',
-      ENCARGADO: 'bg-blue-100 text-blue-800',
-      LAVADOR: 'bg-green-100 text-green-800',
+      DUENO: 'bg-brand/12 text-brand',
+      ENCARGADO: 'bg-warn/15 text-[#b9791a]',
+      LAVADOR: 'bg-ok/15 text-[#0c8f68]',
     }
-    return colors[rol] || 'bg-gray-100 text-gray-800'
+    return colors[rol] || 'bg-ink/10 text-ink'
   }
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Usuarios</h1>
+        <h1 className="text-2xl font-bold text-ink">Usuarios</h1>
         <Link href="/usuarios/nuevo">
           <Button variant="primary">Nuevo Usuario</Button>
         </Link>
@@ -149,42 +149,42 @@ export default function UsuariosPage() {
         </div>
 
         {loading ? (
-          <div className="text-center py-8 text-gray-500">Cargando usuarios...</div>
+          <div className="text-center py-8 text-muted">Cargando usuarios...</div>
         ) : usuarios.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">No hay usuarios registrados</div>
+          <div className="text-center py-8 text-muted">No hay usuarios registrados</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-aqua-line">
+              <thead className="bg-aqua-bg">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Nombre
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Usuario
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Rol
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Estado
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Fecha Creación
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
                     Acciones
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-aqua-line">
                 {usuarios.map((usuario) => (
                   <tr key={usuario.id} className={!usuario.activo ? 'opacity-60' : ''}>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{usuario.nombre}</div>
+                      <div className="text-sm font-medium text-ink">{usuario.nombre}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{usuario.usuario}</div>
+                      <div className="text-sm text-muted">{usuario.usuario}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRolColor(usuario.rol)}`}>
@@ -193,16 +193,16 @@ export default function UsuariosPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {usuario.activo ? (
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-ok/15 text-[#0c8f68]">
                           Activo
                         </span>
                       ) : (
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-danger/12 text-danger">
                           Inactivo
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                       {new Date(usuario.createdAt).toLocaleDateString('es-AR')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
