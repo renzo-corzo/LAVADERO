@@ -26,6 +26,9 @@ yarn-error.log*
 .env*.local
 .env
 
+# Maquetas de diseño (fuentes desechables de los mockups Aqua)
+/mockups/
+
 # Notas de despliegue con secretos/credenciales (nunca commitear)
 VARIABLES-*.txt
 VARIABLES-*.md

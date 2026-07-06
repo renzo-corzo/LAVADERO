@@ -1,5 +1,5 @@
 /**
- * Componente Header con navegación y usuario
+ * Componente Header con navegación y usuario — sistema de diseño "Aqua"
  */
 
 'use client'
@@ -9,6 +9,25 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 
+interface MenuItem {
+  href: string
+  label: string
+  icon: string
+  roles: string[]
+  destacado?: boolean
+}
+
+const menuItems: MenuItem[] = [
+  { href: '/tablero', label: 'Tablero', icon: '▦', roles: ['DUENO', 'ENCARGADO'] },
+  { href: '/ots/nueva', label: 'Nueva OT', icon: '＋', roles: ['DUENO', 'ENCARGADO'], destacado: true },
+  { href: '/catalogos', label: 'Catálogos', icon: '📚', roles: ['DUENO', 'ENCARGADO'] },
+  { href: '/clientes', label: 'Clientes', icon: '👥', roles: ['DUENO', 'ENCARGADO'] },
+  { href: '/caja', label: 'Caja', icon: '💰', roles: ['DUENO', 'ENCARGADO'] },
+  // Comisiones oculto: el negocio usa sueldo fijo (páginas y API siguen existiendo).
+  { href: '/reportes', label: 'Reportes', icon: '📈', roles: ['DUENO', 'ENCARGADO'] },
+  { href: '/usuarios', label: 'Usuarios', icon: '👤', roles: ['DUENO'] },
+]
+
 export function Header() {
   const { data: session } = useSession()
   const pathname = usePathname()
@@ -17,72 +36,16 @@ export function Header() {
     await signOut({ callbackUrl: '/login' })
   }
 
-  const menuItems = [
-    {
-      href: '/tablero',
-      label: 'Tablero',
-      icon: '📋',
-      roles: ['DUENO', 'ENCARGADO'],
-      color: 'bg-green-50 hover:bg-green-100 text-green-700 border-green-200',
-    },
-    {
-      href: '/ots/nueva',
-      label: 'Nueva OT',
-      icon: '➕',
-      roles: ['DUENO', 'ENCARGADO'],
-      color: 'bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200',
-      destacado: true,
-      grande: true,
-    },
-    {
-      href: '/catalogos',
-      label: 'Catálogos',
-      icon: '📚',
-      roles: ['DUENO', 'ENCARGADO'],
-      color: 'bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200',
-    },
-    {
-      href: '/clientes',
-      label: 'Clientes',
-      icon: '👥',
-      roles: ['DUENO', 'ENCARGADO'],
-      color: 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200',
-    },
-    {
-      href: '/caja',
-      label: 'Caja',
-      icon: '💰',
-      roles: ['DUENO', 'ENCARGADO'],
-      color: 'bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-200',
-    },
-    // Módulo de Comisiones oculto: el negocio usa sueldo fijo, no comisiones.
-    // Las páginas y la API siguen existiendo; solo se quita el acceso del menú.
-    {
-      href: '/reportes',
-      label: 'Reportes',
-      icon: '📈',
-      roles: ['DUENO', 'ENCARGADO'],
-      color: 'bg-pink-50 hover:bg-pink-100 text-pink-700 border-pink-200',
-    },
-    {
-      href: '/usuarios',
-      label: 'Usuarios',
-      icon: '👤',
-      roles: ['DUENO'],
-      color: 'bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200',
-    },
-  ]
-
-  const itemsFiltrados = menuItems.filter((item) =>
-    session?.user.role && item.roles.includes(session.user.role as 'DUENO' | 'ENCARGADO')
+  const itemsFiltrados = menuItems.filter(
+    (item) => session?.user.role && item.roles.includes(session.user.role)
   )
 
   return (
-    <header className="bg-white shadow-sm border-b sticky top-0 z-50">
+    <header className="bg-white/80 backdrop-blur border-b border-aqua-line sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Barra superior */}
         <div className="flex justify-between items-center h-16">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center gap-3">
             {/* Botón volver al menú (solo móvil vía CSS, y solo si no estás en /tablero) */}
             {pathname !== '/tablero' && (
               <Link href="/tablero" className="lg:hidden">
@@ -91,59 +54,68 @@ export function Header() {
                 </Button>
               </Link>
             )}
-            <Link href="/tablero" className="text-xl font-bold text-gray-900 flex items-center space-x-2">
-              <span>🚗</span>
-              <span className="hidden sm:inline">Lavadero Sistema</span>
-              <span className="sm:hidden">Lavadero</span>
+            <Link href="/tablero" className="flex items-center gap-2.5 font-extrabold text-ink">
+              <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-teal to-brand-blue text-white grid place-items-center text-lg shadow-brand">
+                ≈
+              </span>
+              <span className="text-lg">Lavadero</span>
             </Link>
           </div>
 
-          <div className="flex items-center space-x-4">
-            <div className="text-sm text-gray-600 hidden sm:flex items-center space-x-2">
-              <span className="font-medium">{session?.user.name}</span>
-              <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-                {session?.user.role}
-              </span>
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 text-right">
+              <div className="leading-tight">
+                <div className="text-sm font-semibold text-ink">{session?.user.name}</div>
+                <div className="text-xs text-muted capitalize">
+                  {session?.user.role?.toLowerCase()}
+                </div>
+              </div>
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-teal to-brand-blue text-white grid place-items-center font-extrabold">
+                {session?.user.name?.charAt(0).toUpperCase() ?? '·'}
+              </div>
             </div>
             <Button variant="secondary" size="sm" onClick={handleSignOut}>
-              Cerrar Sesión
+              Salir
             </Button>
           </div>
         </div>
 
         {/* Menú de navegación central - Solo en desktop */}
-        <nav className="hidden lg:block py-4 border-t">
-          <div className="flex flex-wrap justify-center gap-3">
+        <nav className="hidden lg:block pb-3">
+          <div className="flex flex-wrap items-center gap-1.5">
             {itemsFiltrados.map((item) => {
-              const estaActivo = pathname === item.href || pathname?.startsWith(item.href + '/')
-              const esGrande = item.grande || false
+              const activo = pathname === item.href || pathname?.startsWith(item.href + '/')
+
+              if (item.destacado) {
+                return (
+                  <Link key={item.href} href={item.href} className="ml-1">
+                    <span className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-brand-teal to-brand-blue px-4 py-2.5 text-sm font-semibold text-white shadow-brand transition-all hover:-translate-y-px hover:brightness-105">
+                      <span className="text-base leading-none">{item.icon}</span>
+                      {item.label}
+                    </span>
+                  </Link>
+                )
+              }
+
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`
-                    flex items-center space-x-2 rounded-lg font-medium
-                    transition-all duration-200 border-2
-                    ${esGrande ? 'px-6 py-4' : 'px-4 py-2.5'}
-                    ${item.destacado ? 'shadow-lg' : ''}
-                    ${estaActivo 
-                      ? `${item.color.replace('hover:', '')} border-2 border-current shadow-md` 
-                      : `${item.color} border-transparent hover:shadow-md`
-                    }
-                  `}
+                  aria-current={activo ? 'page' : undefined}
+                  className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
+                    activo
+                      ? 'bg-white text-brand shadow-aqua ring-1 ring-aqua-line'
+                      : 'text-muted hover:bg-white/70 hover:text-ink'
+                  }`}
                 >
-                  <span className={esGrande ? 'text-2xl' : 'text-xl'}>{item.icon}</span>
-                  <span className={esGrande ? 'text-base font-semibold' : 'text-sm'}>{item.label}</span>
+                  <span className="text-base leading-none">{item.icon}</span>
+                  {item.label}
                 </Link>
               )
             })}
           </div>
         </nav>
-
-        {/* Menú móvil - Oculto, se usa la página de menú principal */}
-        {/* El menú móvil ahora está en la página principal del tablero */}
       </div>
     </header>
   )
 }
-

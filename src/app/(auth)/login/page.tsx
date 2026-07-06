@@ -57,22 +57,24 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold text-center text-gray-900">
-            Lavadero Sistema
-          </h1>
-          <p className="mt-2 text-center text-gray-600">
-            Inicie sesión para continuar
-          </p>
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="max-w-md w-full">
+        <div className="flex flex-col items-center mb-7">
+          <span className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-teal to-brand-blue text-white grid place-items-center text-2xl shadow-brand mb-4">
+            ≈
+          </span>
+          <h1 className="text-2xl font-extrabold text-ink tracking-tight">Lavadero</h1>
+          <p className="mt-1 text-muted text-sm">Iniciá sesión para continuar</p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form
+          className="bg-white border border-aqua-line rounded-2xl shadow-aqua-lg p-6 sm:p-7 space-y-5"
+          onSubmit={handleSubmit}
+        >
           {error && (
             <div
               role="alert"
-              className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded"
+              className="bg-danger/10 border border-danger/30 text-danger px-4 py-3 rounded-xl text-sm"
             >
               {error}
             </div>
@@ -80,7 +82,7 @@ export default function LoginPage() {
 
           <div className="space-y-4">
             <div>
-              <label htmlFor="usuario" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="usuario" className="block text-sm font-medium text-ink mb-1.5">
                 Usuario
               </label>
               <input
@@ -92,13 +94,13 @@ export default function LoginPage() {
                 autoComplete="username"
                 value={usuario}
                 onChange={(e) => setUsuario(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Ingrese su usuario"
+                className="block w-full px-3.5 py-2.5 bg-white border border-aqua-line rounded-xl text-ink placeholder:text-muted/70 transition focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand"
+                placeholder="Ingresá tu usuario"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-medium text-ink mb-1.5">
                 Contraseña
               </label>
               <input
@@ -109,8 +111,8 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Ingrese su contraseña"
+                className="block w-full px-3.5 py-2.5 bg-white border border-aqua-line rounded-xl text-ink placeholder:text-muted/70 transition focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand"
+                placeholder="Ingresá tu contraseña"
               />
             </div>
           </div>

@@ -8,25 +8,26 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center rounded-lg text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]',
+  'inline-flex items-center justify-center rounded-xl font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]',
   {
     variants: {
       variant: {
+        // Acento de marca "Aqua": degradé turquesa → azul
         primary:
-          'bg-blue-600 text-white hover:bg-blue-700 shadow-[0_4px_14px_0_rgba(37,99,235,0.4)] hover:shadow-[0_6px_20px_rgba(37,99,235,0.5)] focus-visible:ring-blue-500',
+          'bg-gradient-to-br from-brand-teal to-brand-blue text-white shadow-brand hover:-translate-y-px hover:brightness-105',
         secondary:
-          'bg-white/80 backdrop-blur-sm border border-gray-200 text-gray-900 hover:bg-white/90 hover:border-gray-300 shadow-sm hover:shadow-md focus-visible:ring-gray-500',
+          'bg-white border border-aqua-line text-ink hover:border-brand/40 hover:shadow-aqua',
         danger:
-          'bg-red-600 text-white hover:bg-red-700 shadow-[0_4px_14px_0_rgba(220,38,38,0.4)] hover:shadow-[0_6px_20px_rgba(220,38,38,0.5)] focus-visible:ring-red-500',
+          'bg-danger text-white shadow-[0_10px_22px_-10px_rgba(232,99,95,0.7)] hover:brightness-105 focus-visible:ring-danger',
         ghost:
-          'hover:bg-gray-100/80 hover:text-gray-900 focus-visible:ring-gray-500',
+          'text-ink hover:bg-white/70',
         outline:
-          'border-2 border-gray-300 bg-transparent hover:bg-gray-50/80 focus-visible:ring-gray-500',
+          'border border-aqua-line bg-transparent text-ink hover:bg-white/60',
       },
       size: {
-        sm: 'h-9 px-3 text-xs',
-        md: 'h-10 px-4 py-2 text-sm',
-        lg: 'h-12 px-6 py-3 text-base',
+        sm: 'h-9 px-3.5 text-xs',
+        md: 'h-11 px-5 text-sm',
+        lg: 'h-12 px-6 text-base',
       },
     },
     defaultVariants: {

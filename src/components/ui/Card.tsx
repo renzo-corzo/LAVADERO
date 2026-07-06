@@ -22,14 +22,14 @@ export function Card({
   variant = 'default'
 }: CardProps) {
   const baseStyles = variant === 'glass'
-    ? 'bg-white/70 backdrop-blur-md border border-white/20 shadow-xl shadow-gray-900/5 rounded-xl'
-    : 'bg-white shadow-lg rounded-xl border border-gray-100'
-  
+    ? 'bg-white/70 backdrop-blur-md border border-white/40 shadow-aqua-lg rounded-2xl'
+    : 'bg-white shadow-aqua rounded-2xl border border-aqua-line'
+
   return (
     <div className={cn(baseStyles, className)}>
       {(title || actions) && (
-        <div className="px-6 py-4 border-b border-gray-200/50 flex justify-between items-center">
-          {title && <h3 className="text-lg font-semibold text-gray-900 tracking-tight">{title}</h3>}
+        <div className="px-6 py-4 border-b border-aqua-line flex justify-between items-center">
+          {title && <h3 className="text-lg font-semibold text-ink tracking-tight">{title}</h3>}
           {actions && <div>{actions}</div>}
         </div>
       )}
