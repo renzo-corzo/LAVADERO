@@ -142,7 +142,7 @@ export default function RegistrarPagoPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">Cargando...</p>
+        <p className="text-muted">Cargando...</p>
       </div>
     )
   }
@@ -150,7 +150,7 @@ export default function RegistrarPagoPage() {
   if (!ot) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-500 mb-4">OT no encontrada</p>
+        <p className="text-muted mb-4">OT no encontrada</p>
         <Link href="/tablero">
           <Button variant="secondary">Volver al Tablero</Button>
         </Link>
@@ -161,11 +161,11 @@ export default function RegistrarPagoPage() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-6">
-        <Link href={`/tablero/${otId}`} className="text-blue-600 hover:underline mb-2 inline-block">
+        <Link href={`/tablero/${otId}`} className="text-brand hover:underline mb-2 inline-block">
           ← Volver al Detalle
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900">Registrar Pago</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-2xl font-bold text-ink">Registrar Pago</h1>
+        <p className="text-muted mt-1">
           OT: {ot.patente || ot.descripcionVehiculo || 'Sin identificación'}
         </p>
       </div>
@@ -175,16 +175,16 @@ export default function RegistrarPagoPage() {
         <h2 className="text-lg font-bold mb-4">Resumen de OT</h2>
         <div className="space-y-2">
           <div className="flex justify-between">
-            <span className="text-gray-600">Total OT:</span>
+            <span className="text-muted">Total OT:</span>
             <span className="font-bold">{formatCurrency(ot.precio)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-600">Pagado:</span>
-            <span className="font-bold text-green-600">{formatCurrency(totalPagado)}</span>
+            <span className="text-muted">Pagado:</span>
+            <span className="font-bold text-ok">{formatCurrency(totalPagado)}</span>
           </div>
           <div className="flex justify-between border-t pt-2">
             <span className="font-medium">Pendiente:</span>
-            <span className={`font-bold text-lg ${pendiente > 0 ? 'text-red-600' : 'text-green-600'}`}>
+            <span className={`font-bold text-lg ${pendiente > 0 ? 'text-danger' : 'text-ok'}`}>
               {formatCurrency(pendiente)}
             </span>
           </div>
@@ -196,7 +196,7 @@ export default function RegistrarPagoPage() {
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-bold">Nuevo Pago</h2>
           {pendiente <= 0 && (
-            <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+            <span className="px-3 py-1 bg-ok/15 text-[#0c8f68] rounded-full text-sm font-medium">
               ✓ Completamente Pagada
             </span>
           )}
@@ -206,10 +206,10 @@ export default function RegistrarPagoPage() {
           <div className="text-center py-8">
             <div className="mb-4">
               <div className="text-4xl mb-2">✓</div>
-              <h3 className="text-lg font-semibold text-green-700 mb-2">
+              <h3 className="text-lg font-semibold text-ok mb-2">
                 Orden de Trabajo Completamente Pagada
               </h3>
-              <p className="text-gray-600">
+              <p className="text-muted">
                 La OT ya tiene todos los pagos registrados. No se pueden agregar más pagos.
               </p>
             </div>
@@ -220,7 +220,7 @@ export default function RegistrarPagoPage() {
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-ink mb-1">
               Monto *
             </label>
             <Input
@@ -234,14 +234,14 @@ export default function RegistrarPagoPage() {
               required
             />
             {Number(monto) > 0 && Number(monto) <= pendiente && (
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted mt-1">
                 Nuevo pendiente: {formatCurrency(pendiente - Number(monto))}
               </p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-ink mb-1">
               Medio de Pago *
             </label>
             <Select
@@ -257,7 +257,7 @@ export default function RegistrarPagoPage() {
 
           {medioPago === 'TRANSFERENCIA' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-ink mb-1">
                 Referencia de la transferencia *
               </label>
               <Input
@@ -268,7 +268,7 @@ export default function RegistrarPagoPage() {
                 required
                 aria-required
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted mt-1">
                 Obligatorio para identificar el pago en el banco
               </p>
             </div>
@@ -304,15 +304,15 @@ export default function RegistrarPagoPage() {
           <h2 className="text-lg font-bold mb-4">Pagos Anteriores</h2>
           <div className="space-y-2">
             {pagos.map((pago) => (
-              <div key={pago.id} className="p-3 bg-gray-50 rounded border">
+              <div key={pago.id} className="p-3 bg-aqua-bg rounded border">
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="font-medium">{formatCurrency(pago.monto)}</div>
-                    <div className="text-sm text-gray-500">{pago.medioPago}</div>
+                    <div className="text-sm text-muted">{pago.medioPago}</div>
                     {pago.referencia && (
-                      <div className="text-xs text-gray-400 mt-1">Ref: {pago.referencia}</div>
+                      <div className="text-xs text-muted mt-1">Ref: {pago.referencia}</div>
                     )}
-                    <div className="text-xs text-gray-400 mt-1">
+                    <div className="text-xs text-muted mt-1">
                       {new Date(pago.fechaHora).toLocaleString('es-AR')}
                     </div>
                   </div>

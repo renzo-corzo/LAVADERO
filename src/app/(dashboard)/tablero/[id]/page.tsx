@@ -112,7 +112,7 @@ export default function OTDetallePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">Cargando detalle de OT...</p>
+        <p className="text-muted">Cargando detalle de OT...</p>
       </div>
     )
   }
@@ -120,7 +120,7 @@ export default function OTDetallePage() {
   if (!ot) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-500 mb-4">OT no encontrada</p>
+        <p className="text-muted mb-4">OT no encontrada</p>
         <Link href="/tablero">
           <Button variant="secondary">Volver al Tablero</Button>
         </Link>
@@ -132,10 +132,10 @@ export default function OTDetallePage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <Link href="/tablero" className="text-blue-600 hover:underline mb-2 inline-block">
+          <Link href="/tablero" className="text-brand hover:underline mb-2 inline-block">
             ← Volver al Tablero
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-ink">
             Detalle de OT - {ot.patente || ot.descripcionVehiculo || 'Sin identificación'}
           </h1>
         </div>
@@ -156,50 +156,50 @@ export default function OTDetallePage() {
             <h2 className="text-lg font-bold mb-4">Información General</h2>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-gray-500">Estado</label>
+                <label className="text-sm text-muted">Estado</label>
                 <div className="mt-1">
                   <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                    ot.estado === 'EN_COLA' ? 'bg-gray-200 text-gray-700' :
-                    ot.estado === 'EN_PROCESO' ? 'bg-yellow-200 text-yellow-800' :
-                    ot.estado === 'LISTO' ? 'bg-green-200 text-green-800' :
-                    ot.estado === 'ENTREGADO' ? 'bg-blue-200 text-blue-800' :
-                    'bg-red-200 text-red-800'
+                    ot.estado === 'EN_COLA' ? 'bg-ink/10 text-ink' :
+                    ot.estado === 'EN_PROCESO' ? 'bg-warn/20 text-[#b9791a]' :
+                    ot.estado === 'LISTO' ? 'bg-ok/20 text-[#0c8f68]' :
+                    ot.estado === 'ENTREGADO' ? 'bg-brand/15 text-brand' :
+                    'bg-danger/15 text-danger'
                   }`}>
                     {ot.estado.replace('_', ' ')}
                   </span>
                 </div>
               </div>
               <div>
-                <label className="text-sm text-gray-500">Fecha de Ingreso</label>
+                <label className="text-sm text-muted">Fecha de Ingreso</label>
                 <p className="mt-1 font-medium">{formatDateTime(new Date(ot.fechaIngreso))}</p>
               </div>
               <div>
-                <label className="text-sm text-gray-500">Patente</label>
+                <label className="text-sm text-muted">Patente</label>
                 <p className="mt-1 font-medium">{ot.patente}</p>
               </div>
               {ot.tipoVehiculo && (
                 <div>
-                  <label className="text-sm text-gray-500">Tipo de Vehículo</label>
+                  <label className="text-sm text-muted">Tipo de Vehículo</label>
                   <p className="mt-1 font-medium capitalize">{ot.tipoVehiculo}</p>
                 </div>
               )}
               {ot.descripcionVehiculo && (
                 <div className="col-span-2">
-                  <label className="text-sm text-gray-500">Descripción</label>
+                  <label className="text-sm text-muted">Descripción</label>
                   <p className="mt-1">{ot.descripcionVehiculo}</p>
                 </div>
               )}
               <div>
-                <label className="text-sm text-gray-500">Cliente</label>
+                <label className="text-sm text-muted">Cliente</label>
                 <p className="mt-1 font-medium">{ot.nombreCliente}</p>
               </div>
               <div>
-                <label className="text-sm text-gray-500">Teléfono</label>
+                <label className="text-sm text-muted">Teléfono</label>
                 <p className="mt-1 font-medium">{ot.telefonoCliente}</p>
               </div>
               {ot.horarioDeseado && (
                 <div className="col-span-2">
-                  <label className="text-sm text-gray-500">Horario Deseado</label>
+                  <label className="text-sm text-muted">Horario Deseado</label>
                   <p className="mt-1 font-medium">{formatHorarioDeseado(new Date(ot.horarioDeseado), new Date(ot.fechaIngreso))}</p>
                 </div>
               )}
@@ -218,19 +218,19 @@ export default function OTDetallePage() {
                 <>
                   {ot.extras.map((extra: any) => (
                     <div key={extra.id} className="flex justify-between items-center py-2 border-b">
-                      <span className="text-gray-600">+ {extra.nombre}</span>
+                      <span className="text-muted">+ {extra.nombre}</span>
                       <span>{formatCurrency(extra.precio)}</span>
                     </div>
                   ))}
                 </>
               )}
               {ot.precioAjustado && (
-                <div className="mt-2 p-2 bg-yellow-50 rounded">
-                  <p className="text-sm text-gray-600">
+                <div className="mt-2 p-2 bg-warn/10 rounded">
+                  <p className="text-sm text-muted">
                     <strong>Precio ajustado:</strong> {formatCurrency(ot.precioAjustado)}
                   </p>
                   {ot.justificacionPrecio && (
-                    <p className="text-xs text-gray-500 mt-1">{ot.justificacionPrecio}</p>
+                    <p className="text-xs text-muted mt-1">{ot.justificacionPrecio}</p>
                   )}
                 </div>
               )}
@@ -246,7 +246,7 @@ export default function OTDetallePage() {
           {ot.observaciones && (
             <Card>
               <h2 className="text-lg font-bold mb-4">Observaciones</h2>
-              <p className="text-gray-700">{ot.observaciones}</p>
+              <p className="text-ink">{ot.observaciones}</p>
             </Card>
           )}
 
@@ -261,7 +261,7 @@ export default function OTDetallePage() {
                       <span className="font-medium">{historial.estadoAnterior}</span>
                       {' → '}
                       <span className="font-medium">{historial.estadoNuevo}</span>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-muted mt-1">
                         {historial.usuario?.nombre || 'Sistema'} - {formatDateTime(new Date(historial.fechaHora))}
                       </p>
                     </div>
@@ -329,7 +329,7 @@ export default function OTDetallePage() {
                 </Button>
               )}
               {pendiente <= 0 && (
-                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                <span className="px-3 py-1 bg-ok/15 text-[#0c8f68] rounded-full text-xs font-medium">
                   ✓ Pagada
                 </span>
               )}
@@ -337,44 +337,44 @@ export default function OTDetallePage() {
             
             <div className="mb-4">
               <div className="flex justify-between py-2">
-                <span className="text-gray-600">Total OT:</span>
+                <span className="text-muted">Total OT:</span>
                 <span className="font-bold">{formatCurrency(ot.precio)}</span>
               </div>
               <div className="flex justify-between py-2 border-t">
-                <span className="text-gray-600">Pagado:</span>
-                <span className="font-bold text-green-600">{formatCurrency(totalPagado)}</span>
+                <span className="text-muted">Pagado:</span>
+                <span className="font-bold text-ok">{formatCurrency(totalPagado)}</span>
               </div>
               <div className="flex justify-between py-2 border-t-2">
                 <span className="font-medium">Pendiente:</span>
-                <span className={`font-bold ${pendiente > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                <span className={`font-bold ${pendiente > 0 ? 'text-danger' : 'text-ok'}`}>
                   {formatCurrency(pendiente)}
                 </span>
               </div>
             </div>
 
             {esLavador ? (
-              <p className="text-sm text-gray-500 text-center py-2">
+              <p className="text-sm text-muted text-center py-2">
                 Resumen de cobro visible arriba; el detalle de pagos es solo para encargado o dueño.
               </p>
             ) : pagos.length > 0 ? (
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {pagos.map((pago) => (
-                  <div key={pago.id} className="p-2 bg-gray-50 rounded text-sm">
+                  <div key={pago.id} className="p-2 bg-aqua-bg rounded text-sm">
                     <div className="flex justify-between">
                       <span className="font-medium">{formatCurrency(pago.monto)}</span>
-                      <span className="text-gray-500">{pago.medioPago}</span>
+                      <span className="text-muted">{pago.medioPago}</span>
                     </div>
                     {pago.referencia && (
-                      <p className="text-xs text-gray-500 mt-1">Ref: {pago.referencia}</p>
+                      <p className="text-xs text-muted mt-1">Ref: {pago.referencia}</p>
                     )}
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-xs text-muted mt-1">
                       {formatDateTime(new Date(pago.fechaHora))}
                     </p>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500 text-center py-4">No hay pagos registrados</p>
+              <p className="text-sm text-muted text-center py-4">No hay pagos registrados</p>
             )}
           </Card>
         </div>
