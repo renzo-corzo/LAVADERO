@@ -9,6 +9,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { inicioDelDiaLocal, finDelDiaLocal } from '@/lib/utils-fechas'
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,16 +28,12 @@ export async function GET(request: NextRequest) {
 
     const where: any = {}
     if (desde) {
-      const fechaDesde = new Date(desde)
-      fechaDesde.setHours(0, 0, 0, 0)
-      where.fechaCierre = { gte: fechaDesde }
+      where.fechaCierre = { gte: inicioDelDiaLocal(desde) }
     }
     if (hasta) {
-      const fechaHasta = new Date(hasta)
-      fechaHasta.setHours(23, 59, 59, 999)
       where.fechaCierre = {
         ...where.fechaCierre,
-        lte: fechaHasta,
+        lte: finDelDiaLocal(hasta),
       }
     }
 
@@ -123,10 +120,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const fechaInicio = new Date(fechaDesde)
-    fechaInicio.setHours(0, 0, 0, 0)
-    const fechaFin = new Date(fechaHasta)
-    fechaFin.setHours(23, 59, 59, 999)
+    const fechaInicio = inicioDelDiaLocal(fechaDesde)
+    const fechaFin = finDelDiaLocal(fechaHasta)
 
     if (fechaInicio > fechaFin) {
       return NextResponse.json(

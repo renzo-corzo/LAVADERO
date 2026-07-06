@@ -20,6 +20,23 @@ export function crearFechaLocal(fechaStr: string): Date {
   return new Date(year, month - 1, day)
 }
 
+/**
+ * Inicio del día (00:00:00.000) LOCAL para un YYYY-MM-DD (o ISO con fecha).
+ * Evita el bug de `new Date("YYYY-MM-DD")` que interpreta la fecha como UTC.
+ */
+export function inicioDelDiaLocal(fechaStr: string): Date {
+  const [year, month, day] = fechaStr.slice(0, 10).split('-').map(Number)
+  return new Date(year, month - 1, day, 0, 0, 0, 0)
+}
+
+/**
+ * Fin del día (23:59:59.999) LOCAL para un YYYY-MM-DD (o ISO con fecha).
+ */
+export function finDelDiaLocal(fechaStr: string): Date {
+  const [year, month, day] = fechaStr.slice(0, 10).split('-').map(Number)
+  return new Date(year, month - 1, day, 23, 59, 59, 999)
+}
+
 
 
 

@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { inicioDelDiaLocal, finDelDiaLocal } from '@/lib/utils-fechas'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,10 +34,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const fechaInicio = new Date(fechaDesde)
-    fechaInicio.setHours(0, 0, 0, 0)
-    const fechaFin = new Date(fechaHasta)
-    fechaFin.setHours(23, 59, 59, 999)
+    const fechaInicio = inicioDelDiaLocal(fechaDesde)
+    const fechaFin = finDelDiaLocal(fechaHasta)
 
     // Obtener pagos del período
     const pagos = await prisma.pago.findMany({
