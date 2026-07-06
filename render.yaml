@@ -12,7 +12,8 @@ services:
     region: virginia
     plan: free
     buildCommand: npm install && npm run build
-    startCommand: npm start
+    # Aplica migraciones pendientes antes de arrancar (idempotente) y sirve la app.
+    startCommand: npx prisma migrate deploy && npm start
     envVars:
       - key: NODE_ENV
         value: production
