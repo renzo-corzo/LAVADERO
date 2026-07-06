@@ -9,9 +9,8 @@ import { z } from 'zod'
 export const crearOTSchema = z.object({
   servicioId: z.string().min(1, 'El servicio es obligatorio'),
   extrasIds: z.array(z.string()).default([]),
-  empleadosIds: z
-    .array(z.string().min(1))
-    .min(1, 'Debe asignar al menos un lavador'),
+  // Asignar lavador es opcional por ahora (empleados con sueldo fijo, sin comisiones)
+  empleadosIds: z.array(z.string().min(1)).default([]),
   patente: z.string().min(1, 'La patente es obligatoria').max(10).trim(),
   tipoVehiculo: z.enum(['chico', 'mediano', 'camioneta']).nullish(),
   descripcionVehiculo: z.string().optional().or(z.literal('')),

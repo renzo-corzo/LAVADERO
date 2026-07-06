@@ -496,9 +496,7 @@ export default function NuevaOTPage() {
     if (!formData.servicioId) {
       newErrors.servicioId = 'El servicio es obligatorio'
     }
-    if (!formData.empleadosIds || formData.empleadosIds.length === 0) {
-      newErrors.empleadosIds = 'Debe asignar al menos un lavador'
-    }
+    // Asignar lavador es opcional por ahora (no se valida)
     // tipoVehiculo ahora es opcional, no se valida
     if (formData.precioAjustado && !formData.justificacionPrecio) {
       newErrors.justificacionPrecio = 'Justificación requerida para precio ajustado'
@@ -1082,12 +1080,12 @@ export default function NuevaOTPage() {
               )}
             </Card>
 
-            <Card title="Asignación de lavadores *">
+            <Card title="Asignación de lavadores (opcional)">
               {loadingLavadores ? (
-                <p className="text-sm text-gray-500">Cargando equipo...</p>
+                <p className="text-sm text-muted">Cargando equipo...</p>
               ) : lavadores.length === 0 ? (
-                <p className="text-sm text-amber-700">
-                  No hay usuarios con rol LAVADOR activos. Cree uno en Usuarios o active un lavador existente.
+                <p className="text-sm text-muted">
+                  No hay lavadores activos. Podés crear la OT igual y asignar el lavador más tarde.
                 </p>
               ) : (
                 <div className="space-y-2">
