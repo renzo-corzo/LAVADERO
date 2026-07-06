@@ -4,6 +4,7 @@
  */
 
 import { Header } from '@/components/layout/Header'
+import { BottomNav } from '@/components/layout/BottomNav'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
@@ -26,9 +27,10 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen">
       <Header />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28 lg:pb-8">
         {children}
       </main>
+      <BottomNav />
     </div>
   )
 }

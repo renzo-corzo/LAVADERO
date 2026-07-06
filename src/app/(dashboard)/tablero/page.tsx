@@ -6,7 +6,7 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
@@ -16,7 +16,6 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { formatCurrency, formatDateTime, formatHorarioDeseado, getTimeElapsed } from '@/lib/utils'
-import { MenuMovil } from '@/components/tablero/MenuMovil'
 import type { OrdenTrabajo } from '@/types'
 
 interface OTsPorEstado {
@@ -29,12 +28,9 @@ interface OTsPorEstado {
 export default function TableroPage() {
   // ========== TODOS LOS HOOKS PRIMERO ==========
   const router = useRouter()
-  const searchParams = useSearchParams()
   const { data: session } = useSession()
   const confirm = useConfirm()
   const [mounted, setMounted] = useState(false) // Para evitar problemas de hidratación
-  const [esMovil, setEsMovil] = useState(false)
-  const [mostrarKanban, setMostrarKanban] = useState(false)
   const queryClient = useQueryClient()
   const [mostrarExternas, setMostrarExternas] = useState(false)
   const [seleccionadasIds, setSeleccionadasIds] = useState<string[]>([])
@@ -54,39 +50,8 @@ export default function TableroPage() {
     setMounted(true)
   }, [])
 
-  // Detectar si es móvil DESPUÉS de la hidratación
-  useEffect(() => {
-    if (!mounted || typeof window === 'undefined') return
-    const checkMobile = () => {
-      const isMobile = window.innerWidth < 1024 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-      setEsMovil(isMobile)
-    }
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [mounted])
-
-  // Si viene el parámetro kanban, mostrar el kanban directamente
-  useEffect(() => {
-    if (!mounted || typeof window === 'undefined') return
-    const kanbanParam = searchParams.get('kanban')
-    const isDesktop = window.innerWidth >= 1024
-    
-    if (kanbanParam === 'true') {
-      setMostrarKanban(true)
-    } else if (isDesktop) {
-      // En desktop, siempre mostrar kanban
-      setMostrarKanban(true)
-    } else {
-      // En móvil, sin parámetro kanban, mostrar menú (kanban = false)
-      setMostrarKanban(false)
-    }
-  }, [mounted, searchParams])
-
-  // Fetch de OTs con React Query: caché + auto-refresh cada 15s.
-  // Solo habilitado tras montar y cuando el kanban está visible (en móvil se
-  // muestra el menú, no el tablero).
-  const consultaHabilitada = mounted && (!esMovil || mostrarKanban)
+  // Fetch de OTs con React Query: caché + auto-refresh cada 15s (siempre que esté montado).
+  const consultaHabilitada = mounted
 
   const {
     data: listaOTs,
@@ -284,7 +249,7 @@ export default function TableroPage() {
           {ot.esExterna && (
             <div className="flex items-center justify-end gap-2 mb-1">
               <label
-                className="inline-flex items-center gap-2 text-xs text-gray-600 select-none"
+                className="inline-flex items-center gap-2 text-xs text-muted select-none"
                 onClick={(e) => e.stopPropagation()}
               >
                 <input
@@ -382,114 +347,19 @@ export default function TableroPage() {
     </motion.div>
   )
 
-  // ========== VARIABLES Y CÁLCULOS DESPUÉS DE FUNCIONES ==========
-  // Preparar items del menú para pasar como prop (evita hooks en MenuMovil)
-  // IMPORTANTE: Definir siempre el mismo array base para evitar problemas de hidratación
-  const menuItemsBase = [
-    {
-      href: '/tablero?kanban=true',
-      label: 'Tablero Kanban',
-      icon: '📋',
-      color: 'bg-green-500',
-    },
-    {
-      href: '/ots/nueva',
-      label: 'Nueva OT',
-      icon: '➕',
-      color: 'bg-purple-500',
-    },
-    {
-      href: '/catalogos',
-      label: 'Catálogos',
-      icon: '📚',
-      color: 'bg-orange-500',
-    },
-    {
-      href: '/clientes',
-      label: 'Clientes',
-      icon: '👥',
-      color: 'bg-indigo-500',
-    },
-    {
-      href: '/caja',
-      label: 'Caja',
-      icon: '💰',
-      color: 'bg-yellow-500',
-    },
-    // Comisiones oculto (negocio con sueldo fijo). Ver Header.tsx.
-    {
-      href: '/reportes',
-      label: 'Reportes',
-      icon: '📈',
-      color: 'bg-pink-500',
-    },
-  ]
-
-  // Crear array final siempre con la misma estructura (evitar mutaciones condicionales)
-  let itemsFiltrados = menuItemsBase
-
-  // Modo Kiosco para ENCARGADO y DUEÑO (quien opera / puede ser lavador)
-  if (session?.user.role === 'ENCARGADO' || session?.user.role === 'DUENO') {
-    itemsFiltrados = [
-      {
-        href: '/kiosco',
-        label: 'Modo Kiosco',
-        icon: '🖥️',
-        color: 'bg-blue-600',
-      },
-      ...menuItemsBase,
-    ]
-  }
-
-  // Agregar Usuarios solo para DUENO
-  if (session?.user.role === 'DUENO') {
-    itemsFiltrados = [
-      ...itemsFiltrados,
-      {
-        href: '/usuarios',
-        label: 'Usuarios',
-        icon: '👤',
-        color: 'bg-gray-600',
-      },
-    ]
-  }
-
-  // ========== RETURNS CONDICIONALES AL FINAL ==========
-  // Renderizar siempre ambos componentes y usar CSS para mostrar/ocultar
-  // El menú móvil se oculta automáticamente cuando se muestra el kanban
+  // ========== RETURN ==========
   return (
-    <>
-      {/* Menú Principal Móvil - Componente separado, solo visible en móvil */}
-      <MenuMovil items={itemsFiltrados} mostrarKanban={mostrarKanban} />
-
-      {/* Tablero Kanban - Visible en desktop siempre, en móvil solo cuando mostrarKanban=true */}
-      <div className={mostrarKanban ? 'block' : 'hidden lg:block'}>
-
-        {/* Botón para volver al menú en móvil - solo cuando se muestra kanban */}
-        {mostrarKanban && mounted && (
-          <div className="mb-4 lg:hidden">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setMostrarKanban(false)
-                router.push('/tablero')
-              }}
-            >
-              ← Volver al Menú
-            </Button>
-          </div>
-        )}
-
+    <div>
         {loading && (
           <div className="flex items-center justify-center h-64">
-            <p className="text-gray-500">Cargando tablero...</p>
+            <p className="text-muted">Cargando tablero...</p>
           </div>
         )}
 
         {!loading && errorCarga && (
           <div
             role="alert"
-            className="mb-6 flex items-center justify-between gap-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700"
+            className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-danger"
           >
             <span>{errorCarga}</span>
             <Button variant="secondary" size="sm" onClick={() => refetch()}>
@@ -733,7 +603,6 @@ export default function TableroPage() {
           </>
         )}
       </div>
-    </>
   )
 }
 
