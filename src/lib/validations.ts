@@ -15,6 +15,8 @@ export const crearOTSchema = z.object({
   patente: z.string().min(1, 'La patente es obligatoria').max(10).trim(),
   tipoVehiculo: z.enum(['chico', 'mediano', 'camioneta']).nullish(),
   descripcionVehiculo: z.string().optional().or(z.literal('')),
+  // Ruta relativa devuelta por /api/ots/foto (ej. /uploads/ots/xxxx.jpg)
+  fotoUrl: z.string().nullish().transform((v) => (v === '' ? undefined : v)),
   nombreCliente: z.string().min(1, 'El nombre del cliente es obligatorio').trim(),
   telefonoCliente: z.string().min(1, 'El teléfono del cliente es obligatorio').trim(),
   // Para OTs externas (trabajo fuera del lavadero) el horario no es obligatorio

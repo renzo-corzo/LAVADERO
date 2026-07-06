@@ -29,6 +29,9 @@ yarn-error.log*
 # Maquetas de diseño (fuentes desechables de los mockups Aqua)
 /mockups/
 
+# Fotos de OT subidas en desarrollo (en prod van a object storage)
+/public/uploads/
+
 # Notas de despliegue con secretos/credenciales (nunca commitear)
 VARIABLES-*.txt
 VARIABLES-*.md

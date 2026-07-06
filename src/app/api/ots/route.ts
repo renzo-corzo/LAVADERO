@@ -169,6 +169,7 @@ export async function POST(request: NextRequest) {
       observaciones,
       precioAjustado,
       justificacionPrecio,
+      fotoUrl,
     } = validationResult.data
 
     // Obtener servicio y extras para calcular total
@@ -271,6 +272,7 @@ export async function POST(request: NextRequest) {
           patente: patente.trim(),
           tipoVehiculo: tipoVehiculo || null,
           descripcionVehiculo: descripcionVehiculo?.trim() || null,
+          fotoUrl: fotoUrl || null,
           nombreCliente: nombreCliente.trim(),
           telefonoCliente: telefonoCliente.trim(),
           horarioDeseado: esExterna ? null : (horarioDeseado ?? null),

@@ -85,6 +85,7 @@ export interface OrdenTrabajo {
   patente: string // Obligatorio ahora
   tipoVehiculo?: TipoVehiculo // Opcional ahora
   descripcionVehiculo?: string
+  fotoUrl?: string | null // Foto del vehículo al ingresar
   nombreCliente?: string // Nuevo: nombre del cliente (opcional en BD temporalmente para migración)
   telefonoCliente?: string // Nuevo: teléfono del cliente (opcional en BD temporalmente para migración)
   horarioDeseado?: Date // Nuevo: horario en que quiere tenerlo listo

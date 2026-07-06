@@ -154,6 +154,16 @@ export default function OTDetallePage() {
           {/* Información General */}
           <Card>
             <h2 className="text-lg font-bold mb-4">Información General</h2>
+            {ot.fotoUrl && (
+              <a href={ot.fotoUrl} target="_blank" rel="noopener noreferrer" className="block mb-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={ot.fotoUrl}
+                  alt={`Foto del vehículo ${ot.patente || ''}`}
+                  className="w-full max-h-72 object-cover rounded-xl border border-aqua-line"
+                />
+              </a>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm text-muted">Estado</label>

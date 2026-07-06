@@ -17,6 +17,36 @@ import { Card } from '@/components/ui/Card'
 import { formatCurrency } from '@/lib/utils'
 import type { Servicio, Extra, Usuario, Cliente } from '@/types'
 
+/**
+ * Normaliza un teléfono argentino a formato wa.me (solo dígitos, con código país).
+ * Best-effort: el operador confirma el chat al abrirse WhatsApp.
+ */
+function telefonoParaWhatsApp(tel: string): string | null {
+  const digits = (tel || '').replace(/\D/g, '')
+  if (digits.length < 8) return null
+  if (digits.startsWith('54')) return digits
+  const sinCero = digits.replace(/^0/, '') // quita 0 de larga distancia
+  return `549${sinCero}` // 54 (país) + 9 (móvil)
+}
+
+/** Arma el link wa.me con el mensaje de aviso al cliente. */
+function linkWhatsAppOT(params: {
+  telefono: string
+  nombre: string
+  patente: string
+  servicio: string
+}): string | null {
+  const numero = telefonoParaWhatsApp(params.telefono)
+  if (!numero) return null
+  const nombre = params.nombre?.trim() || 'Hola'
+  const mensaje =
+    `¡Hola ${nombre}! 🚗 Recibimos tu vehículo` +
+    (params.patente ? ` (patente ${params.patente})` : '') +
+    ` en el lavadero para *${params.servicio}*. ` +
+    `Te avisamos apenas esté listo. ¡Gracias!`
+  return `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`
+}
+
 export default function NuevaOTPage() {
   const router = useRouter()
   const { data: session } = useSession()
@@ -67,6 +97,35 @@ export default function NuevaOTPage() {
     justificacionPrecio: '',
     empleadosIds: [] as string[],
   })
+
+  // Foto del vehículo
+  const [fotoUrl, setFotoUrl] = useState<string>('')
+  const [subiendoFoto, setSubiendoFoto] = useState(false)
+
+  const handleFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setSubiendoFoto(true)
+    try {
+      const data = new FormData()
+      data.append('foto', file)
+      const res = await fetch('/api/ots/foto', { method: 'POST', body: data })
+      const json = await res.json()
+      if (res.ok) {
+        setFotoUrl(json.url)
+        toast.success('Foto cargada')
+      } else {
+        toast.error(json.error || 'No se pudo subir la foto')
+      }
+    } catch {
+      toast.error('No se pudo subir la foto')
+    } finally {
+      setSubiendoFoto(false)
+      // permite volver a elegir el mismo archivo
+      e.target.value = ''
+    }
+  }
 
   useEffect(() => {
     cargarCatalogos()
@@ -452,6 +511,20 @@ export default function NuevaOTPage() {
 
     setLoading(true)
 
+    // Abrir la pestaña de WhatsApp AHORA (dentro del gesto del click) para evitar
+    // el bloqueo de popups; se completa la URL sólo si la OT se crea correctamente.
+    const servicioNombre =
+      servicios.find((s) => s.id === formData.servicioId)?.nombre || 'tu lavado'
+    const waLink = clienteTrabajoExterno
+      ? null
+      : linkWhatsAppOT({
+          telefono: formData.telefonoCliente,
+          nombre: formData.nombreCliente,
+          patente: formData.patente,
+          servicio: servicioNombre,
+        })
+    const waWindow = waLink ? window.open('', '_blank') : null
+
     try {
       const response = await fetch('/api/ots', {
         method: 'POST',
@@ -461,6 +534,7 @@ export default function NuevaOTPage() {
         body: JSON.stringify({
           ...formData,
           empleadosIds: formData.empleadosIds,
+          fotoUrl: fotoUrl || null,
           tipoVehiculo: formData.tipoVehiculo || null,
           clienteId: formData.tipoCliente === 'FIJO' && formData.clienteId ? formData.clienteId : null,
           precioAjustado: formData.precioAjustado ? parseFloat(formData.precioAjustado) : null,
@@ -480,21 +554,17 @@ export default function NuevaOTPage() {
       })
 
       if (response.ok) {
-        // Redirigir al tablero (en móvil mostrará el menú, en desktop el kanban)
-        // Si es móvil, redirigir al menú principal; si es desktop, al kanban
-        const isMobile = typeof window !== 'undefined' && (window.innerWidth < 1024 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))
-        if (isMobile) {
-          // En móvil, ir al menú principal (no al kanban)
-          router.push('/tablero')
-        } else {
-          // En desktop, ir al kanban
-          router.push('/tablero?kanban=true')
+        // Disparar el aviso de WhatsApp al cliente (pestaña ya abierta arriba)
+        if (waWindow && waLink) {
+          waWindow.location.href = waLink
         }
-        // Forzar recarga completa de la página para asegurar que se vea la nueva OT
+        router.push('/tablero')
+        // Forzar recarga completa para asegurar que se vea la nueva OT
         setTimeout(() => {
           window.location.reload()
         }, 500)
       } else {
+        waWindow?.close()
         const data = await response.json()
         console.error('[nueva-ot] Error del servidor:', data)
         const details = Array.isArray(data.details) ? data.details : []
@@ -513,6 +583,7 @@ export default function NuevaOTPage() {
         toast.error('No se pudo crear la OT', { description: msg })
       }
     } catch (error) {
+      waWindow?.close()
       setErrors({ submit: 'Error al crear orden de trabajo' })
     } finally {
       setLoading(false)
@@ -601,6 +672,50 @@ export default function NuevaOTPage() {
                   onChange={(e) => setFormData({ ...formData, descripcionVehiculo: e.target.value })}
                   placeholder="Ej: Auto rojo, modelo..."
                 />
+
+                {/* Foto del vehículo */}
+                <div>
+                  <label className="block text-sm font-medium text-ink mb-1.5">
+                    Foto del vehículo (opcional)
+                  </label>
+                  {fotoUrl ? (
+                    <div className="flex items-start gap-3">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={fotoUrl}
+                        alt="Foto del vehículo"
+                        className="w-28 h-28 rounded-xl object-cover border border-aqua-line"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setFotoUrl('')}
+                        className="text-sm font-semibold text-danger hover:underline"
+                      >
+                        Quitar foto
+                      </button>
+                    </div>
+                  ) : (
+                    <label
+                      className={`flex flex-col items-center justify-center gap-1 w-full py-6 rounded-xl border-2 border-dashed border-aqua-line cursor-pointer transition hover:border-brand/50 hover:bg-brand/5 ${
+                        subiendoFoto ? 'opacity-60 pointer-events-none' : ''
+                      }`}
+                    >
+                      <span className="text-3xl">📷</span>
+                      <span className="text-sm font-medium text-ink">
+                        {subiendoFoto ? 'Subiendo…' : 'Tomar o subir foto'}
+                      </span>
+                      <span className="text-xs text-muted">Se abre la cámara en el celular</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="hidden"
+                        onChange={handleFoto}
+                        disabled={subiendoFoto}
+                      />
+                    </label>
+                  )}
+                </div>
 
                 {/* Selector de tipo de cliente - solo para DUEÑO y ENCARGADO */}
                 {(session?.user.role === 'DUENO' || session?.user.role === 'ENCARGADO') && (
