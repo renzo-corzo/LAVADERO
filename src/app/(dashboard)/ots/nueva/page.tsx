@@ -29,13 +29,18 @@ function telefonoParaWhatsApp(tel: string): string | null {
   return `549${sinCero}` // 54 (país) + 9 (móvil)
 }
 
-/** Arma el link wa.me con el mensaje de aviso al cliente. */
-function linkWhatsAppOT(params: {
+/**
+ * Arma los links de WhatsApp (app y web) con el mensaje de aviso al cliente.
+ * - app (`whatsapp://`): abre la app SIN cambiar de pestaña → al volver seguís
+ *   en el tablero. Ideal en móvil.
+ * - web (`wa.me`): fallback universal (WhatsApp Web/Desktop) para escritorio.
+ */
+function linksWhatsAppOT(params: {
   telefono: string
   nombre: string
   patente: string
   servicio: string
-}): string | null {
+}): { app: string; web: string } | null {
   const numero = telefonoParaWhatsApp(params.telefono)
   if (!numero) return null
   const nombre = params.nombre?.trim() || 'Hola'
@@ -44,7 +49,11 @@ function linkWhatsAppOT(params: {
     (params.patente ? ` (patente ${params.patente})` : '') +
     ` en el lavadero para *${params.servicio}*. ` +
     `Te avisamos apenas esté listo. ¡Gracias!`
-  return `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`
+  const texto = encodeURIComponent(mensaje)
+  return {
+    app: `whatsapp://send?phone=${numero}&text=${texto}`,
+    web: `https://wa.me/${numero}?text=${texto}`,
+  }
 }
 
 export default function NuevaOTPage() {
@@ -509,19 +518,23 @@ export default function NuevaOTPage() {
 
     setLoading(true)
 
-    // Abrir la pestaña de WhatsApp AHORA (dentro del gesto del click) para evitar
-    // el bloqueo de popups; se completa la URL sólo si la OT se crea correctamente.
     const servicioNombre =
       servicios.find((s) => s.id === formData.servicioId)?.nombre || 'tu lavado'
-    const waLink = clienteTrabajoExterno
+    const waLinks = clienteTrabajoExterno
       ? null
-      : linkWhatsAppOT({
+      : linksWhatsAppOT({
           telefono: formData.telefonoCliente,
           nombre: formData.nombreCliente,
           patente: formData.patente,
           servicio: servicioNombre,
         })
-    const waWindow = waLink ? window.open('', '_blank') : null
+    const esMovil = /Android|iPhone|iPad|iPod/i.test(
+      typeof navigator !== 'undefined' ? navigator.userAgent : ''
+    )
+    // Solo en escritorio pre-abrimos la pestaña dentro del gesto del click (anti
+    // bloqueo de popups). En móvil abrimos la app con whatsapp:// sin cambiar de
+    // pestaña, así al volver el operador sigue en el tablero.
+    const waWindow = !esMovil && waLinks ? window.open('', '_blank') : null
 
     try {
       const response = await fetch('/api/ots', {
@@ -552,15 +565,19 @@ export default function NuevaOTPage() {
       })
 
       if (response.ok) {
-        // Disparar el aviso de WhatsApp al cliente (pestaña ya abierta arriba)
-        if (waWindow && waLink) {
-          waWindow.location.href = waLink
-        }
+        // Ir al tablero primero (así el navegador queda parado ahí)
         router.push('/tablero')
-        // Forzar recarga completa para asegurar que se vea la nueva OT
-        setTimeout(() => {
-          window.location.reload()
-        }, 500)
+
+        // Disparar el aviso de WhatsApp al cliente
+        if (waLinks) {
+          if (esMovil) {
+            // Abre la app SIN cambiar de pestaña → al volver seguís en el tablero
+            window.location.href = waLinks.app
+          } else if (waWindow) {
+            // Escritorio: completa la pestaña ya abierta con WhatsApp Web
+            waWindow.location.href = waLinks.web
+          }
+        }
       } else {
         waWindow?.close()
         const data = await response.json()
