@@ -16,6 +16,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { formatCurrency, formatDateTime, formatHorarioDeseado, getTimeElapsed } from '@/lib/utils'
+import { linksWhatsAppOT, abrirWhatsApp } from '@/lib/whatsapp'
 import type { OrdenTrabajo } from '@/types'
 
 interface OTsPorEstado {
@@ -148,6 +149,27 @@ export default function TableroPage() {
           }
         }
         queryClient.invalidateQueries({ queryKey: ['ots'] })
+
+        // Avisar al cliente por WhatsApp cuando la OT queda LISTA para retirar
+        if (nuevoEstado === 'LISTO') {
+          const ot = listaOTs?.find((o) => o.id === otId)
+          if (ot && !ot.esExterna) {
+            const links = linksWhatsAppOT({
+              telefono: ot.telefonoCliente,
+              nombre: ot.nombreCliente,
+              patente: ot.patente,
+              variante: 'listo',
+            })
+            if (links && !abrirWhatsApp(links)) {
+              toast('Auto listo. Avisá al cliente por WhatsApp', {
+                action: {
+                  label: 'Abrir WhatsApp',
+                  onClick: () => window.open(links.web, '_blank'),
+                },
+              })
+            }
+          }
+        }
       } else {
         const data = await response.json()
         toast.error(data.error || 'No se pudo cambiar el estado')

@@ -15,6 +15,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { formatCurrency, formatDateTime, formatHorarioDeseado } from '@/lib/utils'
+import { linksWhatsAppOT, abrirWhatsApp } from '@/lib/whatsapp'
 import type { OrdenTrabajo, Pago } from '@/types'
 
 interface OTDetalle extends OrdenTrabajo {
@@ -80,6 +81,25 @@ export default function OTDetallePage() {
 
       if (response.ok) {
         queryClient.invalidateQueries({ queryKey: ['ot', otId] })
+
+        // Avisar al cliente por WhatsApp cuando la OT queda LISTA para retirar
+        if (nuevoEstado === 'LISTO' && ot && !ot.esExterna) {
+          const links = linksWhatsAppOT({
+            telefono: ot.telefonoCliente,
+            nombre: ot.nombreCliente,
+            patente: ot.patente,
+            variante: 'listo',
+          })
+          if (links && !abrirWhatsApp(links)) {
+            toast('Auto listo. Avisá al cliente por WhatsApp', {
+              action: {
+                label: 'Abrir WhatsApp',
+                onClick: () => window.open(links.web, '_blank'),
+              },
+            })
+          }
+        }
+
         // Si se marca como ENTREGADO, ofrecer registrar pago
         if (nuevoEstado === 'ENTREGADO' && !esLavador) {
           const quierePagar = await confirm({

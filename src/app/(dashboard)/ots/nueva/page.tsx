@@ -15,46 +15,8 @@ import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { Card } from '@/components/ui/Card'
 import { formatCurrency } from '@/lib/utils'
+import { linksWhatsAppOT } from '@/lib/whatsapp'
 import type { Servicio, Extra, Usuario, Cliente } from '@/types'
-
-/**
- * Normaliza un teléfono argentino a formato wa.me (solo dígitos, con código país).
- * Best-effort: el operador confirma el chat al abrirse WhatsApp.
- */
-function telefonoParaWhatsApp(tel: string): string | null {
-  const digits = (tel || '').replace(/\D/g, '')
-  if (digits.length < 8) return null
-  if (digits.startsWith('54')) return digits
-  const sinCero = digits.replace(/^0/, '') // quita 0 de larga distancia
-  return `549${sinCero}` // 54 (país) + 9 (móvil)
-}
-
-/**
- * Arma los links de WhatsApp (app y web) con el mensaje de aviso al cliente.
- * - app (`whatsapp://`): abre la app SIN cambiar de pestaña → al volver seguís
- *   en el tablero. Ideal en móvil.
- * - web (`wa.me`): fallback universal (WhatsApp Web/Desktop) para escritorio.
- */
-function linksWhatsAppOT(params: {
-  telefono: string
-  nombre: string
-  patente: string
-  servicio: string
-}): { app: string; web: string } | null {
-  const numero = telefonoParaWhatsApp(params.telefono)
-  if (!numero) return null
-  const nombre = params.nombre?.trim() || 'Hola'
-  const mensaje =
-    `¡Hola ${nombre}! 🚗 Recibimos tu vehículo` +
-    (params.patente ? ` (patente ${params.patente})` : '') +
-    ` en el lavadero para *${params.servicio}*. ` +
-    `Te avisamos apenas esté listo. ¡Gracias!`
-  const texto = encodeURIComponent(mensaje)
-  return {
-    app: `whatsapp://send?phone=${numero}&text=${texto}`,
-    web: `https://wa.me/${numero}?text=${texto}`,
-  }
-}
 
 export default function NuevaOTPage() {
   const router = useRouter()
@@ -527,6 +489,7 @@ export default function NuevaOTPage() {
           nombre: formData.nombreCliente,
           patente: formData.patente,
           servicio: servicioNombre,
+          variante: 'recibido',
         })
     const esMovil = /Android|iPhone|iPad|iPod/i.test(
       typeof navigator !== 'undefined' ? navigator.userAgent : ''
