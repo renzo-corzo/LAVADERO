@@ -12,8 +12,11 @@ services:
     region: virginia
     plan: free
     buildCommand: npm install && npm run build
-    # Aplica migraciones pendientes antes de arrancar (idempotente) y sirve la app.
-    startCommand: npx prisma migrate deploy && npm start
+    # Arranca la app directamente. NO corremos "prisma migrate deploy" acá porque
+    # en el free tier el advisory lock de Prisma se queda colgado (P1002) y bloquea
+    # el arranque. Las migraciones se aplican manualmente contra la URL externa
+    # de la base (o desde el dashboard) cuando cambia el schema.
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
