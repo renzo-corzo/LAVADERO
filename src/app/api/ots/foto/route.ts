@@ -1,19 +1,16 @@
 /**
  * API Route: Subida de foto de vehículo para una OT
- * POST: recibe una imagen (multipart), la comprime y la guarda en disco.
+ * POST: recibe una imagen (multipart), la comprime con sharp y la guarda.
  *
- * Nota: en desarrollo se guarda en public/uploads/ots (servido estáticamente).
- * En producción con filesystem efímero (Render/Vercel) esto debe migrar a un
- * almacenamiento de objetos (Cloudflare R2 / S3 / Supabase Storage).
+ * El destino lo decide src/lib/storage.ts: Cloudflare R2 en producción (si están
+ * las variables R2_*), o disco local en desarrollo.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { hasPermission } from '@/lib/auth'
-import { randomUUID } from 'crypto'
-import { mkdir, writeFile } from 'fs/promises'
-import path from 'path'
+import { guardarImagenOT } from '@/lib/storage'
 import sharp from 'sharp'
 
 export const runtime = 'nodejs'
@@ -53,12 +50,9 @@ export async function POST(request: NextRequest) {
       .jpeg({ quality: 80 })
       .toBuffer()
 
-    const nombre = `${randomUUID()}.jpg`
-    const dir = path.join(process.cwd(), 'public', 'uploads', 'ots')
-    await mkdir(dir, { recursive: true })
-    await writeFile(path.join(dir, nombre), procesada)
+    const url = await guardarImagenOT(procesada)
 
-    return NextResponse.json({ url: `/uploads/ots/${nombre}` }, { status: 201 })
+    return NextResponse.json({ url }, { status: 201 })
   } catch (error) {
     console.error('[API OTs foto] Error al subir foto:', error)
     return NextResponse.json({ error: 'No se pudo procesar la imagen' }, { status: 500 })
