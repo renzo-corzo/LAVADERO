@@ -41,9 +41,17 @@ export async function GET(request: NextRequest) {
     const where: Record<string, unknown> = {}
 
     if (rolParam) {
+      // Los usuarios ADMIN solo los puede listar otro ADMIN
+      if (rolParam === 'ADMIN' && role !== 'ADMIN') {
+        return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
+      }
       where.rol = rolParam
-    } else if (!incluirClientes) {
-      where.rol = { not: 'CLIENTE' }
+    } else {
+      const excluir: string[] = []
+      if (!incluirClientes) excluir.push('CLIENTE')
+      if (role !== 'ADMIN') excluir.push('ADMIN') // ocultar ADMIN a quien no es ADMIN
+      if (excluir.length === 1) where.rol = { not: excluir[0] }
+      else if (excluir.length > 1) where.rol = { notIn: excluir }
     }
 
     if (!incluirInactivos) {
@@ -109,6 +117,14 @@ export async function POST(request: NextRequest) {
 
     const { nombre, usuario: username, password, rol } = validationResult.data
     const activo = body.activo !== undefined ? body.activo : true
+
+    // Solo un ADMIN puede crear otro ADMIN
+    if (rol === 'ADMIN' && session.user.role !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Sin permisos para crear un usuario ADMIN' },
+        { status: 403 }
+      )
+    }
 
     const usuarioExistente = await prisma.usuario.findUnique({
       where: { usuario: username },

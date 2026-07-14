@@ -19,7 +19,7 @@ interface Usuario {
   id: string
   nombre: string
   usuario: string
-  rol: 'DUENO' | 'ENCARGADO' | 'LAVADOR'
+  rol: 'ADMIN' | 'DUENO' | 'ENCARGADO' | 'LAVADOR'
   activo: boolean
   createdAt: string
   updatedAt: string
@@ -96,6 +96,7 @@ export default function UsuariosPage() {
 
   const getRolLabel = (rol: string) => {
     const labels: Record<string, string> = {
+      ADMIN: 'Admin',
       DUENO: 'Dueño',
       ENCARGADO: 'Encargado',
       LAVADOR: 'Lavador',
@@ -105,6 +106,7 @@ export default function UsuariosPage() {
 
   const getRolColor = (rol: string) => {
     const colors: Record<string, string> = {
+      ADMIN: 'bg-ink text-white',
       DUENO: 'bg-brand/12 text-brand',
       ENCARGADO: 'bg-warn/15 text-[#b9791a]',
       LAVADOR: 'bg-ok/15 text-[#0c8f68]',

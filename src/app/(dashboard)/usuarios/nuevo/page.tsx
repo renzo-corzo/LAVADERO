@@ -8,6 +8,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -15,19 +16,22 @@ import { Select } from '@/components/ui/Select'
 
 export default function NuevoUsuarioPage() {
   const router = useRouter()
+  const { data: session } = useSession()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
+
   const [formData, setFormData] = useState({
     nombre: '',
     usuario: '',
     password: '',
     confirmPassword: '',
-    rol: '' as 'DUENO' | 'ENCARGADO' | 'LAVADOR' | '',
+    rol: '' as 'ADMIN' | 'DUENO' | 'ENCARGADO' | 'LAVADOR' | '',
     activo: true,
   })
 
   const rolOptions = [
+    // El rol ADMIN solo lo puede asignar otro ADMIN
+    ...(session?.user.role === 'ADMIN' ? [{ value: 'ADMIN', label: 'Admin' }] : []),
     { value: 'DUENO', label: 'Dueño' },
     { value: 'ENCARGADO', label: 'Encargado' },
     { value: 'LAVADOR', label: 'Lavador' },

@@ -43,6 +43,11 @@ export async function GET(
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
 
+    // Un usuario ADMIN solo lo puede ver otro ADMIN
+    if (usuario.rol === 'ADMIN' && session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+    }
+
     return NextResponse.json(usuario)
   } catch (error) {
     console.error('Error al obtener usuario:', error)
@@ -78,7 +83,12 @@ export async function PUT(
       )
     }
 
-    if (!['DUENO', 'ENCARGADO', 'LAVADOR'].includes(rol)) {
+    // Solo un ADMIN puede asignar el rol ADMIN
+    const rolesPermitidos =
+      session.user.role === 'ADMIN'
+        ? ['ADMIN', 'DUENO', 'ENCARGADO', 'LAVADOR']
+        : ['DUENO', 'ENCARGADO', 'LAVADOR']
+    if (!rolesPermitidos.includes(rol)) {
       return NextResponse.json(
         { error: 'Rol inválido' },
         { status: 400 }
@@ -92,6 +102,11 @@ export async function PUT(
     })
 
     if (!usuarioExistente) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+    }
+
+    // Un usuario ADMIN solo puede ser gestionado por otro ADMIN (se oculta al resto)
+    if (usuarioExistente.rol === 'ADMIN' && session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
 
@@ -183,6 +198,11 @@ export async function DELETE(
     })
 
     if (!usuario) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+    }
+
+    // Un usuario ADMIN solo lo puede desactivar otro ADMIN (se oculta al resto)
+    if (usuario.rol === 'ADMIN' && session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
 

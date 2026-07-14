@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -18,13 +19,14 @@ interface Usuario {
   id: string
   nombre: string
   usuario: string
-  rol: 'DUENO' | 'ENCARGADO' | 'LAVADOR'
+  rol: 'ADMIN' | 'DUENO' | 'ENCARGADO' | 'LAVADOR'
   activo: boolean
 }
 
 export default function EditarUsuarioPage() {
   const router = useRouter()
   const params = useParams()
+  const { data: session } = useSession()
   const id = params.id as string
 
   const [loading, setLoading] = useState(true)
@@ -35,7 +37,7 @@ export default function EditarUsuarioPage() {
   const [formData, setFormData] = useState({
     nombre: '',
     usuario: '',
-    rol: '' as 'DUENO' | 'ENCARGADO' | 'LAVADOR' | '',
+    rol: '' as 'ADMIN' | 'DUENO' | 'ENCARGADO' | 'LAVADOR' | '',
     activo: true,
   })
 
@@ -45,6 +47,8 @@ export default function EditarUsuarioPage() {
   })
 
   const rolOptions = [
+    // El rol ADMIN solo lo puede asignar otro ADMIN
+    ...(session?.user.role === 'ADMIN' ? [{ value: 'ADMIN', label: 'Admin' }] : []),
     { value: 'DUENO', label: 'Dueño' },
     { value: 'ENCARGADO', label: 'Encargado' },
     { value: 'LAVADOR', label: 'Lavador' },

@@ -21,7 +21,7 @@ export default withAuth(
 
     // Portal de clientes (rol CLIENTE)
     if (path.startsWith('/portal')) {
-      if (role !== 'CLIENTE' && role !== 'DUENO' && role !== 'ENCARGADO') {
+      if (role !== 'CLIENTE' && role !== 'DUENO' && role !== 'ENCARGADO' && role !== 'ADMIN') {
         return NextResponse.redirect(new URL('/dashboard', req.url))
       }
     }
@@ -31,16 +31,16 @@ export default withAuth(
       return NextResponse.redirect(new URL('/portal', req.url))
     }
 
-    // Rutas solo para DUENO
+    // Rutas solo para DUENO / ADMIN
     if (path.startsWith('/usuarios') || path.startsWith('/config')) {
-      if (role !== 'DUENO') {
+      if (role !== 'DUENO' && role !== 'ADMIN') {
         return NextResponse.redirect(new URL('/dashboard', req.url))
       }
     }
 
-    // Configuración de comisiones: solo DUEÑO (04-NAVEGACION-Y-PERMISOS.md)
+    // Configuración de comisiones: solo DUEÑO / ADMIN
     if (path.startsWith('/comisiones/configurar')) {
-      if (role !== 'DUENO') {
+      if (role !== 'DUENO' && role !== 'ADMIN') {
         return NextResponse.redirect(new URL('/comisiones', req.url))
       }
     }

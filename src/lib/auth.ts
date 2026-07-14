@@ -13,6 +13,7 @@ import { authOptions } from './auth/config'
  */
 export function hasPermission(userRole: UserRole, action: string): boolean {
   const permissions: Record<UserRole, string[]> = {
+    ADMIN: ['*'],
     DUENO: ['*'],
     ENCARGADO: [
       'ot:create',

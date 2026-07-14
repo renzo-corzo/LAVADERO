@@ -3,9 +3,8 @@
  * Definir aquí todos los tipos TypeScript usados en la aplicación
  */
 
-// Roles de usuario
-// Nota: En Prisma se usa "DUENO" (sin Ñ), pero en TypeScript mantenemos "DUEÑO" para mejor UX
-export type UserRole = 'DUENO' | 'ENCARGADO' | 'LAVADOR' | 'CLIENTE'
+// Roles de usuario. ADMIN es el súper-rol (soporte/desarrollo), por encima de DUENO.
+export type UserRole = 'ADMIN' | 'DUENO' | 'ENCARGADO' | 'LAVADOR' | 'CLIENTE'
 
 // Estados de Orden de Trabajo
 export type OTEstado = 'EN_COLA' | 'EN_PROCESO' | 'LISTO' | 'ENTREGADO' | 'CANCELADO'
