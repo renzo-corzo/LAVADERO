@@ -165,7 +165,7 @@ export default function NuevaOTPage() {
   }, [formData.tipoCliente])
 
   useEffect(() => {
-    if (session && (session.user.role === 'DUENO' || session.user.role === 'ENCARGADO')) {
+    if (session && (session.user.role === 'DUENO' || session.user.role === 'ENCARGADO' || session.user.role === 'ADMIN')) {
       cargarClientes()
     }
   }, [session])
@@ -696,7 +696,7 @@ export default function NuevaOTPage() {
                 </div>
 
                 {/* Selector de tipo de cliente - solo para DUEÑO y ENCARGADO */}
-                {(session?.user.role === 'DUENO' || session?.user.role === 'ENCARGADO') && (
+                {(session?.user.role === 'DUENO' || session?.user.role === 'ENCARGADO' || session?.user.role === 'ADMIN') && (
                   <div>
                     <Select
                       label="Tipo de Cliente *"
@@ -713,7 +713,7 @@ export default function NuevaOTPage() {
                 )}
 
                 {/* Selector de cliente fijo - solo si es tipo FIJO y es DUEÑO/ENCARGADO */}
-                {(session?.user.role === 'DUENO' || session?.user.role === 'ENCARGADO') && formData.tipoCliente === 'FIJO' && (
+                {(session?.user.role === 'DUENO' || session?.user.role === 'ENCARGADO' || session?.user.role === 'ADMIN') && formData.tipoCliente === 'FIJO' && (
                   <div>
                     <Select
                       label="Cliente (Concesionaria) *"

@@ -38,7 +38,7 @@ export default function KioscoPage() {
 
   // Redirigir si no puede usar Kiosco (ENCARGADO / DUEÑO)
   useEffect(() => {
-    const puedeKiosco = session?.user?.role === 'ENCARGADO' || session?.user?.role === 'DUENO'
+    const puedeKiosco = session?.user?.role === 'ENCARGADO' || session?.user?.role === 'DUENO' || session?.user?.role === 'ADMIN'
     if (session?.user && !puedeKiosco) {
       router.replace('/tablero')
     }
@@ -131,7 +131,7 @@ export default function KioscoPage() {
   }
 
   // Si no puede usar Kiosco, no mostrar nada (se redirige)
-  const puedeKiosco = session?.user?.role === 'ENCARGADO' || session?.user?.role === 'DUENO'
+  const puedeKiosco = session?.user?.role === 'ENCARGADO' || session?.user?.role === 'DUENO' || session?.user?.role === 'ADMIN'
   if (session?.user && !puedeKiosco) {
     return null
   }

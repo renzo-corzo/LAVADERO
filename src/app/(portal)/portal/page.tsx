@@ -67,7 +67,7 @@ export default function PortalPage() {
   const [hasta, setHasta] = useState(() => toYYYYMMDD(new Date()))
   const [estado, setEstado] = useState('ENTREGADO')
 
-  const puedeElegirCliente = session?.user.role === 'DUENO' || session?.user.role === 'ENCARGADO'
+  const puedeElegirCliente = session?.user.role === 'DUENO' || session?.user.role === 'ENCARGADO' || session?.user.role === 'ADMIN'
   const [clienteId, setClienteId] = useState<string>('')
   const [clientes, setClientes] = useState<Array<{ id: string; nombre: string }>>([])
   const [loadingClientes, setLoadingClientes] = useState(false)

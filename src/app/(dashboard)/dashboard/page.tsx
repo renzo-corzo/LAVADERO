@@ -106,7 +106,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Accesos Rápidos - Disponible para ENCARGADO y DUENO */}
-      {(session?.user.role === 'ENCARGADO' || session?.user.role === 'DUENO') && (
+      {(session?.user.role === 'ENCARGADO' || session?.user.role === 'DUENO' || session?.user.role === 'ADMIN') && (
         <div className="mb-6">
           <Link href="/ots/nueva">
             <Button variant="primary" size="lg">

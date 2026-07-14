@@ -36,8 +36,10 @@ export function Header() {
     await signOut({ callbackUrl: '/login' })
   }
 
+  const role = session?.user.role
+  // ADMIN ve todo el menú (súper-admin); el resto según su lista de roles.
   const itemsFiltrados = menuItems.filter(
-    (item) => session?.user.role && item.roles.includes(session.user.role)
+    (item) => !!role && (role === 'ADMIN' || item.roles.includes(role))
   )
 
   return (

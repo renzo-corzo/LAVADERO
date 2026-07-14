@@ -20,7 +20,7 @@ export default async function KioscoLayout({
   }
 
   // Modo Kiosco: ENCARGADO y DUEÑO (quien puede operar como lavador)
-  const puedeKiosco = session.user.role === 'ENCARGADO' || session.user.role === 'DUENO'
+  const puedeKiosco = session.user.role === 'ENCARGADO' || session.user.role === 'DUENO' || session.user.role === 'ADMIN'
   if (!puedeKiosco) {
     redirect('/tablero')
   }

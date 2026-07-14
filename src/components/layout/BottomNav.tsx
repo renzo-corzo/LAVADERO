@@ -30,7 +30,8 @@ export function BottomNav() {
   const { data: session } = useSession()
   const role = session?.user.role
 
-  const visibles = tabs.filter((t) => role && t.roles.includes(role))
+  // ADMIN ve todas las pestañas (súper-admin); el resto según su lista de roles.
+  const visibles = tabs.filter((t) => !!role && (role === 'ADMIN' || t.roles.includes(role)))
   if (visibles.length === 0) return null
 
   return (

@@ -401,7 +401,7 @@ export default function TableroPage() {
           <Button variant="secondary" onClick={() => refetch()} disabled={isFetching}>
             {isFetching ? 'Cargando...' : '🔄 Recargar'}
           </Button>
-          {(session?.user.role === 'ENCARGADO' || session?.user.role === 'DUENO') && (
+          {(session?.user.role === 'ENCARGADO' || session?.user.role === 'DUENO' || session?.user.role === 'ADMIN') && (
             <Link href="/ots/nueva">
               <Button variant="primary">+ Nueva OT</Button>
             </Link>
@@ -422,7 +422,7 @@ export default function TableroPage() {
               className="block w-full px-3.5 py-2.5 bg-white border border-aqua-line rounded-xl text-ink transition focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand"
             />
           </div>
-          {(session?.user.role === 'ENCARGADO' || session?.user.role === 'DUENO') && (
+          {(session?.user.role === 'ENCARGADO' || session?.user.role === 'DUENO' || session?.user.role === 'ADMIN') && (
             <div className="flex items-end">
               <label className="flex items-center gap-2 text-sm text-ink">
                 <input
