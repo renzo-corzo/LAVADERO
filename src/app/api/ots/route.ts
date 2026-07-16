@@ -28,12 +28,21 @@ export async function GET(request: NextRequest) {
     const estado = searchParams.get('estado')
     const fecha = searchParams.get('fecha') // formato: YYYY-MM-DD
     const incluirExternas = searchParams.get('incluirExternas') === 'true'
+    const sucursalIdParam = searchParams.get('sucursalId')?.trim() || null
 
     const where: any = {}
 
     // LAVADOR: solo OTs donde figura asignado en orden_trabajo_empleados
     if (otScope === 'assigned') {
       where.empleados = { some: { empleadoId: session.user.id } }
+    }
+
+    // Sucursal: los usuarios con sucursal asignada ven solo la suya;
+    // DUEÑO/ADMIN pueden filtrar por ?sucursalId= o ver todas.
+    if (session.user.sucursalId) {
+      where.sucursalId = session.user.sucursalId
+    } else if (sucursalIdParam) {
+      where.sucursalId = sucursalIdParam
     }
 
     if (estado) {
@@ -166,11 +175,29 @@ export async function POST(request: NextRequest) {
       telefonoCliente,
       horarioDeseado,
       clienteId,
+      sucursalId: sucursalIdBody,
       observaciones,
       precioAjustado,
       justificacionPrecio,
       fotoUrl,
     } = validationResult.data
+
+    // Resolver sucursal: si el usuario pertenece a una, se fuerza la suya;
+    // si no (DUEÑO/ADMIN), debe indicarla en el body.
+    const sucursalId = session.user.sucursalId || sucursalIdBody
+    if (!sucursalId) {
+      return NextResponse.json(
+        { error: 'Debe indicar la sucursal de la orden' },
+        { status: 400 }
+      )
+    }
+    const sucursal = await prisma.sucursal.findUnique({ where: { id: sucursalId } })
+    if (!sucursal || !sucursal.activo) {
+      return NextResponse.json(
+        { error: 'Sucursal no encontrada o inactiva' },
+        { status: 400 }
+      )
+    }
 
     // Obtener servicio y extras para calcular total
     const servicio = await prisma.servicio.findUnique({
@@ -278,6 +305,7 @@ export async function POST(request: NextRequest) {
           horarioDeseado: esExterna ? null : (horarioDeseado ?? null),
           esExterna,
           clienteId: clienteId || null,
+          sucursalId,
           servicioId,
           observaciones: observaciones || null,
           estado: 'EN_COLA',

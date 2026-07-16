@@ -27,6 +27,10 @@ export async function GET(request: NextRequest) {
     const servicioId = searchParams.get('servicioId')
     const extrasIds = searchParams.get('extrasIds')?.split(',') || []
     const excludeOTId = searchParams.get('excludeOTId')
+    // Capacidad por sucursal: usuarios con sucursal usan la suya; DUEÑO/ADMIN
+    // envían la elegida por query. Sin sucursal resoluble no se filtra (compat).
+    const sucursalId =
+      session.user.sucursalId || searchParams.get('sucursalId')?.trim() || null
     
     // IMPORTANTE: Obtener hora actual del cliente desde query params
     // El cliente envía un objeto JSON con componentes locales (año, mes, dia, hora, minuto)
@@ -143,6 +147,7 @@ export async function GET(request: NextRequest) {
       estado: {
         in: ['EN_COLA', 'EN_PROCESO', 'LISTO'],
       },
+      ...(sucursalId ? { sucursalId } : {}),
     }
     
     console.log(`[horarios-disponibles] Buscando OTs en rango: ${fechaInicio.toISOString()} - ${fechaFin.toISOString()}`)

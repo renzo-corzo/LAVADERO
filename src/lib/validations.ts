@@ -5,6 +5,12 @@
 
 import { z } from 'zod'
 
+// Schema para crear/editar sucursal
+export const crearSucursalSchema = z.object({
+  nombre: z.string().min(1, 'El nombre es obligatorio').max(60),
+  direccion: z.string().max(200).nullish().transform((v) => (v === '' ? undefined : v)),
+})
+
 // Schema para crear OT
 export const crearOTSchema = z.object({
   servicioId: z.string().min(1, 'El servicio es obligatorio'),
@@ -32,6 +38,9 @@ export const crearOTSchema = z.object({
       return val
     }),
   clienteId: z.string().nullish().transform((v) => (v === '' ? undefined : v)),
+  // Sucursal donde se hace el trabajo. Si el usuario tiene sucursal asignada,
+  // el servidor la fuerza; si no (DUEÑO/ADMIN), debe venir en el body.
+  sucursalId: z.string().nullish().transform((v) => (v === '' ? undefined : v)),
   observaciones: z.string().optional().or(z.literal('')),
   precioAjustado: z.number().positive().nullish(),
   justificacionPrecio: z.string().nullish().transform((v) => (v === '' ? undefined : v)),

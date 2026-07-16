@@ -32,6 +32,11 @@ export async function POST(request: NextRequest) {
     const body: DisponibilidadRequest = await request.json()
     const { servicioId, extrasIds = [], horarioDeseado, fechaIngreso, excludeOTId, clienteId } = body
 
+    // Capacidad por sucursal: usuarios con sucursal usan la suya; DUEÑO/ADMIN
+    // envían la elegida en el body. Sin sucursal resoluble no se filtra (compat).
+    const sucursalId =
+      session.user.sucursalId || (body as any).sucursalId?.trim?.() || null
+
     // Si es OT externa (cliente con trabajoExterno), no se valida horario
     if (clienteId) {
       const cliente: any = await prisma.cliente.findUnique({ where: { id: clienteId } })
@@ -120,6 +125,7 @@ export async function POST(request: NextRequest) {
       estado: {
         in: ['EN_COLA', 'EN_PROCESO', 'LISTO'], // Solo OTs activas
       },
+      ...(sucursalId ? { sucursalId } : {}),
     }
 
     if (excludeOTId) {

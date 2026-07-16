@@ -31,6 +31,14 @@ function resolveSeedPassword(envVar: string, fallback: string): string {
 async function main() {
   console.log('🌱 Iniciando seed...')
 
+  // Sucursal por defecto (la migración crea "Principal"; por si acaso, upsert)
+  const sucursal = await prisma.sucursal.upsert({
+    where: { nombre: 'Principal' },
+    update: {},
+    create: { id: 'suc_principal', nombre: 'Principal', activo: true },
+  })
+  console.log('✅ Sucursal por defecto:', sucursal.nombre)
+
   const adminPassword = resolveSeedPassword('SEED_ADMIN_PASSWORD', 'admin123')
   const hashedPassword = await hash(adminPassword, 10)
 
@@ -105,6 +113,7 @@ async function main() {
       usuario: 'encargado',
       password: encargadoPassword,
       rol: UserRole.ENCARGADO,
+      sucursalId: sucursal.id,
       activo: true,
     },
   })
@@ -123,6 +132,7 @@ async function main() {
       usuario: 'lavador',
       password: lavadorPassword,
       rol: UserRole.LAVADOR,
+      sucursalId: sucursal.id,
       activo: true,
     },
   })

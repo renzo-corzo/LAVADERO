@@ -108,6 +108,7 @@ export const authOptions: NextAuthOptions = {
             email: null, // No tenemos email en el modelo
             role: user.rol,
             clienteId: user.clienteId ?? null,
+            sucursalId: user.sucursalId ?? null,
           }
         } catch (error) {
           // Solo propagamos errores controlados (rate limit, servicio no disponible)
@@ -125,6 +126,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id
         token.role = (user as any).role
         token.clienteId = (user as any).clienteId ?? null
+        token.sucursalId = (user as any).sucursalId ?? null
       }
       return token
     },
@@ -133,6 +135,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string
         session.user.role = token.role as UserRole
         session.user.clienteId = (token as any).clienteId ?? null
+        session.user.sucursalId = (token as any).sucursalId ?? null
       }
       return session
     },

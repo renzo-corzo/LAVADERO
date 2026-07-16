@@ -34,16 +34,27 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // El cierre es POR SUCURSAL (mismo criterio que el POST de cierres)
+    const sucursalId =
+      session.user.sucursalId || searchParams.get('sucursalId')?.trim() || null
+    if (!sucursalId) {
+      return NextResponse.json(
+        { error: 'Debe indicar la sucursal del cierre' },
+        { status: 400 }
+      )
+    }
+
     const fechaInicio = inicioDelDiaLocal(fechaDesde)
     const fechaFin = finDelDiaLocal(fechaHasta)
 
-    // Obtener pagos del período
+    // Obtener pagos del período de la sucursal (vía la OT del pago)
     const pagos = await prisma.pago.findMany({
       where: {
         fechaHora: {
           gte: fechaInicio,
           lte: fechaFin,
         },
+        ordenTrabajo: { sucursalId },
       },
       include: {
         ordenTrabajo: {
@@ -94,10 +105,11 @@ export async function GET(request: NextRequest) {
 
     const totalGeneral = totalEfectivo + totalTransferencia
 
-    // Verificar OTs entregadas sin pago
+    // Verificar OTs entregadas sin pago (de la sucursal)
     const otsEntregadasSinPago = await prisma.ordenTrabajo.findMany({
       where: {
         estado: 'ENTREGADO',
+        sucursalId,
         fechaIngreso: {
           gte: fechaInicio,
           lte: fechaFin,

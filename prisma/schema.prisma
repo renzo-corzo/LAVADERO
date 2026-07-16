@@ -60,19 +60,40 @@ enum TipoCliente {
 // MODELOS
 // ============================================
 
-model Usuario {
+// Sucursal del lavadero. Los negocios de una sola sede tienen la "Principal"
+// (creada por la migración/seed) y la UI oculta el selector.
+model Sucursal {
   id        String   @id @default(cuid())
-  nombre    String
-  usuario   String   @unique // login username
-  password  String   // hash de contraseña
-  rol       UserRole
-  clienteId String?  // Si rol=CLIENTE, referencia a concesionaria (Cliente)
+  nombre    String   @unique
+  direccion String?
   activo    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  usuarios       Usuario[]
+  ordenesTrabajo OrdenTrabajo[]
+  cierres        CierreCaja[]
+  servicios      Servicio[]
+  extras         Extra[]
+
+  @@map("sucursales")
+}
+
+model Usuario {
+  id         String   @id @default(cuid())
+  nombre     String
+  usuario    String   @unique // login username
+  password   String   // hash de contraseña
+  rol        UserRole
+  clienteId  String?  // Si rol=CLIENTE, referencia a concesionaria (Cliente)
+  sucursalId String?  // ENCARGADO/LAVADOR pertenecen a una sucursal; ADMIN/DUENO null = todas
+  activo     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
   // Relaciones
   cliente             Cliente?            @relation(fields: [clienteId], references: [id])
+  sucursal            Sucursal?           @relation(fields: [sucursalId], references: [id])
   otsCreadas          OrdenTrabajo[]       @relation("OTCreador")
   otsAsignadas        OrdenTrabajoEmpleado[]
   pagosRegistrados    Pago[]
@@ -85,6 +106,7 @@ model Usuario {
   auditoriaLogs       AuditoriaLog[]
 
   @@index([clienteId])
+  @@index([sucursalId])
   @@map("usuarios")
 }
 
@@ -94,14 +116,17 @@ model Servicio {
   precio          Decimal       @db.Decimal(12, 2)
   duracionEstimada Int?         // en minutos
   tipoVehiculo    TipoVehiculo?
+  sucursalId      String?       // null = compartido entre todas las sucursales
   activo          Boolean       @default(true)
   descripcion     String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
   // Relaciones
+  sucursal        Sucursal?     @relation(fields: [sucursalId], references: [id])
   ots             OrdenTrabajo[]
 
+  @@index([sucursalId])
   @@map("servicios")
 }
 
@@ -110,14 +135,17 @@ model Extra {
   nombre          String        @unique
   precio          Decimal       @db.Decimal(12, 2)
   duracionEstimada Int?         // en minutos
+  sucursalId      String?       // null = compartido entre todas las sucursales
   activo          Boolean       @default(true)
   descripcion     String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
   // Relaciones
+  sucursal        Sucursal?     @relation(fields: [sucursalId], references: [id])
   ots             OrdenTrabajoExtra[]
 
+  @@index([sucursalId])
   @@map("extras")
 }
 
@@ -160,6 +188,7 @@ model OrdenTrabajo {
   horarioDeseado      DateTime?   // Nuevo: horario en que quiere tenerlo listo
   esExterna           Boolean     @default(false) // OT fuera del lavadero: no ocupa turnos ni genera conflictos
   clienteId           String?     // Cliente fijo (concesionaria), null para walk-in
+  sucursalId          String      // Sucursal donde se realiza la OT
   servicioId          String
   observaciones       String?
   estado              OTEstado    @default(EN_COLA)
@@ -172,6 +201,7 @@ model OrdenTrabajo {
 
   // Relaciones
   cliente             Cliente?            @relation(fields: [clienteId], references: [id])
+  sucursal            Sucursal            @relation(fields: [sucursalId], references: [id])
   servicio            Servicio            @relation(fields: [servicioId], references: [id])
   usuarioCreador      Usuario             @relation("OTCreador", fields: [usuarioCreadorId], references: [id])
   empleados           OrdenTrabajoEmpleado[]
@@ -185,6 +215,7 @@ model OrdenTrabajo {
   @@index([fechaIngreso])
   @@index([usuarioCreadorId])
   @@index([clienteId])
+  @@index([sucursalId])
   @@map("ordenes_trabajo")
 }
 
@@ -260,15 +291,18 @@ model CierreCaja {
   totalTransferencia Decimal    @db.Decimal(12, 2)
   totalGeneral      Decimal     @db.Decimal(12, 2)
   observaciones     String?
+  sucursalId        String      // El cierre de caja es por sucursal
   usuarioId         String
   createdAt         DateTime    @default(now())
 
   // Relaciones
+  sucursal          Sucursal    @relation(fields: [sucursalId], references: [id])
   usuario           Usuario     @relation(fields: [usuarioId], references: [id])
   ots               CierreCajaOT[]
 
   @@index([fechaCierre])
   @@index([usuarioId])
+  @@index([sucursalId])
   @@map("cierres_caja")
 }
 

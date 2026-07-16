@@ -13,6 +13,7 @@ declare module 'next-auth' {
       email?: string | null
       role: UserRole
       clienteId?: string | null
+      sucursalId?: string | null
     }
   }
 
@@ -20,6 +21,7 @@ declare module 'next-auth' {
     id: string
     role: UserRole
     clienteId?: string | null
+    sucursalId?: string | null
   }
 }
 
@@ -28,6 +30,7 @@ declare module 'next-auth/jwt' {
     id: string
     role: UserRole
     clienteId?: string | null
+    sucursalId?: string | null
   }
 }
 

@@ -25,8 +25,16 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const desde = searchParams.get('desde') // formato: YYYY-MM-DD
     const hasta = searchParams.get('hasta') // formato: YYYY-MM-DD
+    const sucursalIdParam = searchParams.get('sucursalId')?.trim() || null
 
     const where: any = {}
+
+    // Sucursal: usuarios con sucursal ven la suya; DUEÑO/ADMIN filtran o ven todas
+    if (session.user.sucursalId) {
+      where.sucursalId = session.user.sucursalId
+    } else if (sucursalIdParam) {
+      where.sucursalId = sucursalIdParam
+    }
     if (desde) {
       where.fechaCierre = { gte: inicioDelDiaLocal(desde) }
     }
@@ -120,6 +128,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // El cierre de caja es POR SUCURSAL: usuarios con sucursal usan la suya;
+    // DUEÑO/ADMIN deben indicarla en el body.
+    const sucursalId = session.user.sucursalId || body.sucursalId?.trim() || null
+    if (!sucursalId) {
+      return NextResponse.json(
+        { error: 'Debe indicar la sucursal del cierre' },
+        { status: 400 }
+      )
+    }
+    const sucursal = await prisma.sucursal.findUnique({ where: { id: sucursalId } })
+    if (!sucursal) {
+      return NextResponse.json({ error: 'Sucursal no encontrada' }, { status: 400 })
+    }
+
     const fechaInicio = inicioDelDiaLocal(fechaDesde)
     const fechaFin = finDelDiaLocal(fechaHasta)
 
@@ -133,13 +155,14 @@ export async function POST(request: NextRequest) {
     // Verificar si ya existe un cierre para este período (opcional, se puede permitir solapamiento)
     // Por ahora no validamos solapamiento para permitir flexibilidad
 
-    // Obtener todos los pagos del período
+    // Obtener todos los pagos del período de la sucursal (vía la OT del pago)
     const pagos = await prisma.pago.findMany({
       where: {
         fechaHora: {
           gte: fechaInicio,
           lte: fechaFin,
         },
+        ordenTrabajo: { sucursalId },
       },
       include: {
         ordenTrabajo: {
@@ -184,6 +207,7 @@ export async function POST(request: NextRequest) {
           totalTransferencia,
           totalGeneral,
           observaciones: observaciones || null,
+          sucursalId,
           usuarioId: session.user.id,
           ots: {
             create: otsCobradas.map((otId) => ({
