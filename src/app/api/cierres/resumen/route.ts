@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { empresaScope } from '@/lib/empresa'
 import { inicioDelDiaLocal, finDelDiaLocal } from '@/lib/utils-fechas'
 
 export const dynamic = 'force-dynamic'
@@ -34,6 +35,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Scoping multi-tenant
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
     // El cierre es POR SUCURSAL (mismo criterio que el POST de cierres)
     const sucursalId =
       session.user.sucursalId || searchParams.get('sucursalId')?.trim() || null
@@ -42,6 +49,18 @@ export async function GET(request: NextRequest) {
         { error: 'Debe indicar la sucursal del cierre' },
         { status: 400 }
       )
+    }
+
+    // La sucursal debe pertenecer a la empresa del usuario
+    const sucursal = await prisma.sucursal.findFirst({
+      where: {
+        id: sucursalId,
+        ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
+      },
+      select: { id: true },
+    })
+    if (!sucursal) {
+      return NextResponse.json({ error: 'Sucursal no encontrada' }, { status: 400 })
     }
 
     const fechaInicio = inicioDelDiaLocal(fechaDesde)

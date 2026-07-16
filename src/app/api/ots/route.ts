@@ -9,6 +9,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { getOtAccessScope, hasPermission } from '@/lib/auth'
+import { empresaScope } from '@/lib/empresa'
 import { calcularTotalOT } from '@/lib/reglas-negocio'
 import { crearOTSchema } from '@/lib/validations'
 
@@ -30,7 +31,16 @@ export async function GET(request: NextRequest) {
     const incluirExternas = searchParams.get('incluirExternas') === 'true'
     const sucursalIdParam = searchParams.get('sucursalId')?.trim() || null
 
+    // Scoping multi-tenant: cada usuario ve solo su empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
     const where: any = {}
+    if (scope.empresaId) {
+      where.empresaId = scope.empresaId
+    }
 
     // LAVADOR: solo OTs donde figura asignado en orden_trabajo_empleados
     if (otScope === 'assigned') {
@@ -164,6 +174,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Scoping multi-tenant: la OT se crea dentro de la empresa del usuario
+    // (ADMIN puede indicar contexto vía ?empresaId= / x-empresa-id)
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
     const {
       servicioId,
       extrasIds = [],
@@ -192,16 +209,23 @@ export async function POST(request: NextRequest) {
       )
     }
     const sucursal = await prisma.sucursal.findUnique({ where: { id: sucursalId } })
-    if (!sucursal || !sucursal.activo) {
+    if (
+      !sucursal ||
+      !sucursal.activo ||
+      (scope.empresaId && sucursal.empresaId !== scope.empresaId)
+    ) {
       return NextResponse.json(
         { error: 'Sucursal no encontrada o inactiva' },
         { status: 400 }
       )
     }
 
-    // Obtener servicio y extras para calcular total
-    const servicio = await prisma.servicio.findUnique({
-      where: { id: servicioId },
+    // Empresa de la OT: la del scope, o la de la sucursal (ADMIN sin contexto)
+    const empresaId = scope.empresaId ?? sucursal.empresaId
+
+    // Obtener servicio y extras para calcular total (de la misma empresa)
+    const servicio = await prisma.servicio.findFirst({
+      where: { id: servicioId, empresaId },
     })
 
     if (!servicio || !servicio.activo) {
@@ -216,6 +240,7 @@ export async function POST(request: NextRequest) {
         id: { in: empleadosIds },
         rol: 'LAVADOR',
         activo: true,
+        empresaId,
       },
       select: { id: true },
     })
@@ -232,6 +257,7 @@ export async function POST(request: NextRequest) {
         where: {
           id: { in: extrasIds },
           activo: true,
+          empresaId,
         },
       })
 
@@ -246,8 +272,8 @@ export async function POST(request: NextRequest) {
     // Validar y obtener cliente si se proporciona
     let cliente: any = null
     if (clienteId) {
-      cliente = await prisma.cliente.findUnique({
-        where: { id: clienteId },
+      cliente = await prisma.cliente.findFirst({
+        where: { id: clienteId, empresaId },
       })
 
       if (!cliente || !cliente.activo) {
@@ -305,6 +331,7 @@ export async function POST(request: NextRequest) {
           horarioDeseado: esExterna ? null : (horarioDeseado ?? null),
           esExterna,
           clienteId: clienteId || null,
+          empresaId,
           sucursalId,
           servicioId,
           observaciones: observaciones || null,

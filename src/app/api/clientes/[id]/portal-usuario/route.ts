@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { empresaScope } from '@/lib/empresa'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 
@@ -59,8 +60,17 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
     }
 
-    const cliente = await prisma.cliente.findUnique({
-      where: { id: params.id },
+    // Scoping multi-tenant
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
+    const cliente = await prisma.cliente.findFirst({
+      where: {
+        id: params.id,
+        ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
+      },
       select: { id: true, nombre: true, tipo: true, activo: true },
     })
     if (!cliente) return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 })
@@ -98,9 +108,18 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: 'Datos inválidos', details: parsed.error.flatten() }, { status: 400 })
     }
 
-    const cliente = await prisma.cliente.findUnique({
-      where: { id: params.id },
-      select: { id: true, nombre: true, tipo: true, activo: true },
+    // Scoping multi-tenant
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
+    const cliente = await prisma.cliente.findFirst({
+      where: {
+        id: params.id,
+        ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
+      },
+      select: { id: true, nombre: true, tipo: true, activo: true, empresaId: true },
     })
 
     if (!cliente) return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 })
@@ -154,6 +173,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
             password: hashedPassword,
             rol: 'CLIENTE',
             clienteId: cliente.id,
+            empresaId: cliente.empresaId,
             activo: true,
           },
           select: { id: true, nombre: true, usuario: true, rol: true, activo: true, clienteId: true },

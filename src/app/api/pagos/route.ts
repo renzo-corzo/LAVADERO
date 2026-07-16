@@ -9,6 +9,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { empresaScope } from '@/lib/empresa'
 import { verificarYCalcularComisiones } from '@/lib/comisiones'
 import { registrarPagoSchema } from '@/lib/validations'
 
@@ -30,7 +31,16 @@ export async function GET(request: NextRequest) {
     const otIdRaw = searchParams.get('otId')
     const otId = otIdRaw?.trim() || null
 
+    // Scoping multi-tenant: pagos solo de OTs de la propia empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
     const where: Record<string, unknown> = {}
+    if (scope.empresaId) {
+      where.ordenTrabajo = { empresaId: scope.empresaId }
+    }
     if (otId) {
       where.ordenTrabajoId = otId
     }
@@ -121,8 +131,17 @@ export async function POST(request: NextRequest) {
 
     const { ordenTrabajoId, monto, medioPago, referencia } = validationResult.data
 
-    const ot = await prisma.ordenTrabajo.findUnique({
-      where: { id: ordenTrabajoId },
+    // Scoping multi-tenant: solo se cobran OTs de la propia empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
+    const ot = await prisma.ordenTrabajo.findFirst({
+      where: {
+        id: ordenTrabajoId,
+        ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
+      },
     })
 
     if (!ot) {

@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { empresaScope } from '@/lib/empresa'
 import { crearFechaLocal } from '@/lib/utils-fechas'
 
 export const dynamic = 'force-dynamic'
@@ -29,7 +30,16 @@ export async function GET(request: NextRequest) {
     const empleadoId = searchParams.get('empleadoId')
     const clienteId = searchParams.get('clienteId') // Filtro por cliente
 
+    // Scoping multi-tenant: comisiones solo de OTs de la propia empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
     const where: any = {}
+    if (scope.empresaId) {
+      where.ordenTrabajo = { empresaId: scope.empresaId }
+    }
 
     if (fechaDesde && fechaHasta) {
       const desdeLocal = crearFechaLocal(fechaDesde)

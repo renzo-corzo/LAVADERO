@@ -9,6 +9,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { empresaScope } from '@/lib/empresa'
 import { inicioDelDiaLocal, finDelDiaLocal } from '@/lib/utils-fechas'
 
 export async function GET(request: NextRequest) {
@@ -27,7 +28,16 @@ export async function GET(request: NextRequest) {
     const hasta = searchParams.get('hasta') // formato: YYYY-MM-DD
     const sucursalIdParam = searchParams.get('sucursalId')?.trim() || null
 
+    // Scoping multi-tenant
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
     const where: any = {}
+    if (scope.empresaId) {
+      where.empresaId = scope.empresaId
+    }
 
     // Sucursal: usuarios con sucursal ven la suya; DUEÑO/ADMIN filtran o ven todas
     if (session.user.sucursalId) {
@@ -137,10 +147,18 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+    // Scoping multi-tenant: el cierre pertenece a la empresa de la sucursal
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
     const sucursal = await prisma.sucursal.findUnique({ where: { id: sucursalId } })
-    if (!sucursal) {
+    if (!sucursal || (scope.empresaId && sucursal.empresaId !== scope.empresaId)) {
       return NextResponse.json({ error: 'Sucursal no encontrada' }, { status: 400 })
     }
+
+    const empresaId = scope.empresaId ?? sucursal.empresaId
 
     const fechaInicio = inicioDelDiaLocal(fechaDesde)
     const fechaFin = finDelDiaLocal(fechaHasta)
@@ -207,6 +225,7 @@ export async function POST(request: NextRequest) {
           totalTransferencia,
           totalGeneral,
           observaciones: observaciones || null,
+          empresaId,
           sucursalId,
           usuarioId: session.user.id,
           ots: {

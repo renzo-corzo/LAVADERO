@@ -9,6 +9,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { empresaScope } from '@/lib/empresa'
 import { crearServicioSchema } from '@/lib/validations'
 
 export async function GET(request: NextRequest) {
@@ -23,11 +24,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
     }
 
+    // Scoping multi-tenant
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
     const searchParams = request.nextUrl.searchParams
     const activo = searchParams.get('activo')
 
     const servicios = await prisma.servicio.findMany({
-      where: activo !== null ? { activo: activo === 'true' } : undefined,
+      where: {
+        ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
+        ...(activo !== null ? { activo: activo === 'true' } : {}),
+      },
       orderBy: { nombre: 'asc' },
     })
 
@@ -72,10 +82,22 @@ export async function POST(request: NextRequest) {
     const { nombre, precio, duracionEstimada, tipoVehiculo, descripcion } = validationResult.data
     const activo = body.activo !== undefined ? body.activo : true
 
-    // Verificar que el nombre sea único
+    // Scoping multi-tenant: el catálogo pertenece a una empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+    if (!scope.empresaId) {
+      return NextResponse.json(
+        { error: 'Debe indicar la empresa (contexto de plataforma)' },
+        { status: 400 }
+      )
+    }
+
+    // Verificar que el nombre sea único dentro de la empresa
     const nombreTrim = nombre.trim()
     const existente = await prisma.servicio.findUnique({
-      where: { nombre: nombreTrim },
+      where: { empresaId_nombre: { empresaId: scope.empresaId, nombre: nombreTrim } },
     })
 
     if (existente) {
@@ -87,6 +109,7 @@ export async function POST(request: NextRequest) {
 
     const servicio = await prisma.servicio.create({
       data: {
+        empresaId: scope.empresaId,
         nombre: nombreTrim,
         precio,
         duracionEstimada: duracionEstimada ?? null,

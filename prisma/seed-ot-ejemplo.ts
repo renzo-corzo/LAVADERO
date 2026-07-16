@@ -54,6 +54,7 @@ async function main() {
         patente: 'ABC123',
         tipoVehiculo: 'chico',
         descripcionVehiculo: 'Auto rojo, modelo 2020',
+        empresaId: sucursal.empresaId,
         sucursalId: sucursal.id,
         servicioId: servicio.id,
         observaciones: 'OT de ejemplo para prueba',

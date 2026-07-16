@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { empresaScope } from '@/lib/empresa'
 import bcrypt from 'bcryptjs'
 
 export async function PUT(
@@ -41,12 +42,28 @@ export async function PUT(
       )
     }
 
+    // Scoping multi-tenant
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
     // Verificar que el usuario existe
     const usuario = await prisma.usuario.findUnique({
       where: { id: params.id },
     })
 
     if (!usuario) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+    }
+
+    // La clave de un ADMIN solo la puede cambiar otro ADMIN
+    if (usuario.rol === 'ADMIN' && session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+    }
+
+    // Usuarios de otra empresa: no existen para este usuario
+    if (scope.empresaId && usuario.rol !== 'ADMIN' && usuario.empresaId !== scope.empresaId) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
 

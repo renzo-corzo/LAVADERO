@@ -9,6 +9,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { empresaScope } from '@/lib/empresa'
 import { canEditOT, calcularTotalOT } from '@/lib/reglas-negocio'
 import { editarOTSchema } from '@/lib/validations'
 
@@ -27,8 +28,17 @@ export async function GET(
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
     }
 
-    const ot = await prisma.ordenTrabajo.findUnique({
-      where: { id: params.id },
+    // Scoping multi-tenant: solo OTs de la propia empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
+    const ot = await prisma.ordenTrabajo.findFirst({
+      where: {
+        id: params.id,
+        ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
+      },
       include: {
         servicio: true,
         extras: {
@@ -110,9 +120,18 @@ export async function PUT(
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
     }
 
+    // Scoping multi-tenant: solo se puede editar una OT de la propia empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
     // Obtener OT actual
-    const otActual = await prisma.ordenTrabajo.findUnique({
-      where: { id: params.id },
+    const otActual = await prisma.ordenTrabajo.findFirst({
+      where: {
+        id: params.id,
+        ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
+      },
     })
 
     if (!otActual) {
@@ -182,8 +201,8 @@ export async function PUT(
       )
     }
 
-    const servicio = await prisma.servicio.findUnique({
-      where: { id: servicioId },
+    const servicio = await prisma.servicio.findFirst({
+      where: { id: servicioId, empresaId: otActual.empresaId },
     })
 
     if (!servicio || !servicio.activo) {
@@ -199,6 +218,7 @@ export async function PUT(
         where: {
           id: { in: extrasIds },
           activo: true,
+          empresaId: otActual.empresaId,
         },
       })
 

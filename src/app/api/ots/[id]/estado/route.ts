@@ -9,6 +9,7 @@ import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { isValidEstadoTransition } from '@/lib/reglas-negocio'
 import { hasEstadoTransitionPermission } from '@/lib/auth'
+import { empresaScope } from '@/lib/empresa'
 import { verificarYCalcularComisiones } from '@/lib/comisiones'
 import { cambiarEstadoOTSchema } from '@/lib/validations'
 
@@ -41,8 +42,17 @@ export async function PUT(
 
     const { nuevoEstado, motivo } = validationResult.data
 
-    const otActual = await prisma.ordenTrabajo.findUnique({
-      where: { id: params.id },
+    // Scoping multi-tenant: solo OTs de la propia empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
+    const otActual = await prisma.ordenTrabajo.findFirst({
+      where: {
+        id: params.id,
+        ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
+      },
       include: {
         empleados: { select: { empleadoId: true } },
       },

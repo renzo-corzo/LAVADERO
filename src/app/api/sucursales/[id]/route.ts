@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
+import { empresaScope } from '@/lib/empresa'
 import { crearSucursalSchema } from '@/lib/validations'
 
 export async function PUT(
@@ -37,7 +38,18 @@ export async function PUT(
       )
     }
 
-    const existente = await prisma.sucursal.findUnique({ where: { id: params.id } })
+    // Scoping multi-tenant: solo sucursales de la propia empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
+    const existente = await prisma.sucursal.findFirst({
+      where: {
+        id: params.id,
+        ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
+      },
+    })
     if (!existente) {
       return NextResponse.json({ error: 'Sucursal no encontrada' }, { status: 404 })
     }
@@ -45,9 +57,11 @@ export async function PUT(
     const { nombre, direccion } = validation.data
     const activo = typeof body.activo === 'boolean' ? body.activo : existente.activo
 
-    // No permitir desactivar la última sucursal activa
+    // No permitir desactivar la última sucursal activa DE LA EMPRESA
     if (!activo) {
-      const activas = await prisma.sucursal.count({ where: { activo: true } })
+      const activas = await prisma.sucursal.count({
+        where: { activo: true, empresaId: existente.empresaId },
+      })
       if (activas <= 1 && existente.activo) {
         return NextResponse.json(
           { error: 'No se puede desactivar la única sucursal activa' },
@@ -56,7 +70,9 @@ export async function PUT(
       }
     }
 
-    const conMismoNombre = await prisma.sucursal.findUnique({ where: { nombre } })
+    const conMismoNombre = await prisma.sucursal.findUnique({
+      where: { empresaId_nombre: { empresaId: existente.empresaId, nombre } },
+    })
     if (conMismoNombre && conMismoNombre.id !== params.id) {
       return NextResponse.json({ error: 'Ya existe una sucursal con ese nombre' }, { status: 400 })
     }

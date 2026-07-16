@@ -9,6 +9,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { empresaScope } from '@/lib/empresa'
 
 function parseDateYYYYMMDD(s: string): Date | null {
   // Espera YYYY-MM-DD
@@ -67,8 +68,17 @@ export async function GET(request: NextRequest) {
     const hastaFin = new Date(hasta)
     hastaFin.setHours(23, 59, 59, 999)
 
-    const cliente = await prisma.cliente.findUnique({
-      where: { id: clienteId },
+    // Scoping multi-tenant: el cliente consultado debe ser de la propia empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
+    const cliente = await prisma.cliente.findFirst({
+      where: {
+        id: clienteId,
+        ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
+      },
       select: { id: true, nombre: true, tipo: true, activo: true },
     })
 

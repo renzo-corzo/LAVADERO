@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { empresaScope } from '@/lib/empresa'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,6 +22,12 @@ export async function GET(request: NextRequest) {
     // Permitir acceso a cualquier usuario autenticado para ver horarios disponibles
     // Esto es necesario para que cualquier rol pueda visualizar la disponibilidad
     // incluso si no tiene permiso completo para crear OTs
+
+    // Scoping multi-tenant: la ocupación de horarios se calcula por empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
 
     const searchParams = request.nextUrl.searchParams
     const fecha = searchParams.get('fecha') // formato: YYYY-MM-DD o ISO string
@@ -147,6 +154,7 @@ export async function GET(request: NextRequest) {
       estado: {
         in: ['EN_COLA', 'EN_PROCESO', 'LISTO'],
       },
+      ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
       ...(sucursalId ? { sucursalId } : {}),
     }
     

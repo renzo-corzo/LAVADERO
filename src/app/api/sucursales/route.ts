@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
+import { empresaScope } from '@/lib/empresa'
 import { crearSucursalSchema } from '@/lib/validations'
 
 export async function GET(request: NextRequest) {
@@ -20,11 +21,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
     }
 
+    // Scoping multi-tenant
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
     const incluirInactivas = request.nextUrl.searchParams.get('incluirInactivas') === 'true'
     const puedeGestionar = session.user.role === 'DUENO' || session.user.role === 'ADMIN'
 
     const sucursales = await prisma.sucursal.findMany({
-      where: incluirInactivas && puedeGestionar ? {} : { activo: true },
+      where: {
+        ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
+        ...(incluirInactivas && puedeGestionar ? {} : { activo: true }),
+      },
       select: { id: true, nombre: true, direccion: true, activo: true },
       orderBy: { nombre: 'asc' },
     })
@@ -63,13 +73,31 @@ export async function POST(request: NextRequest) {
 
     const { nombre, direccion } = validation.data
 
-    const existente = await prisma.sucursal.findUnique({ where: { nombre } })
+    // Scoping multi-tenant: la sucursal pertenece a una empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+    if (!scope.empresaId) {
+      return NextResponse.json(
+        { error: 'Debe indicar la empresa (contexto de plataforma)' },
+        { status: 400 }
+      )
+    }
+
+    const existente = await prisma.sucursal.findUnique({
+      where: { empresaId_nombre: { empresaId: scope.empresaId, nombre } },
+    })
     if (existente) {
       return NextResponse.json({ error: 'Ya existe una sucursal con ese nombre' }, { status: 400 })
     }
 
     const sucursal = await prisma.sucursal.create({
-      data: { nombre: nombre.trim(), direccion: direccion?.trim() || null },
+      data: {
+        empresaId: scope.empresaId,
+        nombre: nombre.trim(),
+        direccion: direccion?.trim() || null,
+      },
       select: { id: true, nombre: true, direccion: true, activo: true },
     })
 

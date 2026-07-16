@@ -31,19 +31,42 @@ function resolveSeedPassword(envVar: string, fallback: string): string {
 async function main() {
   console.log('🌱 Iniciando seed...')
 
+  // Empresa por defecto (la migración crea "Mi Lavadero"; por si acaso, upsert)
+  const empresa = await prisma.empresa.upsert({
+    where: { nombre: 'Mi Lavadero' },
+    update: {},
+    create: { id: 'emp_default', nombre: 'Mi Lavadero', activo: true },
+  })
+  console.log('✅ Empresa por defecto:', empresa.nombre)
+
   // Sucursal por defecto (la migración crea "Principal"; por si acaso, upsert)
   const sucursal = await prisma.sucursal.upsert({
-    where: { nombre: 'Principal' },
+    where: { empresaId_nombre: { empresaId: empresa.id, nombre: 'Principal' } },
     update: {},
-    create: { id: 'suc_principal', nombre: 'Principal', activo: true },
+    create: { id: 'suc_principal', empresaId: empresa.id, nombre: 'Principal', activo: true },
   })
   console.log('✅ Sucursal por defecto:', sucursal.nombre)
 
   const adminPassword = resolveSeedPassword('SEED_ADMIN_PASSWORD', 'admin123')
   const hashedPassword = await hash(adminPassword, 10)
 
-  // Crear usuario DUEÑO por defecto
-  const dueno = await prisma.usuario.upsert({
+  // Crear usuario ADMIN de plataforma (sin empresa: ve todo)
+  await prisma.usuario.upsert({
+    where: { usuario: 'superadmin' },
+    update: {},
+    create: {
+      nombre: 'Admin Plataforma',
+      usuario: 'superadmin',
+      password: hashedPassword,
+      rol: UserRole.ADMIN,
+      empresaId: null,
+      activo: true,
+    },
+  })
+  console.log('✅ Usuario superadmin (ADMIN de plataforma) creado')
+
+  // Crear usuario DUEÑO por defecto (de la empresa por defecto)
+  await prisma.usuario.upsert({
     where: { usuario: 'admin' },
     update: {},
     create: {
@@ -51,6 +74,7 @@ async function main() {
       usuario: 'admin',
       password: hashedPassword,
       rol: UserRole.DUENO,
+      empresaId: empresa.id,
       activo: true,
     },
   })
@@ -61,9 +85,10 @@ async function main() {
   // Crear servicios de ejemplo
   const servicios = await Promise.all([
     prisma.servicio.upsert({
-      where: { nombre: 'Lavado Básico' },
+      where: { empresaId_nombre: { empresaId: empresa.id, nombre: 'Lavado Básico' } },
       update: {},
       create: {
+        empresaId: empresa.id,
         nombre: 'Lavado Básico',
         precio: 1500,
         duracionEstimada: 30,
@@ -73,9 +98,10 @@ async function main() {
       },
     }),
     prisma.servicio.upsert({
-      where: { nombre: 'Lavado Completo' },
+      where: { empresaId_nombre: { empresaId: empresa.id, nombre: 'Lavado Completo' } },
       update: {},
       create: {
+        empresaId: empresa.id,
         nombre: 'Lavado Completo',
         precio: 2500,
         duracionEstimada: 60,
@@ -85,9 +111,10 @@ async function main() {
       },
     }),
     prisma.servicio.upsert({
-      where: { nombre: 'Lavado Premium' },
+      where: { empresaId_nombre: { empresaId: empresa.id, nombre: 'Lavado Premium' } },
       update: {},
       create: {
+        empresaId: empresa.id,
         nombre: 'Lavado Premium',
         precio: 3500,
         duracionEstimada: 90,
@@ -105,7 +132,7 @@ async function main() {
     resolveSeedPassword('SEED_ENCARGADO_PASSWORD', 'encargado123'),
     10
   )
-  const encargado = await prisma.usuario.upsert({
+  await prisma.usuario.upsert({
     where: { usuario: 'encargado' },
     update: {},
     create: {
@@ -113,6 +140,7 @@ async function main() {
       usuario: 'encargado',
       password: encargadoPassword,
       rol: UserRole.ENCARGADO,
+      empresaId: empresa.id,
       sucursalId: sucursal.id,
       activo: true,
     },
@@ -124,7 +152,7 @@ async function main() {
     resolveSeedPassword('SEED_LAVADOR_PASSWORD', 'lavador123'),
     10
   )
-  const lavador = await prisma.usuario.upsert({
+  await prisma.usuario.upsert({
     where: { usuario: 'lavador' },
     update: {},
     create: {
@@ -132,6 +160,7 @@ async function main() {
       usuario: 'lavador',
       password: lavadorPassword,
       rol: UserRole.LAVADOR,
+      empresaId: empresa.id,
       sucursalId: sucursal.id,
       activo: true,
     },
@@ -141,9 +170,10 @@ async function main() {
   // Crear extras de ejemplo
   const extras = await Promise.all([
     prisma.extra.upsert({
-      where: { nombre: 'Aspirado Motor' },
+      where: { empresaId_nombre: { empresaId: empresa.id, nombre: 'Aspirado Motor' } },
       update: {},
       create: {
+        empresaId: empresa.id,
         nombre: 'Aspirado Motor',
         precio: 800,
         duracionEstimada: 20,
@@ -152,9 +182,10 @@ async function main() {
       },
     }),
     prisma.extra.upsert({
-      where: { nombre: 'Limpieza de Tapizados' },
+      where: { empresaId_nombre: { empresaId: empresa.id, nombre: 'Limpieza de Tapizados' } },
       update: {},
       create: {
+        empresaId: empresa.id,
         nombre: 'Limpieza de Tapizados',
         precio: 1200,
         duracionEstimada: 30,
@@ -163,9 +194,10 @@ async function main() {
       },
     }),
     prisma.extra.upsert({
-      where: { nombre: 'Encerado' },
+      where: { empresaId_nombre: { empresaId: empresa.id, nombre: 'Encerado' } },
       update: {},
       create: {
+        empresaId: empresa.id,
         nombre: 'Encerado',
         precio: 1500,
         duracionEstimada: 45,
@@ -188,4 +220,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect()
   })
-

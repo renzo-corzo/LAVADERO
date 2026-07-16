@@ -10,6 +10,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { empresaScope } from '@/lib/empresa'
 import bcrypt from 'bcryptjs'
 
 export async function GET(
@@ -26,6 +27,12 @@ export async function GET(
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
     }
 
+    // Scoping multi-tenant
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
     const usuario = await prisma.usuario.findUnique({
       where: { id: params.id },
       select: {
@@ -33,6 +40,7 @@ export async function GET(
         nombre: true,
         usuario: true,
         rol: true,
+        empresaId: true,
         sucursalId: true,
         activo: true,
         createdAt: true,
@@ -46,6 +54,11 @@ export async function GET(
 
     // Un usuario ADMIN solo lo puede ver otro ADMIN
     if (usuario.rol === 'ADMIN' && session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+    }
+
+    // Usuarios de otra empresa: no existen para este usuario
+    if (scope.empresaId && usuario.rol !== 'ADMIN' && usuario.empresaId !== scope.empresaId) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
 
@@ -96,10 +109,16 @@ export async function PUT(
       )
     }
 
+    // Scoping multi-tenant
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
     // Verificar que el usuario existe
     const usuarioExistente = await prisma.usuario.findUnique({
       where: { id: params.id },
-      select: { id: true, usuario: true, rol: true, activo: true },
+      select: { id: true, usuario: true, rol: true, activo: true, empresaId: true },
     })
 
     if (!usuarioExistente) {
@@ -108,6 +127,15 @@ export async function PUT(
 
     // Un usuario ADMIN solo puede ser gestionado por otro ADMIN (se oculta al resto)
     if (usuarioExistente.rol === 'ADMIN' && session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+    }
+
+    // Usuarios de otra empresa: no existen para este usuario
+    if (
+      scope.empresaId &&
+      usuarioExistente.rol !== 'ADMIN' &&
+      usuarioExistente.empresaId !== scope.empresaId
+    ) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
 
@@ -132,6 +160,22 @@ export async function PUT(
       }
     }
 
+    // La sucursal asignada debe pertenecer a la misma empresa
+    const sucursalAsignada =
+      rol === 'ENCARGADO' || rol === 'LAVADOR' ? sucursalId || null : null
+    if (sucursalAsignada && usuarioExistente.empresaId) {
+      const sucursalValida = await prisma.sucursal.findFirst({
+        where: { id: sucursalAsignada, empresaId: usuarioExistente.empresaId },
+        select: { id: true },
+      })
+      if (!sucursalValida) {
+        return NextResponse.json(
+          { error: 'La sucursal no pertenece a la empresa' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Actualizar usuario
     const usuarioActualizado = await prisma.usuario.update({
       where: { id: params.id },
@@ -140,7 +184,7 @@ export async function PUT(
         usuario: username.trim(),
         rol,
         // Solo los empleados operativos llevan sucursal
-        sucursalId: rol === 'ENCARGADO' || rol === 'LAVADOR' ? sucursalId || null : null,
+        sucursalId: sucursalAsignada,
         activo: activo !== undefined ? activo : usuarioExistente.activo,
       },
       select: {
@@ -196,6 +240,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'Sin permisos. Solo DUEÑO puede desactivar usuarios' }, { status: 403 })
     }
 
+    // Scoping multi-tenant
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
     // Verificar que el usuario existe
     const usuario = await prisma.usuario.findUnique({
       where: { id: params.id },
@@ -207,6 +257,11 @@ export async function DELETE(
 
     // Un usuario ADMIN solo lo puede desactivar otro ADMIN (se oculta al resto)
     if (usuario.rol === 'ADMIN' && session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+    }
+
+    // Usuarios de otra empresa: no existen para este usuario
+    if (scope.empresaId && usuario.rol !== 'ADMIN' && usuario.empresaId !== scope.empresaId) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
 
