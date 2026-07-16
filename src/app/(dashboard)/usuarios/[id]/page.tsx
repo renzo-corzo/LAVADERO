@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
+import { useSucursales } from '@/lib/hooks/useSucursales'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -20,6 +21,7 @@ interface Usuario {
   nombre: string
   usuario: string
   rol: 'ADMIN' | 'DUENO' | 'ENCARGADO' | 'LAVADOR'
+  sucursalId?: string | null
   activo: boolean
 }
 
@@ -34,12 +36,16 @@ export default function EditarUsuarioPage() {
   const [error, setError] = useState<string | null>(null)
   const [mostrarCambiarPassword, setMostrarCambiarPassword] = useState(false)
   
+  const { sucursales } = useSucursales()
   const [formData, setFormData] = useState({
     nombre: '',
     usuario: '',
     rol: '' as 'ADMIN' | 'DUENO' | 'ENCARGADO' | 'LAVADOR' | '',
+    sucursalId: '',
     activo: true,
   })
+
+  const esEmpleado = formData.rol === 'ENCARGADO' || formData.rol === 'LAVADOR'
 
   const [passwordData, setPasswordData] = useState({
     nuevaPassword: '',
@@ -75,6 +81,7 @@ export default function EditarUsuarioPage() {
           nombre: data.nombre,
           usuario: data.usuario,
           rol: data.rol,
+          sucursalId: data.sucursalId || '',
           activo: data.activo,
         })
       } else {
@@ -120,6 +127,8 @@ export default function EditarUsuarioPage() {
           nombre: formData.nombre.trim(),
           usuario: formData.usuario.trim(),
           rol: formData.rol,
+          // Con una sola sucursal se asigna automáticamente
+          sucursalId: esEmpleado ? formData.sucursalId || sucursales[0]?.id || null : null,
           activo: formData.activo,
         }),
       })
@@ -235,6 +244,17 @@ export default function EditarUsuarioPage() {
                 placeholder="Seleccionar rol"
                 required
               />
+
+              {esEmpleado && sucursales.length > 1 && (
+                <Select
+                  id="sucursalId"
+                  label="Sucursal *"
+                  value={formData.sucursalId}
+                  onChange={(e) => setFormData({ ...formData, sucursalId: e.target.value })}
+                  options={sucursales.map((s) => ({ value: s.id, label: s.nombre }))}
+                  placeholder="Seleccionar sucursal"
+                />
+              )}
 
               <div className="flex items-center space-x-2">
                 <input

@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { nombre, usuario: username, password, rol } = validationResult.data
+    const { nombre, usuario: username, password, rol, sucursalId } = validationResult.data
     const activo = body.activo !== undefined ? body.activo : true
 
     // Solo un ADMIN puede crear otro ADMIN
@@ -145,6 +145,8 @@ export async function POST(request: NextRequest) {
         usuario: username.trim(),
         password: hashedPassword,
         rol,
+        // Solo los empleados operativos llevan sucursal
+        sucursalId: rol === 'ENCARGADO' || rol === 'LAVADOR' ? sucursalId || null : null,
         activo: activo !== undefined ? activo : true,
       },
       select: {
@@ -152,6 +154,7 @@ export async function POST(request: NextRequest) {
         nombre: true,
         usuario: true,
         rol: true,
+        sucursalId: true,
         activo: true,
         createdAt: true,
       },

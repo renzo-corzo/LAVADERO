@@ -25,6 +25,7 @@ const menuItems: MenuItem[] = [
   { href: '/caja', label: 'Caja', icon: '💰', roles: ['DUENO', 'ENCARGADO'] },
   // Comisiones oculto: el negocio usa sueldo fijo (páginas y API siguen existiendo).
   { href: '/reportes', label: 'Reportes', icon: '📈', roles: ['DUENO', 'ENCARGADO'] },
+  { href: '/sucursales', label: 'Sucursales', icon: '🏬', roles: ['DUENO'] },
   { href: '/usuarios', label: 'Usuarios', icon: '👤', roles: ['DUENO'] },
 ]
 

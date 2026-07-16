@@ -33,6 +33,7 @@ export async function GET(
         nombre: true,
         usuario: true,
         rol: true,
+        sucursalId: true,
         activo: true,
         createdAt: true,
         updatedAt: true,
@@ -73,7 +74,7 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const { nombre, usuario: username, rol, activo } = body
+    const { nombre, usuario: username, rol, activo, sucursalId } = body
 
     // Validaciones
     if (!nombre || !username || !rol) {
@@ -138,6 +139,8 @@ export async function PUT(
         nombre: nombre.trim(),
         usuario: username.trim(),
         rol,
+        // Solo los empleados operativos llevan sucursal
+        sucursalId: rol === 'ENCARGADO' || rol === 'LAVADOR' ? sucursalId || null : null,
         activo: activo !== undefined ? activo : usuarioExistente.activo,
       },
       select: {
@@ -145,6 +148,7 @@ export async function PUT(
         nombre: true,
         usuario: true,
         rol: true,
+        sucursalId: true,
         activo: true,
         updatedAt: true,
       },
