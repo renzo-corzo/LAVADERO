@@ -8,7 +8,7 @@ databases:
 services:
   - type: web
     name: lavadero
-    env: node
+    runtime: node
     region: virginia
     plan: free
     buildCommand: npm install && npm run build
@@ -20,6 +20,11 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Zona horaria del negocio: toda la lógica de horarios/cierres del server
+      # (setHours, "hoy", "horario pasado") debe calcular en hora argentina,
+      # no en UTC (default de Render).
+      - key: TZ
+        value: America/Argentina/Buenos_Aires
       - key: NPM_CONFIG_PRODUCTION
         value: "false"
       # Render inyecta automáticamente la cadena de conexión de la base de arriba.
