@@ -38,6 +38,13 @@ export default withAuth(
       }
     }
 
+    // Panel de plataforma: solo ADMIN
+    if (path.startsWith('/empresas')) {
+      if (role !== 'ADMIN') {
+        return NextResponse.redirect(new URL('/tablero', req.url))
+      }
+    }
+
     // Configuración de comisiones: solo DUEÑO / ADMIN
     if (path.startsWith('/comisiones/configurar')) {
       if (role !== 'DUENO' && role !== 'ADMIN') {
@@ -86,6 +93,7 @@ export const config = {
     '/catalogos/:path*',
     '/usuarios/:path*',
     '/sucursales/:path*',
+    '/empresas/:path*',
     '/config/:path*',
     '/portal/:path*',
   ],

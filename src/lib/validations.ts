@@ -11,6 +11,19 @@ export const crearSucursalSchema = z.object({
   direccion: z.string().max(200).nullish().transform((v) => (v === '' ? undefined : v)),
 })
 
+// Schema para crear empresa (plataforma ADMIN): empresa + sucursales + dueño
+export const crearEmpresaSchema = z.object({
+  nombre: z.string().min(2, 'El nombre debe tener al menos 2 caracteres').max(80),
+  sucursales: z
+    .array(z.string().min(1, 'El nombre de la sucursal es obligatorio').max(60))
+    .min(1, 'Debe crear al menos una sucursal'),
+  dueno: z.object({
+    nombre: z.string().min(1, 'El nombre del dueño es obligatorio'),
+    usuario: z.string().min(3, 'El usuario debe tener al menos 3 caracteres'),
+    password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+  }),
+})
+
 // Schema para crear OT
 export const crearOTSchema = z.object({
   servicioId: z.string().min(1, 'El servicio es obligatorio'),

@@ -92,6 +92,18 @@ export const authOptions: NextAuthOptions = {
             return null
           }
 
+          // Si la empresa del usuario está desactivada, nadie de esa empresa entra
+          if (user.empresaId) {
+            const empresa = await prisma.empresa.findUnique({
+              where: { id: user.empresaId },
+              select: { activo: true },
+            })
+            if (!empresa?.activo) {
+              console.error('[AUTH] rechazo_login motivo=empresa_inactiva')
+              return null
+            }
+          }
+
           const isValidPassword = await compare(credentials.password, user.password)
 
           if (!isValidPassword) {

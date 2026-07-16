@@ -5,8 +5,8 @@
  * - Usuarios normales (DUEÑO/ENCARGADO/LAVADOR/CLIENTE): SIEMPRE su propia
  *   empresa (del JWT). Nunca pueden ver/tocar otra.
  * - ADMIN de plataforma: opera "en contexto" de una empresa indicada por el
- *   request (?empresaId= o header x-empresa-id); sin contexto = vista global
- *   (solo para pantallas de plataforma).
+ *   request (?empresaId=, header x-empresa-id o cookie empresa-contexto);
+ *   sin contexto = vista global (solo para pantallas de plataforma).
  */
 
 import type { Session } from 'next-auth'
@@ -27,6 +27,7 @@ export function empresaScope(session: Session, request?: NextRequest): EmpresaSc
     const param =
       request?.nextUrl.searchParams.get('empresaId')?.trim() ||
       request?.headers.get('x-empresa-id')?.trim() ||
+      request?.cookies.get('empresa-contexto')?.value?.trim() ||
       null
     return { empresaId: param, valido: true, esAdmin }
   }

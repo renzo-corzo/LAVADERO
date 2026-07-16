@@ -8,6 +8,7 @@ import { signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { useSucursales } from '@/lib/hooks/useSucursales'
 
 interface MenuItem {
   href: string
@@ -27,6 +28,8 @@ const menuItems: MenuItem[] = [
   { href: '/reportes', label: 'Reportes', icon: '📈', roles: ['DUENO', 'ENCARGADO'] },
   { href: '/sucursales', label: 'Sucursales', icon: '🏬', roles: ['DUENO'] },
   { href: '/usuarios', label: 'Usuarios', icon: '👤', roles: ['DUENO'] },
+  // Panel de plataforma: solo ADMIN (roles vacío + gate ADMIN del filtro)
+  { href: '/empresas', label: 'Empresas', icon: '🏢', roles: [] },
 ]
 
 export function Header() {
@@ -38,10 +41,18 @@ export function Header() {
   }
 
   const role = session?.user.role
+  const { sucursales } = useSucursales()
+
   // ADMIN ve todo el menú (súper-admin); el resto según su lista de roles.
-  const itemsFiltrados = menuItems.filter(
-    (item) => !!role && (role === 'ADMIN' || item.roles.includes(role))
-  )
+  // "Sucursales" solo aparece para DUEÑO si su empresa tiene más de una
+  // (con una sola sucursal la app se ve igual que siempre).
+  const itemsFiltrados = menuItems.filter((item) => {
+    if (!role) return false
+    if (role === 'ADMIN') return true
+    if (!item.roles.includes(role)) return false
+    if (item.href === '/sucursales') return sucursales.length > 1
+    return true
+  })
 
   return (
     <header className="bg-white/80 backdrop-blur border-b border-aqua-line sticky top-0 z-50">
