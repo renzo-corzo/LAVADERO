@@ -78,6 +78,18 @@ export async function PUT(
       )
     }
 
+    // La duración se carga en MINUTOS (tope 8 horas): evita errores de tipeo
+    // que bloquean todos los horarios del día.
+    if (duracionEstimada != null && duracionEstimada !== '') {
+      const dur = parseInt(duracionEstimada)
+      if (isNaN(dur) || dur <= 0 || dur > 480) {
+        return NextResponse.json(
+          { error: 'La duración se carga en minutos (entre 1 y 480, máx. 8 horas)' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Verificar que el nombre sea único (excepto el actual)
     const existente = await prisma.servicio.findUnique({
       where: { nombre },

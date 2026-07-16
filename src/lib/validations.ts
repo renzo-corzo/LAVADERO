@@ -101,11 +101,19 @@ export const registrarPagoSchema = z
     }
   })
 
+// La duración se carga en MINUTOS; tope sano para evitar errores de tipeo
+// (ej. cargar el precio en el campo de duración bloqueaba todos los horarios).
+const duracionMinutos = z
+  .number()
+  .int()
+  .positive()
+  .max(480, 'La duración se carga en minutos (máximo 480 = 8 horas)')
+
 // Schema para crear servicio
 export const crearServicioSchema = z.object({
   nombre: z.string().min(1, 'El nombre es obligatorio'),
   precio: z.number().positive('El precio debe ser positivo'),
-  duracionEstimada: z.number().int().positive().optional(),
+  duracionEstimada: duracionMinutos.optional(),
   tipoVehiculo: z.enum(['chico', 'mediano', 'camioneta']).optional(),
   descripcion: z.string().optional(),
 })
@@ -114,7 +122,7 @@ export const crearServicioSchema = z.object({
 export const crearExtraSchema = z.object({
   nombre: z.string().min(1, 'El nombre es obligatorio'),
   precio: z.number().positive('El precio debe ser positivo'),
-  duracionEstimada: z.number().int().positive().optional(),
+  duracionEstimada: duracionMinutos.optional(),
   descripcion: z.string().optional(),
 })
 
