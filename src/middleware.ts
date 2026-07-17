@@ -73,6 +73,7 @@ export default withAuth(
       path.startsWith('/caja') ||
       path.startsWith('/comisiones') ||
       path.startsWith('/reportes') ||
+      path.startsWith('/contactos') ||
       path.startsWith('/catalogos')
     ) {
       if (role === 'LAVADOR') {
@@ -106,6 +107,7 @@ export const config = {
     '/caja/:path*',
     '/comisiones/:path*',
     '/reportes/:path*',
+    '/contactos/:path*',
     '/catalogos/:path*',
     '/usuarios/:path*',
     '/sucursales/:path*',
