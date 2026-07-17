@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { empresaScope } from '@/lib/empresa'
 
 interface DisponibilidadRequest {
   servicioId: string
@@ -29,8 +30,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
     }
 
+    // Scoping multi-tenant: la disponibilidad se calcula por empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
     const body: DisponibilidadRequest = await request.json()
     const { servicioId, extrasIds = [], horarioDeseado, fechaIngreso, excludeOTId, clienteId } = body
+
+    // Capacidad por sucursal: usuarios con sucursal usan la suya; DUEÑO/ADMIN
+    // envían la elegida en el body. Sin sucursal resoluble no se filtra (compat).
+    const sucursalId =
+      session.user.sucursalId || (body as any).sucursalId?.trim?.() || null
 
     // Si es OT externa (cliente con trabajoExterno), no se valida horario
     if (clienteId) {
@@ -120,6 +132,8 @@ export async function POST(request: NextRequest) {
       estado: {
         in: ['EN_COLA', 'EN_PROCESO', 'LISTO'], // Solo OTs activas
       },
+      ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
+      ...(sucursalId ? { sucursalId } : {}),
     }
 
     if (excludeOTId) {

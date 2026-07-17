@@ -17,6 +17,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { formatCurrency, formatDateTime, formatHorarioDeseado, getTimeElapsed } from '@/lib/utils'
 import { linksWhatsAppOT, abrirWhatsApp } from '@/lib/whatsapp'
+import { useSucursales } from '@/lib/hooks/useSucursales'
 import type { OrdenTrabajo } from '@/types'
 
 interface OTsPorEstado {
@@ -34,6 +35,9 @@ export default function TableroPage() {
   const [mounted, setMounted] = useState(false) // Para evitar problemas de hidratación
   const queryClient = useQueryClient()
   const [mostrarExternas, setMostrarExternas] = useState(false)
+  // Sucursal: '' = todas (consolidado). Solo el dueño/admin puede elegir.
+  const { sucursales, puedeElegir } = useSucursales()
+  const [filtroSucursal, setFiltroSucursal] = useState<string>('')
   const [seleccionadasIds, setSeleccionadasIds] = useState<string[]>([])
   const [estadoLote, setEstadoLote] = useState<'EN_PROCESO' | 'LISTO' | 'ENTREGADO'>('LISTO')
   const [aplicandoLote, setAplicandoLote] = useState(false)
@@ -60,13 +64,14 @@ export default function TableroPage() {
     isFetching,
     refetch,
   } = useQuery<OrdenTrabajo[], Error & { status?: number }>({
-    queryKey: ['ots', { fecha: filtroFecha, externas: mostrarExternas }],
+    queryKey: ['ots', { fecha: filtroFecha, externas: mostrarExternas, sucursal: filtroSucursal }],
     enabled: consultaHabilitada,
     refetchInterval: consultaHabilitada ? 15_000 : false,
     queryFn: async () => {
       const params = new URLSearchParams()
       if (filtroFecha) params.append('fecha', filtroFecha)
       if (mostrarExternas) params.append('incluirExternas', 'true')
+      if (filtroSucursal) params.append('sucursalId', filtroSucursal)
 
       const response = await fetch(`/api/ots?${params.toString()}`, { cache: 'no-store' })
       if (!response.ok) {
@@ -411,6 +416,25 @@ export default function TableroPage() {
 
       <Card className="mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {puedeElegir && (
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1.5">
+                Sucursal
+              </label>
+              <select
+                value={filtroSucursal}
+                onChange={(e) => setFiltroSucursal(e.target.value)}
+                className="block w-full px-3.5 py-2.5 bg-white border border-aqua-line rounded-xl text-ink transition focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand"
+              >
+                <option value="">Todas las sucursales</option>
+                {sucursales.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-ink mb-1.5">
               Fecha

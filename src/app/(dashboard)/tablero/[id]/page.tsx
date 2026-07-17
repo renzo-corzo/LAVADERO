@@ -160,11 +160,14 @@ export default function OTDetallePage() {
           </h1>
         </div>
         <div className="flex gap-2">
-          {ot.estado !== 'ENTREGADO' && ot.estado !== 'CANCELADO' && (
-            <Link href={`/ots/${otId}/editar`}>
-              <Button variant="secondary">Editar OT</Button>
-            </Link>
-          )}
+          {/* Editable solo EN_COLA/EN_PROCESO, sin pagos y no siendo lavador */}
+          {!esLavador &&
+            (ot.estado === 'EN_COLA' || ot.estado === 'EN_PROCESO') &&
+            totalPagado === 0 && (
+              <Link href={`/ots/${otId}/editar`}>
+                <Button variant="secondary">✏️ Editar OT</Button>
+              </Link>
+            )}
         </div>
       </div>
 

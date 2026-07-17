@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { empresaScope } from '@/lib/empresa'
 import { crearFechaLocal } from '@/lib/utils-fechas'
 
 export const dynamic = 'force-dynamic'
@@ -23,10 +24,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
     }
 
+    // Scoping multi-tenant
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
     const searchParams = request.nextUrl.searchParams
     const fechaDesde = searchParams.get('fechaDesde')
     const fechaHasta = searchParams.get('fechaHasta')
     const clienteId = searchParams.get('clienteId') // Filtro por cliente
+    const sucursalIdParam = searchParams.get('sucursalId')?.trim() || null // Filtro por sucursal
 
     if (!fechaDesde || !fechaHasta) {
       return NextResponse.json(
@@ -48,6 +56,17 @@ export async function GET(request: NextRequest) {
         gte: desdeLocal,
         lte: hastaLocal,
       },
+    }
+
+    // Scoping por empresa
+    if (scope.empresaId) {
+      where.empresaId = scope.empresaId
+    }
+
+    // Filtro por sucursal: empleados anclados usan la suya; el resto elige
+    const sucursalFiltro = session.user.sucursalId || sucursalIdParam
+    if (sucursalFiltro) {
+      where.sucursalId = sucursalFiltro
     }
 
     // Agregar filtro por cliente si se especifica

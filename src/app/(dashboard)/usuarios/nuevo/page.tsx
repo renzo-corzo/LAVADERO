@@ -9,6 +9,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import { useSucursales } from '@/lib/hooks/useSucursales'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -20,14 +21,18 @@ export default function NuevoUsuarioPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const { sucursales } = useSucursales()
   const [formData, setFormData] = useState({
     nombre: '',
     usuario: '',
     password: '',
     confirmPassword: '',
     rol: '' as 'ADMIN' | 'DUENO' | 'ENCARGADO' | 'LAVADOR' | '',
+    sucursalId: '',
     activo: true,
   })
+
+  const esEmpleado = formData.rol === 'ENCARGADO' || formData.rol === 'LAVADOR'
 
   const rolOptions = [
     // El rol ADMIN solo lo puede asignar otro ADMIN
@@ -82,6 +87,8 @@ export default function NuevoUsuarioPage() {
           usuario: formData.usuario.trim(),
           password: formData.password,
           rol: formData.rol,
+          // Con una sola sucursal se asigna automáticamente
+          sucursalId: esEmpleado ? formData.sucursalId || sucursales[0]?.id || null : null,
           activo: formData.activo,
         }),
       })
@@ -166,6 +173,17 @@ export default function NuevoUsuarioPage() {
               required
               error={error && !formData.rol ? 'El rol es requerido' : undefined}
             />
+
+            {esEmpleado && sucursales.length > 1 && (
+              <Select
+                id="sucursalId"
+                label="Sucursal *"
+                value={formData.sucursalId}
+                onChange={(e) => setFormData({ ...formData, sucursalId: e.target.value })}
+                options={sucursales.map((s) => ({ value: s.id, label: s.nombre }))}
+                placeholder="Seleccionar sucursal"
+              />
+            )}
 
             <div className="flex items-center space-x-2">
               <input

@@ -60,19 +60,66 @@ enum TipoCliente {
 // MODELOS
 // ============================================
 
-model Usuario {
+// Empresa (tenant de la plataforma): cada lavadero-cliente es una Empresa.
+// El ADMIN de plataforma (empresaId null en Usuario) las administra todas.
+model Empresa {
   id        String   @id @default(cuid())
-  nombre    String
-  usuario   String   @unique // login username
-  password  String   // hash de contraseña
-  rol       UserRole
-  clienteId String?  // Si rol=CLIENTE, referencia a concesionaria (Cliente)
+  nombre    String   @unique
   activo    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  sucursales     Sucursal[]
+  usuarios       Usuario[]
+  clientes       Cliente[]
+  servicios      Servicio[]
+  extras         Extra[]
+  ordenesTrabajo OrdenTrabajo[]
+  cierres        CierreCaja[]
+
+  @@map("empresas")
+}
+
+// Sucursal del lavadero. Los negocios de una sola sede tienen la "Principal"
+// (creada por la migración/seed) y la UI oculta el selector.
+model Sucursal {
+  id        String   @id @default(cuid())
+  empresaId String
+  nombre    String
+  direccion String?
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  empresa        Empresa        @relation(fields: [empresaId], references: [id])
+  usuarios       Usuario[]
+  ordenesTrabajo OrdenTrabajo[]
+  cierres        CierreCaja[]
+  servicios      Servicio[]
+  extras         Extra[]
+
+  @@unique([empresaId, nombre])
+  @@index([empresaId])
+  @@map("sucursales")
+}
+
+model Usuario {
+  id         String   @id @default(cuid())
+  nombre     String
+  usuario    String   @unique // login username (único en toda la plataforma)
+  password   String   // hash de contraseña
+  rol        UserRole
+  empresaId  String?  // Empresa a la que pertenece; null SOLO para ADMIN de plataforma
+  clienteId  String?  // Si rol=CLIENTE, referencia a concesionaria (Cliente)
+  sucursalId String?  // ENCARGADO/LAVADOR pertenecen a una sucursal; DUENO null = todas las de su empresa
+  activo     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
   // Relaciones
+  empresa             Empresa?            @relation(fields: [empresaId], references: [id])
   cliente             Cliente?            @relation(fields: [clienteId], references: [id])
+  sucursal            Sucursal?           @relation(fields: [sucursalId], references: [id])
   otsCreadas          OrdenTrabajo[]       @relation("OTCreador")
   otsAsignadas        OrdenTrabajoEmpleado[]
   pagosRegistrados    Pago[]
@@ -85,45 +132,62 @@ model Usuario {
   auditoriaLogs       AuditoriaLog[]
 
   @@index([clienteId])
+  @@index([sucursalId])
+  @@index([empresaId])
   @@map("usuarios")
 }
 
 model Servicio {
   id              String        @id @default(cuid())
-  nombre          String        @unique
+  empresaId       String
+  nombre          String
   precio          Decimal       @db.Decimal(12, 2)
   duracionEstimada Int?         // en minutos
   tipoVehiculo    TipoVehiculo?
+  sucursalId      String?       // null = compartido entre todas las sucursales de la empresa
   activo          Boolean       @default(true)
   descripcion     String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
   // Relaciones
+  empresa         Empresa       @relation(fields: [empresaId], references: [id])
+  sucursal        Sucursal?     @relation(fields: [sucursalId], references: [id])
   ots             OrdenTrabajo[]
 
+  @@unique([empresaId, nombre])
+  @@index([empresaId])
+  @@index([sucursalId])
   @@map("servicios")
 }
 
 model Extra {
   id              String        @id @default(cuid())
-  nombre          String        @unique
+  empresaId       String
+  nombre          String
   precio          Decimal       @db.Decimal(12, 2)
   duracionEstimada Int?         // en minutos
+  sucursalId      String?       // null = compartido entre todas las sucursales de la empresa
   activo          Boolean       @default(true)
   descripcion     String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
   // Relaciones
+  empresa         Empresa       @relation(fields: [empresaId], references: [id])
+  sucursal        Sucursal?     @relation(fields: [sucursalId], references: [id])
   ots             OrdenTrabajoExtra[]
 
+  @@unique([empresaId, nombre])
+  @@index([empresaId])
+  @@index([sucursalId])
   @@map("extras")
 }
 
 model Cliente {
   id                  String      @id @default(cuid())
-  nombre              String      @unique
+  empresaId           String
+  nombre              String
   tipo                TipoCliente @default(WALK_IN)
   telefono            String?
   email               String?
@@ -139,9 +203,12 @@ model Cliente {
   updatedAt           DateTime    @updatedAt
 
   // Relaciones
+  empresa             Empresa     @relation(fields: [empresaId], references: [id])
   ordenesTrabajo      OrdenTrabajo[]
   portalUsuarios      Usuario[]
 
+  @@unique([empresaId, nombre])
+  @@index([empresaId])
   @@index([tipo])
   @@index([activo])
   @@index([prioridad])
@@ -160,6 +227,8 @@ model OrdenTrabajo {
   horarioDeseado      DateTime?   // Nuevo: horario en que quiere tenerlo listo
   esExterna           Boolean     @default(false) // OT fuera del lavadero: no ocupa turnos ni genera conflictos
   clienteId           String?     // Cliente fijo (concesionaria), null para walk-in
+  empresaId           String      // Empresa dueña de la OT (scoping multi-tenant)
+  sucursalId          String      // Sucursal donde se realiza la OT
   servicioId          String
   observaciones       String?
   estado              OTEstado    @default(EN_COLA)
@@ -172,6 +241,8 @@ model OrdenTrabajo {
 
   // Relaciones
   cliente             Cliente?            @relation(fields: [clienteId], references: [id])
+  empresa             Empresa             @relation(fields: [empresaId], references: [id])
+  sucursal            Sucursal            @relation(fields: [sucursalId], references: [id])
   servicio            Servicio            @relation(fields: [servicioId], references: [id])
   usuarioCreador      Usuario             @relation("OTCreador", fields: [usuarioCreadorId], references: [id])
   empleados           OrdenTrabajoEmpleado[]
@@ -185,6 +256,8 @@ model OrdenTrabajo {
   @@index([fechaIngreso])
   @@index([usuarioCreadorId])
   @@index([clienteId])
+  @@index([sucursalId])
+  @@index([empresaId])
   @@map("ordenes_trabajo")
 }
 
@@ -253,6 +326,7 @@ model Pago {
 
 model CierreCaja {
   id                String      @id @default(cuid())
+  empresaId         String      // Empresa dueña del cierre (scoping multi-tenant)
   fechaDesde        DateTime
   fechaHasta        DateTime
   fechaCierre       DateTime    @default(now())
@@ -260,15 +334,20 @@ model CierreCaja {
   totalTransferencia Decimal    @db.Decimal(12, 2)
   totalGeneral      Decimal     @db.Decimal(12, 2)
   observaciones     String?
+  sucursalId        String      // El cierre de caja es por sucursal
   usuarioId         String
   createdAt         DateTime    @default(now())
 
   // Relaciones
+  empresa           Empresa     @relation(fields: [empresaId], references: [id])
+  sucursal          Sucursal    @relation(fields: [sucursalId], references: [id])
   usuario           Usuario     @relation(fields: [usuarioId], references: [id])
   ots               CierreCajaOT[]
 
   @@index([fechaCierre])
   @@index([usuarioId])
+  @@index([sucursalId])
+  @@index([empresaId])
   @@map("cierres_caja")
 }
 

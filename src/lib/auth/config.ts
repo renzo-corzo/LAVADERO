@@ -92,6 +92,18 @@ export const authOptions: NextAuthOptions = {
             return null
           }
 
+          // Si la empresa del usuario está desactivada, nadie de esa empresa entra
+          if (user.empresaId) {
+            const empresa = await prisma.empresa.findUnique({
+              where: { id: user.empresaId },
+              select: { activo: true },
+            })
+            if (!empresa?.activo) {
+              console.error('[AUTH] rechazo_login motivo=empresa_inactiva')
+              return null
+            }
+          }
+
           const isValidPassword = await compare(credentials.password, user.password)
 
           if (!isValidPassword) {
@@ -107,7 +119,9 @@ export const authOptions: NextAuthOptions = {
             name: user.nombre,
             email: null, // No tenemos email en el modelo
             role: user.rol,
+            empresaId: user.empresaId ?? null,
             clienteId: user.clienteId ?? null,
+            sucursalId: user.sucursalId ?? null,
           }
         } catch (error) {
           // Solo propagamos errores controlados (rate limit, servicio no disponible)
@@ -124,7 +138,9 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         token.role = (user as any).role
+        token.empresaId = (user as any).empresaId ?? null
         token.clienteId = (user as any).clienteId ?? null
+        token.sucursalId = (user as any).sucursalId ?? null
       }
       return token
     },
@@ -132,7 +148,9 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id as string
         session.user.role = token.role as UserRole
+        session.user.empresaId = (token as any).empresaId ?? null
         session.user.clienteId = (token as any).clienteId ?? null
+        session.user.sucursalId = (token as any).sucursalId ?? null
       }
       return session
     },

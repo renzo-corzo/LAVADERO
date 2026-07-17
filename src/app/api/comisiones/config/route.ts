@@ -9,6 +9,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { empresaScope } from '@/lib/empresa'
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,12 +22,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
     }
 
+    // Scoping multi-tenant: configuraciones solo de empleados de la propia empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+    const filtroEmpleado = scope.empresaId ? { empleado: { empresaId: scope.empresaId } } : {}
+
     const empleadoId = request.nextUrl.searchParams.get('empleadoId')
 
     if (empleadoId) {
       // Obtener configuración de un empleado específico
-      const config = await prisma.configComision.findUnique({
-        where: { empleadoId },
+      const config = await prisma.configComision.findFirst({
+        where: { empleadoId, ...filtroEmpleado },
         include: { empleado: { select: { id: true, nombre: true, usuario: true } } },
       })
 
@@ -42,8 +50,9 @@ export async function GET(request: NextRequest) {
           : null,
       })
     } else {
-      // Obtener todas las configuraciones
+      // Obtener todas las configuraciones (de la empresa)
       const configs = await prisma.configComision.findMany({
+        where: { ...filtroEmpleado },
         include: { empleado: { select: { id: true, nombre: true, usuario: true } } },
         orderBy: { empleado: { nombre: 'asc' } },
       })
@@ -88,9 +97,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validar que el empleado existe
-    const empleado = await prisma.usuario.findUnique({
-      where: { id: empleadoId },
+    // Scoping multi-tenant: solo empleados de la propia empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
+    // Validar que el empleado existe (y es de la empresa)
+    const empleado = await prisma.usuario.findFirst({
+      where: {
+        id: empleadoId,
+        ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
+      },
     })
 
     if (!empleado) {

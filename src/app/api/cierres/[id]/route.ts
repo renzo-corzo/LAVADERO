@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { empresaScope } from '@/lib/empresa'
 
 export async function GET(
   request: NextRequest,
@@ -23,8 +24,17 @@ export async function GET(
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
     }
 
-    const cierre = await prisma.cierreCaja.findUnique({
-      where: { id: params.id },
+    // Scoping multi-tenant: solo cierres de la propia empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
+    const cierre = await prisma.cierreCaja.findFirst({
+      where: {
+        id: params.id,
+        ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
+      },
       include: {
         usuario: {
           select: {
@@ -56,13 +66,14 @@ export async function GET(
       )
     }
 
-    // Obtener pagos del período para el detalle
+    // Obtener pagos del período para el detalle (solo de la sucursal del cierre)
     const pagos = await prisma.pago.findMany({
       where: {
         fechaHora: {
           gte: cierre.fechaDesde,
           lte: cierre.fechaHasta,
         },
+        ordenTrabajo: { sucursalId: cierre.sucursalId },
       },
       include: {
         ordenTrabajo: {

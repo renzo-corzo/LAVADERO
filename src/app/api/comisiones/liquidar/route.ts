@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { empresaScope } from '@/lib/empresa'
 import { liquidarComisionesSchema } from '@/lib/validations'
 
 export async function POST(request: NextRequest) {
@@ -40,9 +41,18 @@ export async function POST(request: NextRequest) {
 
     const { empleadoId, fechaDesde, fechaHasta, comisionesIds } = validationResult.data
 
-    // Validar que el empleado existe
-    const empleado = await prisma.usuario.findUnique({
-      where: { id: empleadoId },
+    // Scoping multi-tenant: solo empleados de la propia empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
+    // Validar que el empleado existe (y es de la empresa)
+    const empleado = await prisma.usuario.findFirst({
+      where: {
+        id: empleadoId,
+        ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
+      },
     })
 
     if (!empleado) {

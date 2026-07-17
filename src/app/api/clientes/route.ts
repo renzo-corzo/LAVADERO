@@ -9,6 +9,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { empresaScope } from '@/lib/empresa'
 import { crearClienteSchema } from '@/lib/validations'
 
 // GET: Listar clientes
@@ -28,7 +29,16 @@ export async function GET(request: NextRequest) {
     const tipo = searchParams.get('tipo') // 'CONCESIONARIA' | 'WALK_IN' | null (todos)
     const activo = searchParams.get('activo') // 'true' | 'false' | null (todos)
 
+    // Scoping multi-tenant
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
     const where: any = {}
+    if (scope.empresaId) {
+      where.empresaId = scope.empresaId
+    }
     if (tipo) {
       where.tipo = tipo
     }
@@ -98,9 +108,21 @@ export async function POST(request: NextRequest) {
       observaciones,
     } = validationResult.data
 
-    // Verificar que no exista un cliente con el mismo nombre
+    // Scoping multi-tenant: el cliente pertenece a una empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+    if (!scope.empresaId) {
+      return NextResponse.json(
+        { error: 'Debe indicar la empresa (contexto de plataforma)' },
+        { status: 400 }
+      )
+    }
+
+    // Verificar que no exista un cliente con el mismo nombre en la empresa
     const clienteExistente = await prisma.cliente.findUnique({
-      where: { nombre: nombre.trim() },
+      where: { empresaId_nombre: { empresaId: scope.empresaId, nombre: nombre.trim() } },
     })
 
     if (clienteExistente) {
@@ -113,6 +135,7 @@ export async function POST(request: NextRequest) {
     // Crear cliente
     const cliente = await prisma.cliente.create({
       data: {
+        empresaId: scope.empresaId,
         nombre: nombre.trim(),
         tipo,
         telefono: telefono?.trim() || null,

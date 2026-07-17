@@ -32,9 +32,16 @@ export default withAuth(
     }
 
     // Rutas solo para DUENO / ADMIN
-    if (path.startsWith('/usuarios') || path.startsWith('/config')) {
+    if (path.startsWith('/usuarios') || path.startsWith('/config') || path.startsWith('/sucursales')) {
       if (role !== 'DUENO' && role !== 'ADMIN') {
         return NextResponse.redirect(new URL('/dashboard', req.url))
+      }
+    }
+
+    // Panel de plataforma: solo ADMIN
+    if (path.startsWith('/empresas')) {
+      if (role !== 'ADMIN') {
+        return NextResponse.redirect(new URL('/tablero', req.url))
       }
     }
 
@@ -85,6 +92,8 @@ export const config = {
     '/reportes/:path*',
     '/catalogos/:path*',
     '/usuarios/:path*',
+    '/sucursales/:path*',
+    '/empresas/:path*',
     '/config/:path*',
     '/portal/:path*',
   ],

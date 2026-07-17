@@ -16,6 +16,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Card } from '@/components/ui/Card'
 import { formatCurrency } from '@/lib/utils'
 import { linksWhatsAppOT } from '@/lib/whatsapp'
+import { useSucursales } from '@/lib/hooks/useSucursales'
 import type { Servicio, Extra, Usuario, Cliente } from '@/types'
 
 export default function NuevaOTPage() {
@@ -68,6 +69,22 @@ export default function NuevaOTPage() {
     justificacionPrecio: '',
     empleadosIds: [] as string[],
   })
+
+  // Sucursal donde se hace el trabajo
+  const { sucursales, sucursalPropia, puedeElegir } = useSucursales()
+  const [sucursalId, setSucursalId] = useState<string>('')
+
+  // Auto-seleccionar: la propia del empleado, o la primera activa (dueño/admin)
+  useEffect(() => {
+    if (sucursalPropia) {
+      setSucursalId(sucursalPropia)
+      return
+    }
+    if (!sucursalId && sucursales.length > 0) {
+      setSucursalId(sucursales[0].id)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sucursalPropia, sucursales])
 
   // Foto del vehículo
   const [fotoUrl, setFotoUrl] = useState<string>('')
@@ -297,6 +314,7 @@ export default function NuevaOTPage() {
           horarioDeseado: hoy.toISOString(),
           fechaIngreso: new Date().toISOString(),
           clienteId: formData.tipoCliente === 'FIJO' && formData.clienteId ? formData.clienteId : null,
+          sucursalId: sucursalId || null,
         }),
       })
 
@@ -373,6 +391,7 @@ export default function NuevaOTPage() {
         servicioId: formData.servicioId,
         extrasIds: formData.extrasIds.join(','),
         horaActual: JSON.stringify(horaLocalCliente), // Enviar hora local como JSON
+        ...(sucursalId ? { sucursalId } : {}), // capacidad por sucursal
       })
 
       console.log('[nueva-ot] Cargando horarios disponibles para HOY...', { fecha: fechaHoy, servicioId: formData.servicioId })
@@ -420,7 +439,7 @@ export default function NuevaOTPage() {
     }
   }
 
-  // Cargar horarios cuando se selecciona un servicio
+  // Cargar horarios cuando se selecciona un servicio (o cambia la sucursal)
   useEffect(() => {
     if (formData.servicioId) {
       cargarHorariosDisponibles()
@@ -428,7 +447,7 @@ export default function NuevaOTPage() {
       setHorariosDelDia(null)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.servicioId, formData.extrasIds.join(',')])
+  }, [formData.servicioId, formData.extrasIds.join(','), sucursalId])
 
   // Validar disponibilidad cuando cambia servicio, extras o horario
   useEffect(() => {
@@ -508,6 +527,7 @@ export default function NuevaOTPage() {
         body: JSON.stringify({
           ...formData,
           empleadosIds: formData.empleadosIds,
+          sucursalId: sucursalId || null,
           fotoUrl: fotoUrl || null,
           tipoVehiculo: formData.tipoVehiculo || null,
           clienteId: formData.tipoCliente === 'FIJO' && formData.clienteId ? formData.clienteId : null,
@@ -616,6 +636,20 @@ export default function NuevaOTPage() {
           <div className="lg:col-span-2 space-y-6">
             <Card title="Datos del Vehículo y Cliente">
               <div className="space-y-4">
+                {puedeElegir && (
+                  <Select
+                    label="Sucursal *"
+                    id="sucursalId"
+                    value={sucursalId}
+                    onChange={(e) => {
+                      setSucursalId(e.target.value)
+                      // Reset del horario: la disponibilidad depende de la sucursal
+                      setFormData((prev) => ({ ...prev, horarioDeseado: '' }))
+                    }}
+                    options={sucursales.map((s) => ({ value: s.id, label: s.nombre }))}
+                  />
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
                     label="Patente *"

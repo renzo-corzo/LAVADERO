@@ -9,6 +9,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { empresaScope } from '@/lib/empresa'
 import { crearUsuarioSchema } from '@/lib/validations'
 import bcrypt from 'bcryptjs'
 
@@ -38,7 +39,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Scoping multi-tenant: cada empresa ve solo sus usuarios
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
     const where: Record<string, unknown> = {}
+    if (scope.empresaId) {
+      where.empresaId = scope.empresaId
+    }
 
     if (rolParam) {
       // Los usuarios ADMIN solo los puede listar otro ADMIN
@@ -115,7 +125,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { nombre, usuario: username, password, rol } = validationResult.data
+    const { nombre, usuario: username, password, rol, sucursalId } = validationResult.data
     const activo = body.activo !== undefined ? body.activo : true
 
     // Solo un ADMIN puede crear otro ADMIN
@@ -123,6 +133,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Sin permisos para crear un usuario ADMIN' },
         { status: 403 }
+      )
+    }
+
+    // Scoping multi-tenant: el usuario nuevo pertenece a la empresa del creador
+    // (ADMIN de plataforma se crea sin empresa; el resto la necesita)
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+    const empresaIdNuevo = rol === 'ADMIN' ? null : scope.empresaId
+    if (rol !== 'ADMIN' && !empresaIdNuevo) {
+      return NextResponse.json(
+        { error: 'Debe indicar la empresa (contexto de plataforma)' },
+        { status: 400 }
       )
     }
 
@@ -137,6 +161,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // La sucursal asignada debe pertenecer a la misma empresa
+    const sucursalAsignada =
+      rol === 'ENCARGADO' || rol === 'LAVADOR' ? sucursalId || null : null
+    if (sucursalAsignada) {
+      const sucursalValida = await prisma.sucursal.findFirst({
+        where: { id: sucursalAsignada, empresaId: empresaIdNuevo! },
+        select: { id: true },
+      })
+      if (!sucursalValida) {
+        return NextResponse.json(
+          { error: 'La sucursal no pertenece a la empresa' },
+          { status: 400 }
+        )
+      }
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10)
 
     const nuevoUsuario = await prisma.usuario.create({
@@ -145,6 +185,9 @@ export async function POST(request: NextRequest) {
         usuario: username.trim(),
         password: hashedPassword,
         rol,
+        empresaId: empresaIdNuevo,
+        // Solo los empleados operativos llevan sucursal
+        sucursalId: sucursalAsignada,
         activo: activo !== undefined ? activo : true,
       },
       select: {
@@ -152,6 +195,7 @@ export async function POST(request: NextRequest) {
         nombre: true,
         usuario: true,
         rol: true,
+        sucursalId: true,
         activo: true,
         createdAt: true,
       },

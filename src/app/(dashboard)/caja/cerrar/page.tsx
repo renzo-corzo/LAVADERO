@@ -5,11 +5,12 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
+import { useSucursales } from '@/lib/hooks/useSucursales'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -38,16 +39,35 @@ export default function CerrarCajaPage() {
   const [resumen, setResumen] = useState<any>(null)
   const [cargandoResumen, setCargandoResumen] = useState(false)
 
+  // El cierre es POR SUCURSAL: la propia del empleado o la elegida por dueño/admin
+  const { sucursales, sucursalPropia, puedeElegir } = useSucursales()
+  const [sucursalId, setSucursalId] = useState<string>('')
+
+  useEffect(() => {
+    if (sucursalPropia) {
+      setSucursalId(sucursalPropia)
+      return
+    }
+    if (!sucursalId && sucursales.length > 0) {
+      setSucursalId(sucursales[0].id)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sucursalPropia, sucursales])
+
   const cargarResumen = async () => {
     if (!fechaDesde || !fechaHasta) {
       toast.error('Seleccione ambas fechas')
+      return
+    }
+    if (!sucursalId) {
+      toast.error('Seleccioná la sucursal del cierre')
       return
     }
 
     try {
       setCargandoResumen(true)
       const response = await fetch(
-        `/api/cierres/resumen?fechaDesde=${fechaDesde}&fechaHasta=${fechaHasta}`
+        `/api/cierres/resumen?fechaDesde=${fechaDesde}&fechaHasta=${fechaHasta}&sucursalId=${sucursalId}`
       )
       if (response.ok) {
         const data = await response.json()
@@ -91,6 +111,7 @@ export default function CerrarCajaPage() {
         body: JSON.stringify({
           fechaDesde,
           fechaHasta,
+          sucursalId,
           observaciones: observaciones.trim() || null,
         }),
       })
@@ -126,6 +147,27 @@ export default function CerrarCajaPage() {
       {/* Formulario de fechas */}
       <Card className="mb-6">
         <h2 className="text-lg font-bold mb-4">Período del Cierre</h2>
+        {puedeElegir && (
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-ink mb-1.5">Sucursal *</label>
+            <select
+              value={sucursalId}
+              onChange={(e) => {
+                setSucursalId(e.target.value)
+                // El resumen depende de la sucursal: se vuelve a pedir
+                setResumen(null)
+                setMostrandoResumen(false)
+              }}
+              className="block w-full px-3.5 py-2.5 bg-white border border-aqua-line rounded-xl text-ink transition focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand"
+            >
+              {sucursales.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">

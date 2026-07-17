@@ -33,6 +33,13 @@ async function main() {
     return
   }
 
+  // Sucursal para la OT de ejemplo (la primera activa, ej. "Principal")
+  const sucursal = await prisma.sucursal.findFirst({ where: { activo: true } })
+  if (!sucursal) {
+    console.error('❌ No hay sucursales. Aplicá las migraciones primero.')
+    return
+  }
+
   // Calcular total
   let total = Number(servicio.precio)
   extras.forEach((extra) => {
@@ -47,6 +54,8 @@ async function main() {
         patente: 'ABC123',
         tipoVehiculo: 'chico',
         descripcionVehiculo: 'Auto rojo, modelo 2020',
+        empresaId: sucursal.empresaId,
+        sucursalId: sucursal.id,
         servicioId: servicio.id,
         observaciones: 'OT de ejemplo para prueba',
         estado: 'EN_COLA',

@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { empresaScope } from '@/lib/empresa'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,11 +23,21 @@ export async function GET(request: NextRequest) {
     // Esto es necesario para que cualquier rol pueda visualizar la disponibilidad
     // incluso si no tiene permiso completo para crear OTs
 
+    // Scoping multi-tenant: la ocupación de horarios se calcula por empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
     const searchParams = request.nextUrl.searchParams
     const fecha = searchParams.get('fecha') // formato: YYYY-MM-DD o ISO string
     const servicioId = searchParams.get('servicioId')
     const extrasIds = searchParams.get('extrasIds')?.split(',') || []
     const excludeOTId = searchParams.get('excludeOTId')
+    // Capacidad por sucursal: usuarios con sucursal usan la suya; DUEÑO/ADMIN
+    // envían la elegida por query. Sin sucursal resoluble no se filtra (compat).
+    const sucursalId =
+      session.user.sucursalId || searchParams.get('sucursalId')?.trim() || null
     
     // IMPORTANTE: Obtener hora actual del cliente desde query params
     // El cliente envía un objeto JSON con componentes locales (año, mes, dia, hora, minuto)
@@ -143,6 +154,8 @@ export async function GET(request: NextRequest) {
       estado: {
         in: ['EN_COLA', 'EN_PROCESO', 'LISTO'],
       },
+      ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
+      ...(sucursalId ? { sucursalId } : {}),
     }
     
     console.log(`[horarios-disponibles] Buscando OTs en rango: ${fechaInicio.toISOString()} - ${fechaFin.toISOString()}`)

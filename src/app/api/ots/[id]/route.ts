@@ -9,6 +9,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { empresaScope } from '@/lib/empresa'
 import { canEditOT, calcularTotalOT } from '@/lib/reglas-negocio'
 import { editarOTSchema } from '@/lib/validations'
 
@@ -27,8 +28,17 @@ export async function GET(
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
     }
 
-    const ot = await prisma.ordenTrabajo.findUnique({
-      where: { id: params.id },
+    // Scoping multi-tenant: solo OTs de la propia empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
+    const ot = await prisma.ordenTrabajo.findFirst({
+      where: {
+        id: params.id,
+        ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
+      },
       include: {
         servicio: true,
         extras: {
@@ -110,9 +120,18 @@ export async function PUT(
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
     }
 
+    // Scoping multi-tenant: solo se puede editar una OT de la propia empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
     // Obtener OT actual
-    const otActual = await prisma.ordenTrabajo.findUnique({
-      where: { id: params.id },
+    const otActual = await prisma.ordenTrabajo.findFirst({
+      where: {
+        id: params.id,
+        ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
+      },
     })
 
     if (!otActual) {
@@ -126,6 +145,18 @@ export async function PUT(
     if (!canEditOT(otActual.estado)) {
       return NextResponse.json(
         { error: 'Solo se pueden editar OTs en estado EN_COLA o EN_PROCESO' },
+        { status: 400 }
+      )
+    }
+
+    // Una OT con pagos registrados NO se puede editar: el precio ya se cobró
+    // (total o parcialmente) y modificarla rompería la caja.
+    const pagosExistentes = await prisma.pago.count({
+      where: { ordenTrabajoId: params.id },
+    })
+    if (pagosExistentes > 0) {
+      return NextResponse.json(
+        { error: 'No se puede editar una OT que ya tiene pagos registrados' },
         { status: 400 }
       )
     }
@@ -182,8 +213,8 @@ export async function PUT(
       )
     }
 
-    const servicio = await prisma.servicio.findUnique({
-      where: { id: servicioId },
+    const servicio = await prisma.servicio.findFirst({
+      where: { id: servicioId, empresaId: otActual.empresaId },
     })
 
     if (!servicio || !servicio.activo) {
@@ -199,6 +230,7 @@ export async function PUT(
         where: {
           id: { in: extrasIds },
           activo: true,
+          empresaId: otActual.empresaId,
         },
       })
 
@@ -218,6 +250,47 @@ export async function PUT(
       cliente,
       precioAjustado,
     })
+
+    // Auditoría: registrar SOLO los campos que cambiaron, con antes → después
+    const extrasAnteriores = await prisma.ordenTrabajoExtra.findMany({
+      where: { ordenTrabajoId: params.id },
+      select: { extraId: true },
+    })
+    const nuevoHorario = esExterna ? null : (horarioDeseado ?? null)
+    const valoresNuevos: Record<string, unknown> = {
+      patente: patente.trim(),
+      tipoVehiculo: tipoVehiculo || null,
+      descripcionVehiculo: descripcionVehiculo?.trim() || null,
+      nombreCliente: nombreCliente.trim(),
+      telefonoCliente: telefonoCliente.trim(),
+      horarioDeseado: nuevoHorario ? new Date(nuevoHorario).toISOString() : null,
+      servicioId,
+      observaciones: observaciones || null,
+      total,
+      precioAjustado: precioAjustado ?? null,
+      justificacionPrecio: justificacionPrecio || null,
+      extrasIds: [...extrasIds].sort(),
+    }
+    const valoresAnteriores: Record<string, unknown> = {
+      patente: otActual.patente,
+      tipoVehiculo: otActual.tipoVehiculo,
+      descripcionVehiculo: otActual.descripcionVehiculo,
+      nombreCliente: otActual.nombreCliente,
+      telefonoCliente: otActual.telefonoCliente,
+      horarioDeseado: otActual.horarioDeseado ? otActual.horarioDeseado.toISOString() : null,
+      servicioId: otActual.servicioId,
+      observaciones: otActual.observaciones,
+      total: Number(otActual.total),
+      precioAjustado: otActual.precioAjustado ? Number(otActual.precioAjustado) : null,
+      justificacionPrecio: otActual.justificacionPrecio,
+      extrasIds: extrasAnteriores.map((e) => e.extraId).sort(),
+    }
+    const cambios: Record<string, { antes: unknown; despues: unknown }> = {}
+    for (const campo of Object.keys(valoresNuevos)) {
+      if (JSON.stringify(valoresAnteriores[campo]) !== JSON.stringify(valoresNuevos[campo])) {
+        cambios[campo] = { antes: valoresAnteriores[campo], despues: valoresNuevos[campo] }
+      }
+    }
 
     // Actualizar OT con transacción
     const ot = await prisma.$transaction(async (tx) => {
@@ -258,7 +331,7 @@ export async function PUT(
         },
       })
 
-      // Registrar en log de auditoría
+      // Registrar en log de auditoría: quién editó y qué cambió (antes → después)
       await tx.auditoriaLog.create({
         data: {
           usuarioId: session.user.id,
@@ -266,8 +339,8 @@ export async function PUT(
           entidad: 'OrdenTrabajo',
           entidadId: params.id,
           datos: JSON.stringify({
-            servicioId,
-            total,
+            patente: otActual.patente,
+            cambios,
           }),
         },
       })

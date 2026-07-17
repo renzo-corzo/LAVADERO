@@ -11,6 +11,7 @@ import { Prisma } from '@prisma/client'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { empresaScope } from '@/lib/empresa'
 
 // GET: Obtener cliente por ID
 export async function GET(
@@ -27,8 +28,17 @@ export async function GET(
       return NextResponse.json({ error: 'No tienes permisos para ver clientes' }, { status: 403 })
     }
 
-    const cliente = await prisma.cliente.findUnique({
-      where: { id: params.id },
+    // Scoping multi-tenant: solo clientes de la propia empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
+    const cliente = await prisma.cliente.findFirst({
+      where: {
+        id: params.id,
+        ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
+      },
     })
 
     if (!cliente) {
@@ -60,8 +70,17 @@ export async function PUT(
       return NextResponse.json({ error: 'No tienes permisos para editar clientes' }, { status: 403 })
     }
 
-    const clienteExistente = await prisma.cliente.findUnique({
-      where: { id: params.id },
+    // Scoping multi-tenant: solo se puede editar un cliente de la propia empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
+    const clienteExistente = await prisma.cliente.findFirst({
+      where: {
+        id: params.id,
+        ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
+      },
     })
 
     if (!clienteExistente) {
@@ -102,10 +121,15 @@ export async function PUT(
       )
     }
 
-    // Verificar que no exista otro cliente con el mismo nombre (si se está cambiando)
+    // Verificar que no exista otro cliente con el mismo nombre en la empresa
     if (nombre && nombre.trim() !== clienteExistente.nombre) {
       const clienteConMismoNombre = await prisma.cliente.findUnique({
-        where: { nombre: nombre.trim() },
+        where: {
+          empresaId_nombre: {
+            empresaId: clienteExistente.empresaId,
+            nombre: nombre.trim(),
+          },
+        },
       })
 
       if (clienteConMismoNombre) {
@@ -190,8 +214,17 @@ export async function DELETE(
       return NextResponse.json({ error: 'No tienes permisos para eliminar clientes' }, { status: 403 })
     }
 
-    const cliente = await prisma.cliente.findUnique({
-      where: { id: params.id },
+    // Scoping multi-tenant: solo se puede eliminar un cliente de la propia empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
+    const cliente = await prisma.cliente.findFirst({
+      where: {
+        id: params.id,
+        ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
+      },
       include: {
         ordenesTrabajo: {
           where: {

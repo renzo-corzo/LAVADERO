@@ -14,6 +14,7 @@ import { Select } from '@/components/ui/Select'
 import { formatCurrency } from '@/lib/utils'
 import { obtenerFechaLocal } from '@/lib/utils-fechas'
 import { useSession } from 'next-auth/react'
+import { useSucursales } from '@/lib/hooks/useSucursales'
 
 type TipoReporte = 'ventas' | 'comisiones' | 'metricas' | null
 
@@ -34,6 +35,10 @@ export default function ReportesPage() {
   const [clienteId, setClienteId] = useState<string>('')
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [loadingClientes, setLoadingClientes] = useState(false)
+
+  // Filtro por sucursal: el dueño puede ver todo consolidado o una sola
+  const { sucursales, puedeElegir } = useSucursales()
+  const [sucursalId, setSucursalId] = useState<string>('')
 
   // Cargar clientes
   useEffect(() => {
@@ -77,6 +82,19 @@ export default function ReportesPage() {
       <Card className="mb-6">
         <h2 className="text-lg font-bold mb-4">Filtros del Reporte</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {puedeElegir && (
+            <div>
+              <Select
+                label="Sucursal"
+                value={sucursalId}
+                onChange={(e) => setSucursalId(e.target.value)}
+                options={[
+                  { value: '', label: 'Todas las sucursales' },
+                  ...sucursales.map((s) => ({ value: s.id, label: s.nombre })),
+                ]}
+              />
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Desde</label>
             <Input
@@ -119,6 +137,7 @@ export default function ReportesPage() {
                 setFechaDesde(obtenerFechaLocal(haceUnMes))
                 setFechaHasta(obtenerFechaLocal(hoy))
                 setClienteId('')
+                setSucursalId('')
               }}
             >
               Resetear Filtros
@@ -167,7 +186,7 @@ export default function ReportesPage() {
                   ✕ Cerrar
                 </Button>
               </div>
-              <ReporteVentas fechaDesde={fechaDesde} fechaHasta={fechaHasta} clienteId={clienteId || undefined} />
+              <ReporteVentas fechaDesde={fechaDesde} fechaHasta={fechaHasta} clienteId={clienteId || undefined} sucursalId={sucursalId || undefined} />
             </Card>
           )}
 
@@ -179,7 +198,7 @@ export default function ReportesPage() {
                   ✕ Cerrar
                 </Button>
               </div>
-              <ReporteMetricas fechaDesde={fechaDesde} fechaHasta={fechaHasta} clienteId={clienteId || undefined} />
+              <ReporteMetricas fechaDesde={fechaDesde} fechaHasta={fechaHasta} clienteId={clienteId || undefined} sucursalId={sucursalId || undefined} />
             </Card>
           )}
         </div>
@@ -189,13 +208,13 @@ export default function ReportesPage() {
 }
 
 // Componente de Reporte de Ventas
-function ReporteVentas({ fechaDesde, fechaHasta, clienteId }: { fechaDesde: string; fechaHasta: string; clienteId?: string }) {
+function ReporteVentas({ fechaDesde, fechaHasta, clienteId, sucursalId }: { fechaDesde: string; fechaHasta: string; clienteId?: string; sucursalId?: string }) {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<any>(null)
 
   useEffect(() => {
     cargarDatos()
-  }, [fechaDesde, fechaHasta, clienteId])
+  }, [fechaDesde, fechaHasta, clienteId, sucursalId])
 
   const cargarDatos = async () => {
     try {
@@ -203,6 +222,9 @@ function ReporteVentas({ fechaDesde, fechaHasta, clienteId }: { fechaDesde: stri
       let url = `/api/reportes/ventas?fechaDesde=${fechaDesde}&fechaHasta=${fechaHasta}`
       if (clienteId) {
         url += `&clienteId=${clienteId}`
+      }
+      if (sucursalId) {
+        url += `&sucursalId=${sucursalId}`
       }
       console.log('[ReporteVentas] Cargando datos desde:', url)
       const response = await fetch(url)
@@ -556,17 +578,19 @@ function ReporteMetricas({
   fechaDesde,
   fechaHasta,
   clienteId,
+  sucursalId,
 }: {
   fechaDesde: string
   fechaHasta: string
   clienteId?: string
+  sucursalId?: string
 }) {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<any>(null)
 
   useEffect(() => {
     cargarDatos()
-  }, [fechaDesde, fechaHasta, clienteId])
+  }, [fechaDesde, fechaHasta, clienteId, sucursalId])
 
   const cargarDatos = async () => {
     try {
@@ -574,6 +598,9 @@ function ReporteMetricas({
       let url = `/api/reportes/metricas?fechaDesde=${fechaDesde}&fechaHasta=${fechaHasta}`
       if (clienteId) {
         url += `&clienteId=${clienteId}`
+      }
+      if (sucursalId) {
+        url += `&sucursalId=${sucursalId}`
       }
       const response = await fetch(url)
       if (response.ok) {

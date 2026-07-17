@@ -10,6 +10,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
+import { empresaScope } from '@/lib/empresa'
 
 export async function GET(
   request: NextRequest,
@@ -25,8 +26,17 @@ export async function GET(
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
     }
 
-    const servicio = await prisma.servicio.findUnique({
-      where: { id: params.id },
+    // Scoping multi-tenant: solo servicios de la propia empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+
+    const servicio = await prisma.servicio.findFirst({
+      where: {
+        id: params.id,
+        ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
+      },
     })
 
     if (!servicio) {
@@ -90,9 +100,24 @@ export async function PUT(
       }
     }
 
-    // Verificar que el nombre sea único (excepto el actual)
+    // Scoping multi-tenant: solo se puede editar un servicio de la propia empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+    const actual = await prisma.servicio.findFirst({
+      where: {
+        id: params.id,
+        ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
+      },
+    })
+    if (!actual) {
+      return NextResponse.json({ error: 'Servicio no encontrado' }, { status: 404 })
+    }
+
+    // Verificar que el nombre sea único dentro de la empresa (excepto el actual)
     const existente = await prisma.servicio.findUnique({
-      where: { nombre },
+      where: { empresaId_nombre: { empresaId: actual.empresaId, nombre } },
     })
 
     if (existente && existente.id !== params.id) {
@@ -136,6 +161,22 @@ export async function DELETE(
 
     if (!hasPermission(session.user.role, 'servicio:manage')) {
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
+    }
+
+    // Scoping multi-tenant: solo se puede desactivar un servicio de la propia empresa
+    const scope = empresaScope(session, request)
+    if (!scope.valido) {
+      return NextResponse.json({ error: 'Usuario sin empresa asignada' }, { status: 403 })
+    }
+    const actual = await prisma.servicio.findFirst({
+      where: {
+        id: params.id,
+        ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
+      },
+      select: { id: true },
+    })
+    if (!actual) {
+      return NextResponse.json({ error: 'Servicio no encontrado' }, { status: 404 })
     }
 
     // Soft delete: desactivar en lugar de eliminar

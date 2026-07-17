@@ -5,6 +5,25 @@
 
 import { z } from 'zod'
 
+// Schema para crear/editar sucursal
+export const crearSucursalSchema = z.object({
+  nombre: z.string().min(1, 'El nombre es obligatorio').max(60),
+  direccion: z.string().max(200).nullish().transform((v) => (v === '' ? undefined : v)),
+})
+
+// Schema para crear empresa (plataforma ADMIN): empresa + sucursales + dueño
+export const crearEmpresaSchema = z.object({
+  nombre: z.string().min(2, 'El nombre debe tener al menos 2 caracteres').max(80),
+  sucursales: z
+    .array(z.string().min(1, 'El nombre de la sucursal es obligatorio').max(60))
+    .min(1, 'Debe crear al menos una sucursal'),
+  dueno: z.object({
+    nombre: z.string().min(1, 'El nombre del dueño es obligatorio'),
+    usuario: z.string().min(3, 'El usuario debe tener al menos 3 caracteres'),
+    password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+  }),
+})
+
 // Schema para crear OT
 export const crearOTSchema = z.object({
   servicioId: z.string().min(1, 'El servicio es obligatorio'),
@@ -13,7 +32,7 @@ export const crearOTSchema = z.object({
   empleadosIds: z.array(z.string().min(1)).default([]),
   patente: z.string().min(1, 'La patente es obligatoria').max(10).trim(),
   tipoVehiculo: z.enum(['chico', 'mediano', 'camioneta']).nullish(),
-  descripcionVehiculo: z.string().optional().or(z.literal('')),
+  descripcionVehiculo: z.string().nullish().transform((v) => (v === '' ? undefined : v ?? undefined)),
   // Ruta relativa devuelta por /api/ots/foto (ej. /uploads/ots/xxxx.jpg)
   fotoUrl: z.string().nullish().transform((v) => (v === '' ? undefined : v)),
   nombreCliente: z.string().min(1, 'El nombre del cliente es obligatorio').trim(),
@@ -32,7 +51,10 @@ export const crearOTSchema = z.object({
       return val
     }),
   clienteId: z.string().nullish().transform((v) => (v === '' ? undefined : v)),
-  observaciones: z.string().optional().or(z.literal('')),
+  // Sucursal donde se hace el trabajo. Si el usuario tiene sucursal asignada,
+  // el servidor la fuerza; si no (DUEÑO/ADMIN), debe venir en el body.
+  sucursalId: z.string().nullish().transform((v) => (v === '' ? undefined : v)),
+  observaciones: z.string().nullish().transform((v) => (v === '' ? undefined : v ?? undefined)),
   precioAjustado: z.number().positive().nullish(),
   justificacionPrecio: z.string().nullish().transform((v) => (v === '' ? undefined : v)),
 })
@@ -150,6 +172,8 @@ export const crearUsuarioSchema = z.object({
   usuario: z.string().min(3, 'El usuario debe tener al menos 3 caracteres'),
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
   rol: z.enum(['ADMIN', 'DUENO', 'ENCARGADO', 'LAVADOR', 'CLIENTE']),
+  // Sucursal del empleado (ENCARGADO/LAVADOR); ADMIN/DUENO sin sucursal = todas
+  sucursalId: z.string().nullish().transform((v) => (v === '' ? undefined : v)),
 })
 
 // Schema para configurar comisión
