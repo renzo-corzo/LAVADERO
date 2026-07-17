@@ -9,19 +9,29 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import { useQuery } from '@tanstack/react-query'
 import { useSucursales } from '@/lib/hooks/useSucursales'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 
+interface EmpresaOption {
+  id: string
+  nombre: string
+  activo: boolean
+  sucursales: { id: string; nombre: string; activo: boolean }[]
+}
+
 export default function NuevoUsuarioPage() {
   const router = useRouter()
   const { data: session } = useSession()
+  const esAdmin = session?.user.role === 'ADMIN'
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { sucursales } = useSucursales()
+  const { sucursales: sucursalesPropias } = useSucursales()
+  const [empresaId, setEmpresaId] = useState('')
   const [formData, setFormData] = useState({
     nombre: '',
     usuario: '',
@@ -32,7 +42,26 @@ export default function NuevoUsuarioPage() {
     activo: true,
   })
 
+  // El ADMIN debe elegir a qué empresa pertenece el usuario nuevo
+  const { data: empresas = [] } = useQuery<EmpresaOption[]>({
+    queryKey: ['empresas-admin'],
+    enabled: esAdmin,
+    queryFn: async () => {
+      const res = await fetch('/api/empresas')
+      if (!res.ok) throw new Error('Error al cargar empresas')
+      return (await res.json()) as EmpresaOption[]
+    },
+  })
+
   const esEmpleado = formData.rol === 'ENCARGADO' || formData.rol === 'LAVADOR'
+  const creaAdmin = formData.rol === 'ADMIN'
+
+  // Sucursales para asignar al empleado: las de la empresa elegida (ADMIN)
+  // o las de la propia empresa (DUEÑO)
+  const empresaElegida = empresas.find((e) => e.id === empresaId)
+  const sucursales = esAdmin
+    ? (empresaElegida?.sucursales || []).filter((s) => s.activo)
+    : sucursalesPropias
 
   const rolOptions = [
     // El rol ADMIN solo lo puede asignar otro ADMIN
@@ -77,9 +106,20 @@ export default function NuevoUsuarioPage() {
       return
     }
 
+    // El ADMIN debe indicar la empresa (salvo que cree otro ADMIN de plataforma)
+    if (esAdmin && !creaAdmin && !empresaId) {
+      setError('Seleccioná la empresa a la que pertenece el usuario')
+      return
+    }
+
     try {
       setLoading(true)
-      const response = await fetch('/api/usuarios', {
+      // La empresa del usuario nuevo viaja como contexto (?empresaId=)
+      const url =
+        esAdmin && !creaAdmin && empresaId
+          ? `/api/usuarios?empresaId=${encodeURIComponent(empresaId)}`
+          : '/api/usuarios'
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -173,6 +213,26 @@ export default function NuevoUsuarioPage() {
               required
               error={error && !formData.rol ? 'El rol es requerido' : undefined}
             />
+
+            {/* El ADMIN elige la empresa del usuario (los ADMIN de plataforma no tienen) */}
+            {esAdmin && !creaAdmin && (
+              <Select
+                id="empresaId"
+                label="Empresa *"
+                value={empresaId}
+                onChange={(e) => {
+                  setEmpresaId(e.target.value)
+                  // La sucursal depende de la empresa elegida
+                  setFormData((prev) => ({ ...prev, sucursalId: '' }))
+                }}
+                options={empresas
+                  .filter((emp) => emp.activo)
+                  .map((emp) => ({ value: emp.id, label: emp.nombre }))}
+                placeholder="Seleccionar empresa"
+                required
+                error={error && !empresaId ? 'La empresa es requerida' : undefined}
+              />
+            )}
 
             {esEmpleado && sucursales.length > 1 && (
               <Select
