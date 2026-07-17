@@ -17,9 +17,10 @@ CREATE TABLE "empresas" (
 
 CREATE UNIQUE INDEX "empresas_nombre_key" ON "empresas"("nombre");
 
--- Empresa por defecto para instalaciones existentes (renombrable desde el panel)
+-- Empresa por defecto: la instalación existente (Gastón) pasa a ser el primer
+-- tenant de la plataforma. Renombrable desde el panel /empresas.
 INSERT INTO "empresas" ("id", "nombre", "activo", "createdAt", "updatedAt")
-VALUES ('emp_default', 'Mi Lavadero', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+VALUES ('emp_default', 'TurboCar Detail', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 -- ---------- sucursales ----------
 ALTER TABLE "sucursales" ADD COLUMN "empresaId" TEXT;
