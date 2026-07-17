@@ -32,7 +32,7 @@ export const crearOTSchema = z.object({
   empleadosIds: z.array(z.string().min(1)).default([]),
   patente: z.string().min(1, 'La patente es obligatoria').max(10).trim(),
   tipoVehiculo: z.enum(['chico', 'mediano', 'camioneta']).nullish(),
-  descripcionVehiculo: z.string().optional().or(z.literal('')),
+  descripcionVehiculo: z.string().nullish().transform((v) => (v === '' ? undefined : v ?? undefined)),
   // Ruta relativa devuelta por /api/ots/foto (ej. /uploads/ots/xxxx.jpg)
   fotoUrl: z.string().nullish().transform((v) => (v === '' ? undefined : v)),
   nombreCliente: z.string().min(1, 'El nombre del cliente es obligatorio').trim(),
@@ -54,7 +54,7 @@ export const crearOTSchema = z.object({
   // Sucursal donde se hace el trabajo. Si el usuario tiene sucursal asignada,
   // el servidor la fuerza; si no (DUEÑO/ADMIN), debe venir en el body.
   sucursalId: z.string().nullish().transform((v) => (v === '' ? undefined : v)),
-  observaciones: z.string().optional().or(z.literal('')),
+  observaciones: z.string().nullish().transform((v) => (v === '' ? undefined : v ?? undefined)),
   precioAjustado: z.number().positive().nullish(),
   justificacionPrecio: z.string().nullish().transform((v) => (v === '' ? undefined : v)),
 })
