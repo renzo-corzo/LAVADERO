@@ -10,6 +10,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
@@ -29,6 +30,7 @@ interface BloqueHorario {
 export default function EditarOTPage() {
   const params = useParams()
   const router = useRouter()
+  const queryClient = useQueryClient()
   const otId = params.id as string
 
   const [cargando, setCargando] = useState(true)
@@ -225,6 +227,9 @@ export default function EditarOTPage() {
       })
       const data = await res.json()
       if (res.ok) {
+        // Refrescar el cache: detalle de esta OT y listado del tablero
+        await queryClient.invalidateQueries({ queryKey: ['ot', otId] })
+        queryClient.invalidateQueries({ queryKey: ['ots'] })
         toast.success('OT actualizada. El cambio quedó registrado en auditoría.')
         router.push(`/tablero/${otId}`)
       } else {
