@@ -10,7 +10,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
-import { hasPermission } from '@/lib/auth'
 import { empresaScope } from '@/lib/empresa'
 
 export const dynamic = 'force-dynamic'
@@ -37,8 +36,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    // Mismos permisos que ver clientes/reportes (DUEÑO/ENCARGADO/ADMIN)
-    if (!hasPermission(session.user.role, 'usuario:view')) {
+    // Los contactos para campañas son solo del DUEÑO
+    if (session.user.role !== 'DUENO') {
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
     }
 

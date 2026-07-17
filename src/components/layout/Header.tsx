@@ -25,7 +25,7 @@ const menuItems: MenuItem[] = [
   { href: '/ots/nueva', label: 'Nueva OT', icon: '＋', roles: ['DUENO', 'ENCARGADO'], destacado: true },
   { href: '/catalogos', label: 'Catálogos', icon: '📚', roles: ['DUENO', 'ENCARGADO'] },
   { href: '/clientes', label: 'Clientes', icon: '👥', roles: ['DUENO', 'ENCARGADO'] },
-  { href: '/contactos', label: 'Contactos', icon: '📇', roles: ['DUENO', 'ENCARGADO', 'ADMIN'] },
+  { href: '/contactos', label: 'Contactos', icon: '📇', roles: ['DUENO'] },
   { href: '/caja', label: 'Caja', icon: '💰', roles: ['DUENO', 'ENCARGADO'] },
   // Comisiones oculto: el negocio usa sueldo fijo (páginas y API siguen existiendo).
   { href: '/reportes', label: 'Reportes', icon: '📈', roles: ['DUENO', 'ENCARGADO', 'ADMIN'] },
