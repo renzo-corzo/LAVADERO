@@ -18,6 +18,8 @@ interface MenuItem {
   destacado?: boolean
 }
 
+// El ADMIN de plataforma administra (empresas, usuarios, reportes) pero NO
+// opera el lavadero: sin tablero, OTs, catálogos, clientes ni caja.
 const menuItems: MenuItem[] = [
   { href: '/tablero', label: 'Tablero', icon: '▦', roles: ['DUENO', 'ENCARGADO'] },
   { href: '/ots/nueva', label: 'Nueva OT', icon: '＋', roles: ['DUENO', 'ENCARGADO'], destacado: true },
@@ -25,11 +27,10 @@ const menuItems: MenuItem[] = [
   { href: '/clientes', label: 'Clientes', icon: '👥', roles: ['DUENO', 'ENCARGADO'] },
   { href: '/caja', label: 'Caja', icon: '💰', roles: ['DUENO', 'ENCARGADO'] },
   // Comisiones oculto: el negocio usa sueldo fijo (páginas y API siguen existiendo).
-  { href: '/reportes', label: 'Reportes', icon: '📈', roles: ['DUENO', 'ENCARGADO'] },
-  { href: '/sucursales', label: 'Sucursales', icon: '🏬', roles: ['DUENO'] },
-  { href: '/usuarios', label: 'Usuarios', icon: '👤', roles: ['DUENO'] },
-  // Panel de plataforma: solo ADMIN (roles vacío + gate ADMIN del filtro)
-  { href: '/empresas', label: 'Empresas', icon: '🏢', roles: [] },
+  { href: '/reportes', label: 'Reportes', icon: '📈', roles: ['DUENO', 'ENCARGADO', 'ADMIN'] },
+  { href: '/sucursales', label: 'Sucursales', icon: '🏬', roles: ['DUENO', 'ADMIN'] },
+  { href: '/usuarios', label: 'Usuarios', icon: '👤', roles: ['DUENO', 'ADMIN'] },
+  { href: '/empresas', label: 'Empresas', icon: '🏢', roles: ['ADMIN'] },
 ]
 
 export function Header() {
@@ -43,16 +44,17 @@ export function Header() {
   const role = session?.user.role
   const { sucursales } = useSucursales()
 
-  // ADMIN ve todo el menú (súper-admin); el resto según su lista de roles.
-  // "Sucursales" solo aparece para DUEÑO si su empresa tiene más de una
-  // (con una sola sucursal la app se ve igual que siempre).
+  // Cada rol ve solo su lista. "Sucursales" solo aparece para DUEÑO si su
+  // empresa tiene más de una (con una sola la app se ve igual que siempre).
   const itemsFiltrados = menuItems.filter((item) => {
     if (!role) return false
-    if (role === 'ADMIN') return true
     if (!item.roles.includes(role)) return false
-    if (item.href === '/sucursales') return sucursales.length > 1
+    if (item.href === '/sucursales' && role === 'DUENO') return sucursales.length > 1
     return true
   })
+
+  // El "inicio" del ADMIN es el panel de plataforma, no el tablero
+  const homeHref = role === 'ADMIN' ? '/empresas' : '/tablero'
 
   return (
     <header className="bg-white/80 backdrop-blur border-b border-aqua-line sticky top-0 z-50">
@@ -60,15 +62,15 @@ export function Header() {
         {/* Barra superior */}
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center gap-3">
-            {/* Botón volver al menú (solo móvil vía CSS, y solo si no estás en /tablero) */}
-            {pathname !== '/tablero' && (
-              <Link href="/tablero" className="lg:hidden">
+            {/* Botón volver al menú (solo móvil vía CSS, y solo si no estás en el inicio) */}
+            {pathname !== homeHref && (
+              <Link href={homeHref} className="lg:hidden">
                 <Button variant="secondary" size="sm">
                   ← Menú
                 </Button>
               </Link>
             )}
-            <Link href="/tablero" className="flex items-center gap-2.5 font-extrabold text-ink">
+            <Link href={homeHref} className="flex items-center gap-2.5 font-extrabold text-ink">
               <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-teal to-brand-blue text-white grid place-items-center text-lg shadow-brand">
                 ≈
               </span>

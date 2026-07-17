@@ -17,12 +17,14 @@ interface Tab {
   destacado?: boolean
 }
 
+// El ADMIN de plataforma no opera el lavadero: solo Empresas y Reportes.
 const tabs: Tab[] = [
   { href: '/tablero', label: 'Tablero', icon: '▦', roles: ['DUENO', 'ENCARGADO', 'LAVADOR'] },
   { href: '/caja', label: 'Caja', icon: '💰', roles: ['DUENO', 'ENCARGADO'] },
   { href: '/ots/nueva', label: 'Nueva OT', icon: '＋', roles: ['DUENO', 'ENCARGADO'], destacado: true },
   { href: '/clientes', label: 'Clientes', icon: '👥', roles: ['DUENO', 'ENCARGADO'] },
-  { href: '/reportes', label: 'Reportes', icon: '📈', roles: ['DUENO', 'ENCARGADO'] },
+  { href: '/empresas', label: 'Empresas', icon: '🏢', roles: ['ADMIN'] },
+  { href: '/reportes', label: 'Reportes', icon: '📈', roles: ['DUENO', 'ENCARGADO', 'ADMIN'] },
 ]
 
 export function BottomNav() {
@@ -30,8 +32,8 @@ export function BottomNav() {
   const { data: session } = useSession()
   const role = session?.user.role
 
-  // ADMIN ve todas las pestañas (súper-admin); el resto según su lista de roles.
-  const visibles = tabs.filter((t) => !!role && (role === 'ADMIN' || t.roles.includes(role)))
+  // Cada rol ve solo sus pestañas.
+  const visibles = tabs.filter((t) => !!role && t.roles.includes(role))
   if (visibles.length === 0) return null
 
   return (

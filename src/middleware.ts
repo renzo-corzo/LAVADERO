@@ -45,6 +45,22 @@ export default withAuth(
       }
     }
 
+    // El ADMIN de plataforma administra, no opera: sin tablero, OTs,
+    // catálogos, clientes, caja ni kiosco. Su inicio es /empresas.
+    if (role === 'ADMIN') {
+      if (
+        path.startsWith('/tablero') ||
+        path.startsWith('/ots') ||
+        path.startsWith('/catalogos') ||
+        path.startsWith('/clientes') ||
+        path.startsWith('/caja') ||
+        path.startsWith('/kiosco') ||
+        path.startsWith('/dashboard')
+      ) {
+        return NextResponse.redirect(new URL('/empresas', req.url))
+      }
+    }
+
     // Configuración de comisiones: solo DUEÑO / ADMIN
     if (path.startsWith('/comisiones/configurar')) {
       if (role !== 'DUENO' && role !== 'ADMIN') {

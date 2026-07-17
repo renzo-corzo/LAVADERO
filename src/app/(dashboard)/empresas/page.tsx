@@ -323,8 +323,9 @@ export default function EmpresasPage() {
       </Card>
 
       <p className="text-sm text-muted mt-4">
-        💡 “Operar esta empresa” hace que el tablero, las OTs, la caja y los reportes muestren los
-        datos de esa empresa mientras navegás como ADMIN.
+        💡 “Operar esta empresa” hace que Usuarios, Sucursales y Reportes muestren los datos de
+        esa empresa mientras navegás como ADMIN. La operación diaria (tablero, OTs, caja) es de
+        cada dueño.
       </p>
     </div>
   )
