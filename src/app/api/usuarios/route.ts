@@ -84,8 +84,10 @@ export async function GET(request: NextRequest) {
         activo: true,
         createdAt: true,
         updatedAt: true,
+        empresa: { select: { id: true, nombre: true } },
+        sucursal: { select: { id: true, nombre: true } },
       },
-      orderBy: { nombre: 'asc' },
+      orderBy: [{ empresa: { nombre: 'asc' } }, { nombre: 'asc' }],
     })
 
     return NextResponse.json(usuarios)

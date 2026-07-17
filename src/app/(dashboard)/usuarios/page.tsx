@@ -6,14 +6,16 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { Select } from '@/components/ui/Select'
 
 interface Usuario {
   id: string
@@ -23,13 +25,18 @@ interface Usuario {
   activo: boolean
   createdAt: string
   updatedAt: string
+  empresa?: { id: string; nombre: string } | null
+  sucursal?: { id: string; nombre: string } | null
 }
 
 export default function UsuariosPage() {
   const router = useRouter()
   const confirm = useConfirm()
   const queryClient = useQueryClient()
+  const { data: session } = useSession()
+  const esAdmin = session?.user.role === 'ADMIN'
   const [filtroActivo, setFiltroActivo] = useState<string | null>(null)
+  const [filtroEmpresa, setFiltroEmpresa] = useState<string>('')
 
   const {
     data: usuarios = [],
@@ -114,6 +121,25 @@ export default function UsuariosPage() {
     return colors[rol] || 'bg-ink/10 text-ink'
   }
 
+  // Nombre de empresa para mostrar y agrupar (los ADMIN no tienen empresa)
+  const empresaDe = (u: Usuario) => (u.rol === 'ADMIN' ? '⚙️ Plataforma' : u.empresa?.nombre || 'Sin empresa')
+
+  // Filtro por empresa (solo tiene sentido para el ADMIN, que las ve todas)
+  const empresasDisponibles = Array.from(new Set(usuarios.map(empresaDe))).sort()
+  const usuariosFiltrados = filtroEmpresa
+    ? usuarios.filter((u) => empresaDe(u) === filtroEmpresa)
+    : usuarios
+
+  // Agrupar por empresa (para ADMIN; para un dueño hay una sola y no se nota)
+  const grupos = usuariosFiltrados.reduce<Record<string, Usuario[]>>((acc, u) => {
+    const key = empresaDe(u)
+    if (!acc[key]) acc[key] = []
+    acc[key].push(u)
+    return acc
+  }, {})
+  const nombresGrupos = Object.keys(grupos).sort()
+  const mostrarGrupos = esAdmin && nombresGrupos.length > 1
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -124,7 +150,7 @@ export default function UsuariosPage() {
       </div>
 
       <Card>
-        <div className="mb-4">
+        <div className="mb-4 flex flex-wrap items-end gap-3">
           <div className="flex space-x-2">
             <Button
               variant={filtroActivo === null ? 'primary' : 'secondary'}
@@ -148,11 +174,24 @@ export default function UsuariosPage() {
               Inactivos
             </Button>
           </div>
+          {esAdmin && empresasDisponibles.length > 1 && (
+            <div className="min-w-[220px]">
+              <Select
+                label="Empresa"
+                value={filtroEmpresa}
+                onChange={(e) => setFiltroEmpresa(e.target.value)}
+                options={[
+                  { value: '', label: 'Todas las empresas' },
+                  ...empresasDisponibles.map((n) => ({ value: n, label: n })),
+                ]}
+              />
+            </div>
+          )}
         </div>
 
         {loading ? (
           <div className="text-center py-8 text-muted">Cargando usuarios...</div>
-        ) : usuarios.length === 0 ? (
+        ) : usuariosFiltrados.length === 0 ? (
           <div className="text-center py-8 text-muted">No hay usuarios registrados</div>
         ) : (
           <div className="overflow-x-auto">
@@ -169,6 +208,9 @@ export default function UsuariosPage() {
                     Rol
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                    Sucursal
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Estado
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
@@ -180,52 +222,73 @@ export default function UsuariosPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-aqua-line">
-                {usuarios.map((usuario) => (
-                  <tr key={usuario.id} className={!usuario.activo ? 'opacity-60' : ''}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-ink">{usuario.nombre}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-muted">{usuario.usuario}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRolColor(usuario.rol)}`}>
-                        {getRolLabel(usuario.rol)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {usuario.activo ? (
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-ok/15 text-[#0c8f68]">
-                          Activo
-                        </span>
-                      ) : (
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-danger/12 text-danger">
-                          Inactivo
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
-                      {new Date(usuario.createdAt).toLocaleDateString('es-AR')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end space-x-2">
-                        <Link href={`/usuarios/${usuario.id}`}>
-                          <Button variant="secondary" size="sm">
-                            Editar
-                          </Button>
-                        </Link>
-                        {usuario.activo && (
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            onClick={() => handleDesactivar(usuario.id, usuario.nombre)}
-                          >
-                            Desactivar
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+                {nombresGrupos.map((grupo) => (
+                  <Fragment key={grupo}>
+                    {mostrarGrupos && (
+                      <tr className="bg-aqua-bg/60">
+                        <td colSpan={7} className="px-6 py-2 text-sm font-bold text-ink">
+                          🏢 {grupo}
+                          <span className="ml-2 text-xs font-normal text-muted">
+                            {grupos[grupo].length} usuario(s)
+                          </span>
+                        </td>
+                      </tr>
+                    )}
+                    {grupos[grupo].map((usuario) => (
+                      <tr key={usuario.id} className={!usuario.activo ? 'opacity-60' : ''}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-ink">{usuario.nombre}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-muted">{usuario.usuario}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRolColor(usuario.rol)}`}>
+                            {getRolLabel(usuario.rol)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
+                          {usuario.rol === 'ENCARGADO' || usuario.rol === 'LAVADOR'
+                            ? usuario.sucursal?.nombre || '—'
+                            : usuario.rol === 'DUENO'
+                              ? 'Todas'
+                              : '—'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {usuario.activo ? (
+                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-ok/15 text-[#0c8f68]">
+                              Activo
+                            </span>
+                          ) : (
+                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-danger/12 text-danger">
+                              Inactivo
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
+                          {new Date(usuario.createdAt).toLocaleDateString('es-AR')}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex justify-end space-x-2">
+                            <Link href={`/usuarios/${usuario.id}`}>
+                              <Button variant="secondary" size="sm">
+                                Editar
+                              </Button>
+                            </Link>
+                            {usuario.activo && (
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                onClick={() => handleDesactivar(usuario.id, usuario.nombre)}
+                              >
+                                Desactivar
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
