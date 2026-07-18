@@ -35,6 +35,27 @@ export const editarProductoStockSchema = z.object({
   activo: z.boolean().optional(),
 })
 
+// Guardar la receta de un servicio o extra en una sucursal: reemplaza sus
+// líneas por las provistas (upsert/borrado). Exactamente uno de servicioId/extraId.
+export const guardarRecetaSchema = z
+  .object({
+    sucursalId: z.string().min(1, 'La sucursal es obligatoria'),
+    servicioId: z.string().nullish().transform((v) => (v === '' ? undefined : v ?? undefined)),
+    extraId: z.string().nullish().transform((v) => (v === '' ? undefined : v ?? undefined)),
+    lineas: z
+      .array(
+        z.object({
+          productoStockId: z.string().min(1),
+          cantidad: z.number().positive('La cantidad debe ser mayor a cero'),
+        })
+      )
+      .default([]),
+  })
+  .refine((d) => !!d.servicioId !== !!d.extraId, {
+    message: 'Indicá un servicio o un extra (uno solo)',
+    path: ['servicioId'],
+  })
+
 // Registrar un movimiento de stock. La cantidad SIEMPRE se ingresa positiva;
 // el signo lo define el tipo (el AJUSTE puede sumar o restar según `resta`).
 export const crearMovimientoStockSchema = z.object({

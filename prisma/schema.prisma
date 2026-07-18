@@ -58,9 +58,11 @@ enum TipoCliente {
 
 // Tipo de movimiento de stock de insumos.
 enum TipoMovimientoStock {
-  ENTRADA // compra / reposición (suma)
-  SALIDA  // consumo (resta)
-  AJUSTE  // corrección por inventario físico (± )
+  ENTRADA    // compra / reposición (suma)
+  SALIDA     // consumo manual (resta)
+  AJUSTE     // corrección por inventario físico (± )
+  CONSUMO    // consumo automático por receta al completar una OT (resta)
+  DEVOLUCION // reverso automático al cancelar una OT ya consumida (suma)
 }
 
 // ============================================
@@ -85,6 +87,7 @@ model Empresa {
   cierres        CierreCaja[]
   productosStock ProductoStock[]
   movimientosStock MovimientoStock[]
+  recetasInsumo  RecetaInsumo[]
 
   @@map("empresas")
 }
@@ -108,6 +111,7 @@ model Sucursal {
   extras         Extra[]
   productosStock ProductoStock[]
   movimientosStock MovimientoStock[]
+  recetasInsumo  RecetaInsumo[]
 
   @@unique([empresaId, nombre])
   @@index([empresaId])
@@ -166,6 +170,7 @@ model Servicio {
   empresa         Empresa       @relation(fields: [empresaId], references: [id])
   sucursal        Sucursal?     @relation(fields: [sucursalId], references: [id])
   ots             OrdenTrabajo[]
+  recetas         RecetaInsumo[]
 
   @@unique([empresaId, nombre])
   @@index([empresaId])
@@ -189,6 +194,7 @@ model Extra {
   empresa         Empresa       @relation(fields: [empresaId], references: [id])
   sucursal        Sucursal?     @relation(fields: [sucursalId], references: [id])
   ots             OrdenTrabajoExtra[]
+  recetas         RecetaInsumo[]
 
   @@unique([empresaId, nombre])
   @@index([empresaId])
@@ -263,7 +269,8 @@ model OrdenTrabajo {
   pagos               Pago[]
   comisiones          Comision[]
   cierres             CierreCajaOT[]
-  
+  movimientosStock    MovimientoStock[]
+
   @@index([estado])
   @@index([fechaIngreso])
   @@index([usuarioCreadorId])
@@ -490,6 +497,7 @@ model ProductoStock {
   empresa      Empresa            @relation(fields: [empresaId], references: [id])
   sucursal     Sucursal           @relation(fields: [sucursalId], references: [id])
   movimientos  MovimientoStock[]
+  recetas      RecetaInsumo[]
 
   @@unique([sucursalId, nombre])
   @@index([empresaId])
@@ -505,9 +513,10 @@ model MovimientoStock {
   sucursalId    String
   productoId    String
   tipo          TipoMovimientoStock
-  cantidad      Decimal             @db.Decimal(12, 3) // delta con signo aplicado al stock (ENTRADA +, SALIDA -, AJUSTE ±)
-  costoUnitario Decimal?            @db.Decimal(12, 2) // costo por unidad (solo ENTRADA)
+  cantidad      Decimal             @db.Decimal(12, 3) // delta con signo aplicado al stock (ENTRADA/DEVOLUCION +, SALIDA/CONSUMO -, AJUSTE ±)
+  costoUnitario Decimal?            @db.Decimal(12, 2) // costo por unidad (ENTRADA; y CONSUMO guarda el costo al que se consumió)
   motivo        String?
+  ordenTrabajoId String?            // OT que originó el movimiento (CONSUMO/DEVOLUCION automáticos)
   usuarioId     String
   fechaHora     DateTime            @default(now())
   createdAt     DateTime            @default(now())
@@ -515,12 +524,46 @@ model MovimientoStock {
   empresa       Empresa        @relation(fields: [empresaId], references: [id])
   sucursal      Sucursal       @relation(fields: [sucursalId], references: [id])
   producto      ProductoStock  @relation(fields: [productoId], references: [id])
+  ordenTrabajo  OrdenTrabajo?  @relation(fields: [ordenTrabajoId], references: [id])
   usuario       Usuario        @relation(fields: [usuarioId], references: [id])
 
   @@index([empresaId])
   @@index([sucursalId])
   @@index([productoId])
+  @@index([ordenTrabajoId])
   @@index([fechaHora])
   @@map("movimientos_stock")
+}
+
+// Receta (Etapa 2): qué insumo y cuánto consume un servicio o un extra.
+// Es POR SUCURSAL porque apunta a un ProductoStock (que es de una sucursal).
+// Cada línea liga UN servicio O UN extra (uno de los dos) con un producto.
+model RecetaInsumo {
+  id              String   @id @default(cuid())
+  empresaId       String
+  sucursalId      String
+  servicioId      String?  // exactamente uno de servicioId / extraId
+  extraId         String?
+  productoStockId String
+  cantidad        Decimal  @db.Decimal(12, 3) // cantidad consumida por cada OT de ese servicio/extra
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  empresa         Empresa        @relation(fields: [empresaId], references: [id])
+  sucursal        Sucursal       @relation(fields: [sucursalId], references: [id])
+  servicio        Servicio?      @relation(fields: [servicioId], references: [id])
+  extra           Extra?         @relation(fields: [extraId], references: [id])
+  producto        ProductoStock  @relation(fields: [productoStockId], references: [id])
+
+  // Una línea por (servicio, producto) y por (extra, producto). Postgres trata
+  // los NULL como distintos, así que no chocan las filas de servicio vs extra.
+  @@unique([servicioId, productoStockId])
+  @@unique([extraId, productoStockId])
+  @@index([empresaId])
+  @@index([sucursalId])
+  @@index([servicioId])
+  @@index([extraId])
+  @@index([productoStockId])
+  @@map("recetas_insumo")
 }
 

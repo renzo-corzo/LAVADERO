@@ -121,9 +121,17 @@ export default function StockPage() {
             Control de insumos: cargá entradas y salidas, y el sistema te avisa cuándo reponer.
           </p>
         </div>
-        <Button variant="primary" onClick={() => setMostrarAlta((v) => !v)}>
-          {mostrarAlta ? 'Cerrar' : '+ Nuevo producto'}
-        </Button>
+        <div className="flex gap-2">
+          <Link href="/stock/reporte">
+            <Button variant="secondary">📈 Costos</Button>
+          </Link>
+          <Link href="/stock/recetas">
+            <Button variant="secondary">🧪 Recetas</Button>
+          </Link>
+          <Button variant="primary" onClick={() => setMostrarAlta((v) => !v)}>
+            {mostrarAlta ? 'Cerrar' : '+ Nuevo producto'}
+          </Button>
+        </div>
       </div>
 
       {/* Selector de sucursal (solo dueño con más de una) */}
