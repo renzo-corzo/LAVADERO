@@ -31,6 +31,7 @@ export function hasPermission(userRole: UserRole, action: string): boolean {
       'comision:liquidar',
       'reporte:view',
       'servicio:manage',
+      'stock:manage',
       'portal:manage',
       'cliente:view',
       'cliente:create',

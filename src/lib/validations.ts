@@ -11,6 +11,42 @@ export const crearSucursalSchema = z.object({
   direccion: z.string().max(200).nullish().transform((v) => (v === '' ? undefined : v)),
 })
 
+// ---------- Stock de insumos ----------
+
+const UNIDADES_STOCK = ['unidad', 'L', 'ml', 'kg', 'g'] as const
+
+// Crear un producto/insumo. El stock inicial se carga aparte como un movimiento
+// de ENTRADA (para que quede en el historial), así que acá no va cantidad.
+export const crearProductoStockSchema = z.object({
+  nombre: z.string().min(1, 'El nombre es obligatorio').max(80).trim(),
+  unidad: z.enum(UNIDADES_STOCK).default('unidad'),
+  stockMinimo: z.number().min(0, 'El mínimo no puede ser negativo').default(0),
+  // Stock inicial opcional: si viene > 0 se registra como ENTRADA inicial
+  stockInicial: z.number().min(0).optional(),
+  costoUnitario: z.number().min(0).nullish(),
+  sucursalId: z.string().nullish().transform((v) => (v === '' ? undefined : v)),
+})
+
+export const editarProductoStockSchema = z.object({
+  nombre: z.string().min(1, 'El nombre es obligatorio').max(80).trim(),
+  unidad: z.enum(UNIDADES_STOCK),
+  stockMinimo: z.number().min(0, 'El mínimo no puede ser negativo'),
+  costoUnitario: z.number().min(0).nullish(),
+  activo: z.boolean().optional(),
+})
+
+// Registrar un movimiento de stock. La cantidad SIEMPRE se ingresa positiva;
+// el signo lo define el tipo (el AJUSTE puede sumar o restar según `resta`).
+export const crearMovimientoStockSchema = z.object({
+  productoId: z.string().min(1, 'El producto es obligatorio'),
+  tipo: z.enum(['ENTRADA', 'SALIDA', 'AJUSTE']),
+  cantidad: z.number().positive('La cantidad debe ser mayor a cero'),
+  // Solo para AJUSTE: si true el ajuste resta, si false suma
+  resta: z.boolean().optional().default(false),
+  costoUnitario: z.number().min(0).nullish(), // solo ENTRADA
+  motivo: z.string().max(200).nullish().transform((v) => (v === '' ? undefined : v ?? undefined)),
+})
+
 // Schema para crear empresa (plataforma ADMIN): empresa + sucursales + dueño
 export const crearEmpresaSchema = z.object({
   nombre: z.string().min(2, 'El nombre debe tener al menos 2 caracteres').max(80),

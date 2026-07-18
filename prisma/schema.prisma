@@ -56,6 +56,13 @@ enum TipoCliente {
   WALK_IN
 }
 
+// Tipo de movimiento de stock de insumos.
+enum TipoMovimientoStock {
+  ENTRADA // compra / reposición (suma)
+  SALIDA  // consumo (resta)
+  AJUSTE  // corrección por inventario físico (± )
+}
+
 // ============================================
 // MODELOS
 // ============================================
@@ -76,6 +83,8 @@ model Empresa {
   extras         Extra[]
   ordenesTrabajo OrdenTrabajo[]
   cierres        CierreCaja[]
+  productosStock ProductoStock[]
+  movimientosStock MovimientoStock[]
 
   @@map("empresas")
 }
@@ -97,6 +106,8 @@ model Sucursal {
   cierres        CierreCaja[]
   servicios      Servicio[]
   extras         Extra[]
+  productosStock ProductoStock[]
+  movimientosStock MovimientoStock[]
 
   @@unique([empresaId, nombre])
   @@index([empresaId])
@@ -130,6 +141,7 @@ model Usuario {
   configComisiones    ConfigComision[]
   estadosCambiados    EstadoHistorial[]
   auditoriaLogs       AuditoriaLog[]
+  movimientosStock    MovimientoStock[]
 
   @@index([clienteId])
   @@index([sucursalId])
@@ -452,5 +464,63 @@ model AuditoriaLog {
   @@index([usuarioId])
   @@index([entidad, entidadId])
   @@map("auditoria_logs")
+}
+
+// ============================================
+// STOCK DE INSUMOS (Etapa 1: control manual)
+// ============================================
+
+// Producto/insumo del depósito (cera, shampoo, esponjas, etc.).
+// El stock es POR SUCURSAL: cada sede tiene su propio depósito y saldo.
+// stockActual es un saldo materializado que se actualiza en la MISMA
+// transacción que cada movimiento (el ledger inmutable es MovimientoStock).
+model ProductoStock {
+  id           String   @id @default(cuid())
+  empresaId    String
+  sucursalId   String
+  nombre       String
+  unidad       String   @default("unidad") // "L", "ml", "kg", "g", "unidad"
+  stockActual  Decimal  @default(0) @db.Decimal(12, 3)
+  stockMinimo  Decimal  @default(0) @db.Decimal(12, 3) // umbral de alerta de reposición
+  costoUnitario Decimal? @db.Decimal(12, 2) // último costo de compra conocido (por unidad)
+  activo       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  empresa      Empresa            @relation(fields: [empresaId], references: [id])
+  sucursal     Sucursal           @relation(fields: [sucursalId], references: [id])
+  movimientos  MovimientoStock[]
+
+  @@unique([sucursalId, nombre])
+  @@index([empresaId])
+  @@index([sucursalId])
+  @@map("productos_stock")
+}
+
+// Movimiento de stock (ledger inmutable). El saldo de un producto es la
+// suma de los `cantidad` (con signo) de sus movimientos.
+model MovimientoStock {
+  id            String              @id @default(cuid())
+  empresaId     String
+  sucursalId    String
+  productoId    String
+  tipo          TipoMovimientoStock
+  cantidad      Decimal             @db.Decimal(12, 3) // delta con signo aplicado al stock (ENTRADA +, SALIDA -, AJUSTE ±)
+  costoUnitario Decimal?            @db.Decimal(12, 2) // costo por unidad (solo ENTRADA)
+  motivo        String?
+  usuarioId     String
+  fechaHora     DateTime            @default(now())
+  createdAt     DateTime            @default(now())
+
+  empresa       Empresa        @relation(fields: [empresaId], references: [id])
+  sucursal      Sucursal       @relation(fields: [sucursalId], references: [id])
+  producto      ProductoStock  @relation(fields: [productoId], references: [id])
+  usuario       Usuario        @relation(fields: [usuarioId], references: [id])
+
+  @@index([empresaId])
+  @@index([sucursalId])
+  @@index([productoId])
+  @@index([fechaHora])
+  @@map("movimientos_stock")
 }
 

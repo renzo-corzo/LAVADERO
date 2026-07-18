@@ -24,6 +24,7 @@ const menuItems: MenuItem[] = [
   { href: '/tablero', label: 'Tablero', icon: '▦', roles: ['DUENO', 'ENCARGADO'] },
   { href: '/ots/nueva', label: 'Nueva OT', icon: '＋', roles: ['DUENO', 'ENCARGADO'], destacado: true },
   { href: '/catalogos', label: 'Catálogos', icon: '📚', roles: ['DUENO', 'ENCARGADO'] },
+  { href: '/stock', label: 'Stock', icon: '📦', roles: ['DUENO', 'ENCARGADO'] },
   { href: '/clientes', label: 'Clientes', icon: '👥', roles: ['DUENO', 'ENCARGADO'] },
   { href: '/contactos', label: 'Contactos', icon: '📇', roles: ['DUENO'] },
   { href: '/caja', label: 'Caja', icon: '💰', roles: ['DUENO', 'ENCARGADO'] },
