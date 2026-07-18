@@ -54,6 +54,7 @@ export default withAuth(
         path.startsWith('/catalogos') ||
         path.startsWith('/clientes') ||
         path.startsWith('/contactos') ||
+        path.startsWith('/stock') ||
         path.startsWith('/caja') ||
         path.startsWith('/kiosco') ||
         path.startsWith('/dashboard')
@@ -82,6 +83,7 @@ export default withAuth(
       path.startsWith('/comisiones') ||
       path.startsWith('/reportes') ||
       path.startsWith('/contactos') ||
+      path.startsWith('/stock') ||
       path.startsWith('/catalogos')
     ) {
       if (role === 'LAVADOR') {
@@ -116,6 +118,7 @@ export const config = {
     '/comisiones/:path*',
     '/reportes/:path*',
     '/contactos/:path*',
+    '/stock/:path*',
     '/catalogos/:path*',
     '/usuarios/:path*',
     '/sucursales/:path*',
