@@ -122,6 +122,9 @@ export default function StockPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Link href="/stock/reporte">
+            <Button variant="secondary">📈 Costos</Button>
+          </Link>
           <Link href="/stock/recetas">
             <Button variant="secondary">🧪 Recetas</Button>
           </Link>
