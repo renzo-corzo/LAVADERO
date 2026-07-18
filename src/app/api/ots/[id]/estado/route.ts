@@ -11,6 +11,7 @@ import { isValidEstadoTransition } from '@/lib/reglas-negocio'
 import { hasEstadoTransitionPermission } from '@/lib/auth'
 import { empresaScope } from '@/lib/empresa'
 import { verificarYCalcularComisiones } from '@/lib/comisiones'
+import { consumirInsumosOT, devolverInsumosOT } from '@/lib/stock-consumo'
 import { cambiarEstadoOTSchema } from '@/lib/validations'
 
 export async function PUT(
@@ -147,6 +148,14 @@ export async function PUT(
           }),
         },
       })
+
+      // Stock (Etapa 2): al quedar LISTO se descuentan los insumos según receta;
+      // al CANCELAR una OT que ya consumió, se devuelven. Ambos idempotentes.
+      if (nuevoEstado === 'LISTO') {
+        await consumirInsumosOT(tx, params.id, session.user.id)
+      } else if (nuevoEstado === 'CANCELADO') {
+        await devolverInsumosOT(tx, params.id, session.user.id)
+      }
 
       return otActualizada
     })
