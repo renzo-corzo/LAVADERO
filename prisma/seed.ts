@@ -85,10 +85,11 @@ async function main() {
   // Crear servicios de ejemplo
   const servicios = await Promise.all([
     prisma.servicio.upsert({
-      where: { empresaId_nombre: { empresaId: empresa.id, nombre: 'Lavado Básico' } },
+      where: { empresaId_sucursalId_nombre: { empresaId: empresa.id, sucursalId: sucursal.id, nombre: 'Lavado Básico' } },
       update: {},
       create: {
         empresaId: empresa.id,
+        sucursalId: sucursal.id,
         nombre: 'Lavado Básico',
         precio: 1500,
         duracionEstimada: 30,
@@ -98,10 +99,11 @@ async function main() {
       },
     }),
     prisma.servicio.upsert({
-      where: { empresaId_nombre: { empresaId: empresa.id, nombre: 'Lavado Completo' } },
+      where: { empresaId_sucursalId_nombre: { empresaId: empresa.id, sucursalId: sucursal.id, nombre: 'Lavado Completo' } },
       update: {},
       create: {
         empresaId: empresa.id,
+        sucursalId: sucursal.id,
         nombre: 'Lavado Completo',
         precio: 2500,
         duracionEstimada: 60,
@@ -111,10 +113,11 @@ async function main() {
       },
     }),
     prisma.servicio.upsert({
-      where: { empresaId_nombre: { empresaId: empresa.id, nombre: 'Lavado Premium' } },
+      where: { empresaId_sucursalId_nombre: { empresaId: empresa.id, sucursalId: sucursal.id, nombre: 'Lavado Premium' } },
       update: {},
       create: {
         empresaId: empresa.id,
+        sucursalId: sucursal.id,
         nombre: 'Lavado Premium',
         precio: 3500,
         duracionEstimada: 90,
@@ -170,10 +173,11 @@ async function main() {
   // Crear extras de ejemplo
   const extras = await Promise.all([
     prisma.extra.upsert({
-      where: { empresaId_nombre: { empresaId: empresa.id, nombre: 'Aspirado Motor' } },
+      where: { empresaId_sucursalId_nombre: { empresaId: empresa.id, sucursalId: sucursal.id, nombre: 'Aspirado Motor' } },
       update: {},
       create: {
         empresaId: empresa.id,
+        sucursalId: sucursal.id,
         nombre: 'Aspirado Motor',
         precio: 800,
         duracionEstimada: 20,
@@ -182,10 +186,11 @@ async function main() {
       },
     }),
     prisma.extra.upsert({
-      where: { empresaId_nombre: { empresaId: empresa.id, nombre: 'Limpieza de Tapizados' } },
+      where: { empresaId_sucursalId_nombre: { empresaId: empresa.id, sucursalId: sucursal.id, nombre: 'Limpieza de Tapizados' } },
       update: {},
       create: {
         empresaId: empresa.id,
+        sucursalId: sucursal.id,
         nombre: 'Limpieza de Tapizados',
         precio: 1200,
         duracionEstimada: 30,
@@ -194,10 +199,11 @@ async function main() {
       },
     }),
     prisma.extra.upsert({
-      where: { empresaId_nombre: { empresaId: empresa.id, nombre: 'Encerado' } },
+      where: { empresaId_sucursalId_nombre: { empresaId: empresa.id, sucursalId: sucursal.id, nombre: 'Encerado' } },
       update: {},
       create: {
         empresaId: empresa.id,
+        sucursalId: sucursal.id,
         nombre: 'Encerado',
         precio: 1500,
         duracionEstimada: 45,

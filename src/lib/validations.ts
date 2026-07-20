@@ -195,6 +195,8 @@ export const crearServicioSchema = z.object({
   duracionEstimada: duracionMinutos.optional(),
   tipoVehiculo: z.enum(['chico', 'mediano', 'camioneta']).optional(),
   descripcion: z.string().optional(),
+  // Sucursal donde se ofrece. null/vacío = compartido con todas las sucursales.
+  sucursalId: z.string().nullish().transform((v) => (v === '' ? null : v ?? null)),
 })
 
 // Schema para crear extra
@@ -203,6 +205,8 @@ export const crearExtraSchema = z.object({
   precio: z.number().positive('El precio debe ser positivo'),
   duracionEstimada: duracionMinutos.optional(),
   descripcion: z.string().optional(),
+  // null/vacío = compartido con todas las sucursales.
+  sucursalId: z.string().nullish().transform((v) => (v === '' ? null : v ?? null)),
 })
 
 // Schema para crear cliente

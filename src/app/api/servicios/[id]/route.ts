@@ -11,6 +11,7 @@ import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
 import { empresaScope } from '@/lib/empresa'
+import { validarSucursalDeEmpresa, verificarNombreDisponible } from '@/lib/catalogo-sucursal'
 
 export async function GET(
   request: NextRequest,
@@ -115,22 +116,35 @@ export async function PUT(
       return NextResponse.json({ error: 'Servicio no encontrado' }, { status: 404 })
     }
 
-    // Verificar que el nombre sea único dentro de la empresa (excepto el actual)
-    const existente = await prisma.servicio.findUnique({
-      where: { empresaId_nombre: { empresaId: actual.empresaId, nombre } },
-    })
+    // Sucursal destino: si no viene en el body, se mantiene la actual.
+    // Un empleado con sucursal propia no puede mover el servicio a otra.
+    const sucursalId = session.user.sucursalId
+      ? actual.sucursalId
+      : body.sucursalId !== undefined
+        ? body.sucursalId || null
+        : actual.sucursalId
+    const errSucursal = await validarSucursalDeEmpresa(sucursalId, actual.empresaId)
+    if (errSucursal) {
+      return NextResponse.json({ error: errSucursal }, { status: 400 })
+    }
 
-    if (existente && existente.id !== params.id) {
-      return NextResponse.json(
-        { error: 'Ya existe un servicio con ese nombre' },
-        { status: 400 }
-      )
+    // Nombre libre en el ámbito destino (sin chocar consigo mismo)
+    const errNombre = await verificarNombreDisponible(
+      'servicio',
+      actual.empresaId,
+      nombre,
+      sucursalId,
+      params.id
+    )
+    if (errNombre) {
+      return NextResponse.json({ error: errNombre }, { status: 400 })
     }
 
     const servicio = await prisma.servicio.update({
       where: { id: params.id },
       data: {
         nombre,
+        sucursalId,
         precio: parseFloat(precio),
         duracionEstimada: duracionEstimada ? parseInt(duracionEstimada) : null,
         tipoVehiculo: tipoVehiculo || null,

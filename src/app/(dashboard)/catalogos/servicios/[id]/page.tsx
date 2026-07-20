@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { Card } from '@/components/ui/Card'
+import { useSucursales } from '@/lib/hooks/useSucursales'
 import type { Servicio } from '@/types'
 
 export default function EditarServicioPage() {
@@ -22,6 +23,9 @@ export default function EditarServicioPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  // Sucursal donde se ofrece ('' = todas)
+  const { sucursales, puedeElegir } = useSucursales()
+  const [sucursalId, setSucursalId] = useState<string>('')
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -41,7 +45,7 @@ export default function EditarServicioPage() {
       setLoading(true)
       const response = await fetch(`/api/servicios/${id}`)
       if (response.ok) {
-        const servicio: Servicio = await response.json()
+        const servicio: Servicio & { sucursalId?: string | null } = await response.json()
         setFormData({
           nombre: servicio.nombre,
           precio: servicio.precio.toString(),
@@ -50,6 +54,7 @@ export default function EditarServicioPage() {
           descripcion: servicio.descripcion || '',
           activo: servicio.activo,
         })
+        setSucursalId(servicio.sucursalId || '')
       }
     } catch (error) {
       console.error('Error al cargar servicio:', error)
@@ -91,6 +96,7 @@ export default function EditarServicioPage() {
           duracionEstimada: formData.duracionEstimada ? parseInt(formData.duracionEstimada) : undefined,
           tipoVehiculo: formData.tipoVehiculo || undefined,
           descripcion: formData.descripcion,
+          sucursalId: sucursalId || null,
         }),
       })
 
@@ -126,6 +132,21 @@ export default function EditarServicioPage() {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {puedeElegir && (
+              <div className="md:col-span-2">
+                <Select
+                  label="¿Dónde se ofrece?"
+                  id="sucursalId"
+                  value={sucursalId}
+                  onChange={(e) => setSucursalId(e.target.value)}
+                  options={[
+                    { value: '', label: 'Todas las sucursales' },
+                    ...sucursales.map((s) => ({ value: s.id, label: `Solo en ${s.nombre}` })),
+                  ]}
+                />
+              </div>
+            )}
+
             <Input
               label="Nombre"
               id="nombre"

@@ -12,24 +12,37 @@ import { toast } from 'sonner'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { Select } from '@/components/ui/Select'
 import { formatCurrency } from '@/lib/utils'
+import { useSucursales } from '@/lib/hooks/useSucursales'
 import type { Servicio } from '@/types'
+
+type ServicioConSucursal = Servicio & {
+  sucursalId?: string | null
+  sucursal?: { id: string; nombre: string } | null
+}
 
 export default function ServiciosPage() {
   const confirm = useConfirm()
   const queryClient = useQueryClient()
   const [filtroActivo, setFiltroActivo] = useState<string | null>(null)
+  // Filtro por sucursal: muestra lo que se ofrece en esa sede (propio + compartido)
+  const { sucursales, puedeElegir } = useSucursales()
+  const [filtroSucursal, setFiltroSucursal] = useState<string>('')
 
   const {
     data: servicios = [],
     isLoading: loading,
-  } = useQuery<Servicio[]>({
-    queryKey: ['servicios', { activo: filtroActivo }],
+  } = useQuery<ServicioConSucursal[]>({
+    queryKey: ['servicios', { activo: filtroActivo, sucursal: filtroSucursal }],
     queryFn: async () => {
-      const params = filtroActivo ? `?activo=${filtroActivo}` : ''
+      const qs = new URLSearchParams()
+      if (filtroActivo) qs.set('activo', filtroActivo)
+      if (filtroSucursal) qs.set('sucursalId', filtroSucursal)
+      const params = qs.toString() ? `?${qs}` : ''
       const response = await fetch(`/api/servicios${params}`)
       if (!response.ok) throw new Error('Error al cargar servicios')
-      return (await response.json()) as Servicio[]
+      return (await response.json()) as ServicioConSucursal[]
     },
   })
 
@@ -70,6 +83,19 @@ export default function ServiciosPage() {
       </div>
 
       <Card>
+        {puedeElegir && (
+          <div className="mb-4 max-w-xs">
+            <Select
+              label="Sucursal"
+              value={filtroSucursal}
+              onChange={(e) => setFiltroSucursal(e.target.value)}
+              options={[
+                { value: '', label: 'Todas (catálogo completo)' },
+                ...sucursales.map((s) => ({ value: s.id, label: `Se ofrece en ${s.nombre}` })),
+              ]}
+            />
+          </div>
+        )}
         <div className="mb-4">
           <div className="flex space-x-2">
             <Button
@@ -117,6 +143,11 @@ export default function ServiciosPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Tipo Vehículo
                   </th>
+                  {puedeElegir && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                      Sucursal
+                    </th>
+                  )}
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Estado
                   </th>
@@ -143,6 +174,19 @@ export default function ServiciosPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                       {servicio.tipoVehiculo || '-'}
                     </td>
+                    {puedeElegir && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {servicio.sucursal ? (
+                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-brand/12 text-brand">
+                            {servicio.sucursal.nombre}
+                          </span>
+                        ) : (
+                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-ink/8 text-muted">
+                            Todas
+                          </span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${

@@ -115,9 +115,12 @@ export default function NuevaOTPage() {
     }
   }
 
+  // El catálogo depende de la sucursal: al cambiarla se recarga y se limpia
+  // el servicio elegido (podría no ofrecerse en la nueva sede).
   useEffect(() => {
     cargarCatalogos()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sucursalId])
 
   // Cargar datos del cliente cuando se selecciona
   useEffect(() => {
@@ -244,11 +247,22 @@ export default function NuevaOTPage() {
   const cargarCatalogos = async () => {
     try {
       setLoadingCatalogos(true)
-      const response = await fetch('/api/catalogos/activos')
+      // Solo lo que se ofrece en esta sucursal (propio + compartido)
+      const qs = sucursalId ? `?sucursalId=${sucursalId}` : ''
+      const response = await fetch(`/api/catalogos/activos${qs}`)
       if (response.ok) {
         const data = await response.json()
         setServicios(data.servicios)
         setExtras(data.extras)
+
+        // Si el servicio/extras elegidos ya no se ofrecen acá, se limpian
+        const idsServicios = new Set((data.servicios as Servicio[]).map((s) => s.id))
+        const idsExtras = new Set((data.extras as Extra[]).map((e) => e.id))
+        setFormData((prev) => ({
+          ...prev,
+          servicioId: prev.servicioId && idsServicios.has(prev.servicioId) ? prev.servicioId : '',
+          extrasIds: prev.extrasIds.filter((id) => idsExtras.has(id)),
+        }))
       }
     } catch (error) {
       console.error('Error al cargar catálogos:', error)

@@ -14,23 +14,35 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { formatCurrency } from '@/lib/utils'
+import { Select } from '@/components/ui/Select'
+import { useSucursales } from '@/lib/hooks/useSucursales'
 import type { Extra } from '@/types'
+
+type ExtraConSucursal = Extra & {
+  sucursalId?: string | null
+  sucursal?: { id: string; nombre: string } | null
+}
 
 export default function ExtrasPage() {
   const confirm = useConfirm()
   const queryClient = useQueryClient()
   const [filtroActivo, setFiltroActivo] = useState<string | null>(null)
+  const { sucursales, puedeElegir } = useSucursales()
+  const [filtroSucursal, setFiltroSucursal] = useState<string>('')
 
   const {
     data: extras = [],
     isLoading: loading,
-  } = useQuery<Extra[]>({
-    queryKey: ['extras', { activo: filtroActivo }],
+  } = useQuery<ExtraConSucursal[]>({
+    queryKey: ['extras', { activo: filtroActivo, sucursal: filtroSucursal }],
     queryFn: async () => {
-      const params = filtroActivo ? `?activo=${filtroActivo}` : ''
+      const qs = new URLSearchParams()
+      if (filtroActivo) qs.set('activo', filtroActivo)
+      if (filtroSucursal) qs.set('sucursalId', filtroSucursal)
+      const params = qs.toString() ? `?${qs}` : ''
       const response = await fetch(`/api/extras${params}`)
       if (!response.ok) throw new Error('Error al cargar extras')
-      return (await response.json()) as Extra[]
+      return (await response.json()) as ExtraConSucursal[]
     },
   })
 
@@ -71,6 +83,19 @@ export default function ExtrasPage() {
       </div>
 
       <Card>
+        {puedeElegir && (
+          <div className="mb-4 max-w-xs">
+            <Select
+              label="Sucursal"
+              value={filtroSucursal}
+              onChange={(e) => setFiltroSucursal(e.target.value)}
+              options={[
+                { value: '', label: 'Todas (catálogo completo)' },
+                ...sucursales.map((s) => ({ value: s.id, label: `Se ofrece en ${s.nombre}` })),
+              ]}
+            />
+          </div>
+        )}
         <div className="mb-4">
           <div className="flex space-x-2">
             <Button
@@ -115,6 +140,11 @@ export default function ExtrasPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Duración
                   </th>
+                  {puedeElegir && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                      Sucursal
+                    </th>
+                  )}
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                     Estado
                   </th>
@@ -138,6 +168,19 @@ export default function ExtrasPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                       {extra.duracionEstimada ? `${extra.duracionEstimada} min` : '-'}
                     </td>
+                    {puedeElegir && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {extra.sucursal ? (
+                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-brand/12 text-brand">
+                            {extra.sucursal.nombre}
+                          </span>
+                        ) : (
+                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-ink/8 text-muted">
+                            Todas
+                          </span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${

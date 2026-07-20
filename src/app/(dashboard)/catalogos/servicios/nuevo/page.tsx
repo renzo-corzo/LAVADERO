@@ -12,11 +12,15 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { Card } from '@/components/ui/Card'
+import { useSucursales } from '@/lib/hooks/useSucursales'
 
 export default function NuevoServicioPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  // Sucursal donde se ofrece ('' = todas). Solo se elige si hay más de una.
+  const { sucursales, puedeElegir } = useSucursales()
+  const [sucursalId, setSucursalId] = useState<string>('')
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -60,6 +64,7 @@ export default function NuevoServicioPage() {
           duracionEstimada: formData.duracionEstimada ? parseInt(formData.duracionEstimada) : undefined,
           tipoVehiculo: formData.tipoVehiculo || undefined,
           descripcion: formData.descripcion,
+          sucursalId: sucursalId || null,
         }),
       })
 
@@ -91,6 +96,24 @@ export default function NuevoServicioPage() {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {puedeElegir && (
+              <div className="md:col-span-2">
+                <Select
+                  label="¿Dónde se ofrece?"
+                  id="sucursalId"
+                  value={sucursalId}
+                  onChange={(e) => setSucursalId(e.target.value)}
+                  options={[
+                    { value: '', label: 'Todas las sucursales' },
+                    ...sucursales.map((s) => ({ value: s.id, label: `Solo en ${s.nombre}` })),
+                  ]}
+                />
+                <p className="mt-1 text-xs text-muted">
+                  Elegí una sucursal si este servicio (o su precio) es exclusivo de esa sede.
+                </p>
+              </div>
+            )}
+
             <Input
               label="Nombre"
               id="nombre"
