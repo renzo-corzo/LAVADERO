@@ -10,6 +10,7 @@ import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
 import { empresaScope } from '@/lib/empresa'
+import { filtroCatalogoSucursal } from '@/lib/catalogo-sucursal'
 import { canEditOT, calcularTotalOT } from '@/lib/reglas-negocio'
 import { editarOTSchema } from '@/lib/validations'
 
@@ -214,7 +215,11 @@ export async function PUT(
     }
 
     const servicio = await prisma.servicio.findFirst({
-      where: { id: servicioId, empresaId: otActual.empresaId },
+      where: {
+        id: servicioId,
+        empresaId: otActual.empresaId,
+        ...filtroCatalogoSucursal(otActual.sucursalId),
+      },
     })
 
     if (!servicio || !servicio.activo) {
@@ -231,6 +236,7 @@ export async function PUT(
           id: { in: extrasIds },
           activo: true,
           empresaId: otActual.empresaId,
+          ...filtroCatalogoSucursal(otActual.sucursalId),
         },
       })
 

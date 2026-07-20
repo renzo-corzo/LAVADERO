@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { Card } from '@/components/ui/Card'
+import { Select } from '@/components/ui/Select'
+import { useSucursales } from '@/lib/hooks/useSucursales'
 import type { Extra } from '@/types'
 
 export default function EditarExtraPage() {
@@ -21,6 +23,9 @@ export default function EditarExtraPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  // Sucursal donde se ofrece ('' = todas)
+  const { sucursales, puedeElegir } = useSucursales()
+  const [sucursalId, setSucursalId] = useState<string>('')
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -39,7 +44,7 @@ export default function EditarExtraPage() {
       setLoading(true)
       const response = await fetch(`/api/extras/${id}`)
       if (response.ok) {
-        const extra: Extra = await response.json()
+        const extra: Extra & { sucursalId?: string | null } = await response.json()
         setFormData({
           nombre: extra.nombre,
           precio: extra.precio.toString(),
@@ -47,6 +52,7 @@ export default function EditarExtraPage() {
           descripcion: extra.descripcion || '',
           activo: extra.activo,
         })
+        setSucursalId(extra.sucursalId || '')
       }
     } catch (error) {
       console.error('Error al cargar extra:', error)
@@ -87,6 +93,7 @@ export default function EditarExtraPage() {
           precio: parseFloat(formData.precio),
           duracionEstimada: formData.duracionEstimada ? parseInt(formData.duracionEstimada) : undefined,
           descripcion: formData.descripcion,
+          sucursalId: sucursalId || null,
         }),
       })
 
@@ -122,6 +129,21 @@ export default function EditarExtraPage() {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {puedeElegir && (
+              <div className="md:col-span-2">
+                <Select
+                  label="¿Dónde se ofrece?"
+                  id="sucursalId"
+                  value={sucursalId}
+                  onChange={(e) => setSucursalId(e.target.value)}
+                  options={[
+                    { value: '', label: 'Todas las sucursales' },
+                    ...sucursales.map((s) => ({ value: s.id, label: `Solo en ${s.nombre}` })),
+                  ]}
+                />
+              </div>
+            )}
+
             <Input
               label="Nombre"
               id="nombre"

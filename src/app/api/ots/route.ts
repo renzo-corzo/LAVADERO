@@ -10,6 +10,7 @@ import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { getOtAccessScope, hasPermission } from '@/lib/auth'
 import { empresaScope } from '@/lib/empresa'
+import { filtroCatalogoSucursal } from '@/lib/catalogo-sucursal'
 import { calcularTotalOT } from '@/lib/reglas-negocio'
 import { crearOTSchema } from '@/lib/validations'
 
@@ -223,9 +224,10 @@ export async function POST(request: NextRequest) {
     // Empresa de la OT: la del scope, o la de la sucursal (ADMIN sin contexto)
     const empresaId = scope.empresaId ?? sucursal.empresaId
 
-    // Obtener servicio y extras para calcular total (de la misma empresa)
+    // Obtener servicio y extras para calcular total. Deben estar disponibles
+    // en la sucursal de la OT (propios de esa sede o compartidos).
     const servicio = await prisma.servicio.findFirst({
-      where: { id: servicioId, empresaId },
+      where: { id: servicioId, empresaId, ...filtroCatalogoSucursal(sucursalId) },
     })
 
     if (!servicio || !servicio.activo) {
@@ -258,6 +260,7 @@ export async function POST(request: NextRequest) {
           id: { in: extrasIds },
           activo: true,
           empresaId,
+          ...filtroCatalogoSucursal(sucursalId),
         },
       })
 

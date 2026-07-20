@@ -172,7 +172,9 @@ model Servicio {
   ots             OrdenTrabajo[]
   recetas         RecetaInsumo[]
 
-  @@unique([empresaId, nombre])
+  // El nombre es único dentro de cada sucursal (y una vez como "compartido",
+  // sucursalId null). Permite el mismo servicio con precio propio por sede.
+  @@unique([empresaId, sucursalId, nombre])
   @@index([empresaId])
   @@index([sucursalId])
   @@map("servicios")
@@ -196,7 +198,8 @@ model Extra {
   ots             OrdenTrabajoExtra[]
   recetas         RecetaInsumo[]
 
-  @@unique([empresaId, nombre])
+  // Mismo criterio que Servicio: único por sucursal (o una vez compartido).
+  @@unique([empresaId, sucursalId, nombre])
   @@index([empresaId])
   @@index([sucursalId])
   @@map("extras")

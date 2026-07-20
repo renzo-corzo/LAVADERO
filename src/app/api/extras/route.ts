@@ -10,6 +10,11 @@ import { authOptions } from '@/lib/auth/config'
 import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
 import { empresaScope } from '@/lib/empresa'
+import {
+  filtroCatalogoSucursal,
+  validarSucursalDeEmpresa,
+  verificarNombreDisponible,
+} from '@/lib/catalogo-sucursal'
 import { crearExtraSchema } from '@/lib/validations'
 
 export async function GET(request: NextRequest) {
@@ -31,12 +36,16 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams
     const activo = searchParams.get('activo')
+    // Filtro por sucursal: propio + compartido (empleados, siempre la suya)
+    const sucursalId = session.user.sucursalId || searchParams.get('sucursalId')?.trim() || null
 
     const extras = await prisma.extra.findMany({
       where: {
         ...(scope.empresaId ? { empresaId: scope.empresaId } : {}),
         ...(activo !== null ? { activo: activo === 'true' } : {}),
+        ...filtroCatalogoSucursal(sucursalId),
       },
+      include: { sucursal: { select: { id: true, nombre: true } } },
       orderBy: { nombre: 'asc' },
     })
 
@@ -93,22 +102,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verificar que el nombre sea único dentro de la empresa
-    const nombreTrim = nombre.trim()
-    const existente = await prisma.extra.findUnique({
-      where: { empresaId_nombre: { empresaId: scope.empresaId, nombre: nombreTrim } },
-    })
+    // Sucursal donde se ofrece (null = todas)
+    const sucursalId = session.user.sucursalId || validationResult.data.sucursalId || null
+    const errSucursal = await validarSucursalDeEmpresa(sucursalId, scope.empresaId)
+    if (errSucursal) {
+      return NextResponse.json({ error: errSucursal }, { status: 400 })
+    }
 
-    if (existente) {
-      return NextResponse.json(
-        { error: 'Ya existe un extra con ese nombre' },
-        { status: 400 }
-      )
+    // Nombre libre según las reglas del catálogo por sucursal
+    const nombreTrim = nombre.trim()
+    const errNombre = await verificarNombreDisponible('extra', scope.empresaId, nombreTrim, sucursalId)
+    if (errNombre) {
+      return NextResponse.json({ error: errNombre }, { status: 400 })
     }
 
     const extra = await prisma.extra.create({
       data: {
         empresaId: scope.empresaId,
+        sucursalId,
         nombre: nombreTrim,
         precio,
         duracionEstimada: duracionEstimada ?? null,
