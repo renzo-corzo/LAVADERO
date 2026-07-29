@@ -33,7 +33,6 @@ export default function NuevaOTPage() {
     conflicto?: string
     horariosDisponibles?: string[]
   } | null>(null)
-  const [mostrarSelectorHorarios, setMostrarSelectorHorarios] = useState(false)
   const [horariosDelDia, setHorariosDelDia] = useState<{
     fecha?: string
     bloques: Array<{
@@ -42,7 +41,6 @@ export default function NuevaOTPage() {
       ocupadoPor?: { patente: string; cliente: string; fin: string }
     }>
   } | null>(null)
-  const [fechaConsultaActual, setFechaConsultaActual] = useState<string>('')
 
   const [servicios, setServicios] = useState<Servicio[]>([])
   const [extras, setExtras] = useState<Extra[]>([])
@@ -376,16 +374,7 @@ export default function NuevaOTPage() {
       const mes = String(ahora.getMonth() + 1).padStart(2, '0')
       const dia = String(ahora.getDate()).padStart(2, '0')
       const fechaHoy = `${año}-${mes}-${dia}`
-      
-      console.log('[nueva-ot] Fecha calculada:', { 
-        fechaHoy,
-        ahoraISO: ahora.toISOString(),
-        ahoraLocal: ahora.toLocaleString('es-AR'),
-        año,
-        mes,
-        dia
-      })
-      
+
       // IMPORTANTE: Enviar hora actual del cliente en formato que incluya zona horaria local
       // Enviar como objeto con componentes locales para evitar problemas de zona horaria
       const ahoraCliente = new Date()
@@ -408,35 +397,19 @@ export default function NuevaOTPage() {
         ...(sucursalId ? { sucursalId } : {}), // capacidad por sucursal
       })
 
-      console.log('[nueva-ot] Cargando horarios disponibles para HOY...', { fecha: fechaHoy, servicioId: formData.servicioId })
-      
       const response = await fetch(`/api/ots/horarios-disponibles?${params}`)
-      
+
       if (response.ok) {
         const data = await response.json()
-        const disponiblesCount = data.bloques?.filter((b: any) => b.disponible).length || 0
-        
-        console.log('[nueva-ot] Horarios recibidos para HOY:', { 
-          fecha: fechaHoy,
-          bloques: data.bloques?.length || 0, 
-          disponibles: disponiblesCount,
-          ocupados: data.bloques?.filter((b: any) => !b.disponible).length || 0
-        })
-        
-        // Guardar la fecha que se está consultando
-        setFechaConsultaActual(fechaHoy)
-        
+
         // Agregar la fecha a los datos para mostrarla en el UI
         const dataConFecha = { ...data, fecha: fechaHoy }
         setHorariosDelDia(dataConFecha)
-        
-        console.log(`[nueva-ot] Mostrando horarios para HOY: ${fechaHoy}`)
-        
-        // Automatically select the first available slot if none is selected
+
+        // Seleccionar automáticamente el primer horario disponible si no hay uno elegido
         if (!formData.horarioDeseado && data.bloques?.some((b: any) => b.disponible)) {
           const firstAvailable = data.bloques.find((b: any) => b.disponible)
           if (firstAvailable) {
-            console.log('[nueva-ot] Seleccionando automáticamente:', firstAvailable.hora)
             setFormData((prev) => ({ ...prev, horarioDeseado: firstAvailable.hora }))
           }
         }
@@ -986,71 +959,6 @@ export default function NuevaOTPage() {
                           </div>
                         </div>
                       )}
-                    </div>
-                  )}
-
-                  {/* Selector visual ya está arriba, este código se puede eliminar si no se usa */}
-                  {false && mostrarSelectorHorarios && horariosDelDia && (
-                    <div className="mt-4 border-2 border-gray-300 rounded-lg p-4 bg-white shadow-lg">
-                      <h4 className="text-sm font-semibold mb-3 text-gray-800 flex items-center gap-2">
-                        <span className="text-lg">📅</span>
-                        Selecciona un horario disponible
-                      </h4>
-                      <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 max-h-96 overflow-y-auto p-2 bg-gray-50 rounded">
-                        {horariosDelDia?.bloques.map((bloque) => {
-                          const isSelected = formData.horarioDeseado === bloque.hora
-                          return (
-                            <button
-                              key={bloque.hora}
-                              type="button"
-                              onClick={() => {
-                                if (bloque.disponible) {
-                                  setFormData({ ...formData, horarioDeseado: bloque.hora })
-                                  setMostrarSelectorHorarios(false)
-                                }
-                              }}
-                              disabled={!bloque.disponible}
-                              className={`
-                                relative px-2 py-2.5 text-xs font-medium rounded-md border-2 transition-all transform hover:scale-105
-                                ${bloque.disponible
-                                  ? isSelected
-                                    ? 'bg-blue-600 text-white border-blue-700 shadow-lg ring-4 ring-blue-300 scale-110 z-10'
-                                    : 'bg-green-100 text-green-800 border-green-400 hover:bg-green-200 hover:border-green-500 hover:shadow-md cursor-pointer'
-                                  : 'bg-red-100 text-red-600 border-red-400 cursor-not-allowed opacity-60'
-                                }
-                              `}
-                              title={
-                                bloque.ocupadoPor
-                                  ? `Ocupado: ${bloque.ocupadoPor.patente} - ${bloque.ocupadoPor.cliente} (hasta ${bloque.ocupadoPor.fin})`
-                                  : bloque.disponible
-                                  ? 'Disponible - Click para seleccionar'
-                                  : 'No disponible'
-                              }
-                            >
-                              <div className="flex flex-col items-center">
-                                <span>{bloque.hora}</span>
-                                {isSelected && (
-                                  <span className="text-xs mt-0.5">✓</span>
-                                )}
-                              </div>
-                            </button>
-                          )
-                        })}
-                      </div>
-                      <div className="flex flex-wrap gap-4 mt-4 pt-3 border-t border-gray-200 text-xs">
-                        <div className="flex items-center gap-2">
-                          <div className="w-5 h-5 bg-green-100 border-2 border-green-400 rounded"></div>
-                          <span className="text-gray-700">Disponible</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-5 h-5 bg-red-100 border-2 border-red-400 rounded"></div>
-                          <span className="text-gray-700">Ocupado</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-5 h-5 bg-blue-600 border-2 border-blue-700 rounded ring-2 ring-blue-300"></div>
-                          <span className="text-gray-700 font-medium">Seleccionado</span>
-                        </div>
-                      </div>
                     </div>
                   )}
                 </div>

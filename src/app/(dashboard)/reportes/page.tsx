@@ -67,15 +67,14 @@ export default function ReportesPage() {
       toast.error('Por favor seleccioná las fechas')
       return
     }
-    console.log('Mostrando reporte:', tipo)
     setTipoReporte(tipo)
   }
 
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Reportes</h1>
-        <p className="text-gray-600 mt-1">Analiza el rendimiento del negocio</p>
+        <h1 className="text-2xl font-bold text-ink">Reportes</h1>
+        <p className="text-muted mt-1">Analiza el rendimiento del negocio</p>
       </div>
 
       {/* Selector de período y filtros */}
@@ -96,7 +95,7 @@ export default function ReportesPage() {
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Desde</label>
+            <label className="block text-sm font-medium text-ink mb-1">Fecha Desde</label>
             <Input
               type="date"
               value={fechaDesde}
@@ -104,7 +103,7 @@ export default function ReportesPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Hasta</label>
+            <label className="block text-sm font-medium text-ink mb-1">Fecha Hasta</label>
             <Input
               type="date"
               value={fechaHasta}
@@ -151,8 +150,8 @@ export default function ReportesPage() {
         <Card className="hover:shadow-lg transition-shadow">
           <div className="text-center py-8">
             <div className="text-4xl mb-4">📊</div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Reporte de Ventas</h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <h3 className="text-lg font-bold text-ink mb-2">Reporte de Ventas</h3>
+            <p className="text-sm text-muted mb-4">
               Ventas por período, medios de pago y servicios más vendidos
             </p>
             <Button variant="primary" onClick={() => handleVerReporte('ventas')}>
@@ -164,8 +163,8 @@ export default function ReportesPage() {
         <Card className="hover:shadow-lg transition-shadow">
           <div className="text-center py-8">
             <div className="text-4xl mb-4">⚡</div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Métricas Operativas</h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <h3 className="text-lg font-bold text-ink mb-2">Métricas Operativas</h3>
+            <p className="text-sm text-muted mb-4">
               OTs atendidas, tiempos promedio y cancelaciones
             </p>
             <Button variant="primary" onClick={() => handleVerReporte('metricas')}>
@@ -246,11 +245,11 @@ function ReporteVentas({ fechaDesde, fechaHasta, clienteId, sucursalId }: { fech
   }
 
   if (loading) {
-    return <div className="text-center py-8 text-gray-500">Cargando reporte...</div>
+    return <div className="text-center py-8 text-muted">Cargando reporte...</div>
   }
 
   if (!data) {
-    return <div className="text-center py-8 text-gray-500">Error al cargar el reporte</div>
+    return <div className="text-center py-8 text-muted">Error al cargar el reporte</div>
   }
 
   // Mensaje informativo si no hay datos
@@ -290,7 +289,7 @@ function ReporteVentas({ fechaDesde, fechaHasta, clienteId, sucursalId }: { fech
       {/* Resumen */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card>
-          <div className="text-sm text-gray-600 mb-1">Total Ventas</div>
+          <div className="text-sm text-muted mb-1">Total Ventas</div>
           <div className="text-2xl font-bold text-green-600">
             {new Intl.NumberFormat('es-AR', {
               style: 'currency',
@@ -299,11 +298,11 @@ function ReporteVentas({ fechaDesde, fechaHasta, clienteId, sucursalId }: { fech
           </div>
         </Card>
         <Card>
-          <div className="text-sm text-gray-600 mb-1">Cantidad de OTs</div>
+          <div className="text-sm text-muted mb-1">Cantidad de OTs</div>
           <div className="text-2xl font-bold">{data.resumen.cantidadOTs}</div>
         </Card>
         <Card>
-          <div className="text-sm text-gray-600 mb-1">Ticket Promedio</div>
+          <div className="text-sm text-muted mb-1">Ticket Promedio</div>
           <div className="text-2xl font-bold">
             {new Intl.NumberFormat('es-AR', {
               style: 'currency',
@@ -322,7 +321,7 @@ function ReporteVentas({ fechaDesde, fechaHasta, clienteId, sucursalId }: { fech
         <h3 className="text-lg font-semibold mb-4">Totales por Medio de Pago</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card>
-            <div className="text-sm text-gray-600 mb-1">Efectivo</div>
+            <div className="text-sm text-muted mb-1">Efectivo</div>
             <div className="text-xl font-bold">
               {new Intl.NumberFormat('es-AR', {
                 style: 'currency',
@@ -331,7 +330,7 @@ function ReporteVentas({ fechaDesde, fechaHasta, clienteId, sucursalId }: { fech
             </div>
           </Card>
           <Card>
-            <div className="text-sm text-gray-600 mb-1">Transferencia</div>
+            <div className="text-sm text-muted mb-1">Transferencia</div>
             <div className="text-xl font-bold">
               {new Intl.NumberFormat('es-AR', {
                 style: 'currency',
@@ -347,27 +346,27 @@ function ReporteVentas({ fechaDesde, fechaHasta, clienteId, sucursalId }: { fech
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-4">Servicios Más Vendidos</h3>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-aqua-line">
+              <thead className="bg-aqua-bg">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">
                     #
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">
                     Servicio
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase">
                     Cantidad
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase">
                     Total
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-aqua-line">
                 {data.serviciosRanking.map((s: any, index: number) => (
-                  <tr key={index}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <tr key={s.nombre}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-ink">
                       {index + 1}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">{s.nombre}</td>
@@ -393,27 +392,27 @@ function ReporteVentas({ fechaDesde, fechaHasta, clienteId, sucursalId }: { fech
         <div>
           <h3 className="text-lg font-semibold mb-4">Extras Más Vendidos</h3>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-aqua-line">
+              <thead className="bg-aqua-bg">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">
                     #
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">
                     Extra
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase">
                     Cantidad
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase">
                     Total
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-aqua-line">
                 {data.extrasRanking.map((e: any, index: number) => (
-                  <tr key={index}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <tr key={e.nombre}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-ink">
                       {index + 1}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">{e.nombre}</td>
@@ -474,11 +473,11 @@ function ReporteComisiones({
   }
 
   if (loading) {
-    return <div className="text-center py-8 text-gray-500">Cargando reporte...</div>
+    return <div className="text-center py-8 text-muted">Cargando reporte...</div>
   }
 
   if (!data) {
-    return <div className="text-center py-8 text-gray-500">Error al cargar el reporte</div>
+    return <div className="text-center py-8 text-muted">Error al cargar el reporte</div>
   }
 
   return (
@@ -488,27 +487,27 @@ function ReporteComisiones({
       {/* Resumen */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card>
-          <div className="text-sm text-gray-600 mb-1">Total Pendiente</div>
+          <div className="text-sm text-muted mb-1">Total Pendiente</div>
           <div className="text-xl font-bold text-orange-600">
             {formatCurrency(data.totales.totalPendiente)}
           </div>
-          <div className="text-xs text-gray-500 mt-1">{data.totales.pendientes} comisiones</div>
+          <div className="text-xs text-muted mt-1">{data.totales.pendientes} comisiones</div>
         </Card>
         <Card>
-          <div className="text-sm text-gray-600 mb-1">Total Liquidadas</div>
+          <div className="text-sm text-muted mb-1">Total Liquidadas</div>
           <div className="text-xl font-bold text-green-600">
             {formatCurrency(data.totales.totalLiquidadas)}
           </div>
-          <div className="text-xs text-gray-500 mt-1">{data.totales.liquidadas} comisiones</div>
+          <div className="text-xs text-muted mt-1">{data.totales.liquidadas} comisiones</div>
         </Card>
         <Card>
-          <div className="text-sm text-gray-600 mb-1">Total General</div>
+          <div className="text-sm text-muted mb-1">Total General</div>
           <div className="text-xl font-bold">
             {formatCurrency(data.totales.totalPendiente + data.totales.totalLiquidadas)}
           </div>
         </Card>
         <Card>
-          <div className="text-sm text-gray-600 mb-1">Total Comisiones</div>
+          <div className="text-sm text-muted mb-1">Total Comisiones</div>
           <div className="text-xl font-bold">{data.totales.pendientes + data.totales.liquidadas}</div>
         </Card>
       </div>
@@ -518,33 +517,33 @@ function ReporteComisiones({
         <div>
           <h3 className="text-lg font-semibold mb-4">Resumen por Empleado</h3>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-aqua-line">
+              <thead className="bg-aqua-bg">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase">
                     Empleado
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase">
                     Pendientes
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase">
                     Total Pendiente
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase">
                     Liquidadas
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase">
                     Total Liquidadas
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase">
                     Total
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-aqua-line">
                 {data.porEmpleado.map((emp: any) => (
                   <tr key={emp.empleado.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-ink">
                       {emp.empleado.nombre}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
@@ -615,11 +614,11 @@ function ReporteMetricas({
   }
 
   if (loading) {
-    return <div className="text-center py-8 text-gray-500">Cargando métricas...</div>
+    return <div className="text-center py-8 text-muted">Cargando métricas...</div>
   }
 
   if (!data) {
-    return <div className="text-center py-8 text-gray-500">Error al cargar las métricas</div>
+    return <div className="text-center py-8 text-muted">Error al cargar las métricas</div>
   }
 
   return (
@@ -629,23 +628,23 @@ function ReporteMetricas({
       {/* Resumen */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card>
-          <div className="text-sm text-gray-600 mb-1">Total OTs</div>
+          <div className="text-sm text-muted mb-1">Total OTs</div>
           <div className="text-2xl font-bold">{data.resumen.totalOTs}</div>
         </Card>
         <Card>
-          <div className="text-sm text-gray-600 mb-1">Entregadas</div>
+          <div className="text-sm text-muted mb-1">Entregadas</div>
           <div className="text-2xl font-bold text-green-600">
             {data.resumen.porEstado.ENTREGADO}
           </div>
         </Card>
         <Card>
-          <div className="text-sm text-gray-600 mb-1">Canceladas</div>
+          <div className="text-sm text-muted mb-1">Canceladas</div>
           <div className="text-2xl font-bold text-red-600">
             {data.resumen.porEstado.CANCELADO}
           </div>
         </Card>
         <Card>
-          <div className="text-sm text-gray-600 mb-1">En Proceso</div>
+          <div className="text-sm text-muted mb-1">En Proceso</div>
           <div className="text-2xl font-bold text-yellow-600">
             {data.resumen.porEstado.EN_PROCESO}
           </div>
@@ -657,19 +656,19 @@ function ReporteMetricas({
         <h3 className="text-lg font-semibold mb-4">Tiempos Promedio (minutos)</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
-            <div className="text-sm text-gray-600 mb-1">En Cola</div>
+            <div className="text-sm text-muted mb-1">En Cola</div>
             <div className="text-xl font-bold">{data.tiemposPromedio.enCola} min</div>
           </Card>
           <Card>
-            <div className="text-sm text-gray-600 mb-1">En Proceso</div>
+            <div className="text-sm text-muted mb-1">En Proceso</div>
             <div className="text-xl font-bold">{data.tiemposPromedio.enProceso} min</div>
           </Card>
           <Card>
-            <div className="text-sm text-gray-600 mb-1">Listo</div>
+            <div className="text-sm text-muted mb-1">Listo</div>
             <div className="text-xl font-bold">{data.tiemposPromedio.listo} min</div>
           </Card>
           <Card>
-            <div className="text-sm text-gray-600 mb-1">Total</div>
+            <div className="text-sm text-muted mb-1">Total</div>
             <div className="text-xl font-bold text-blue-600">{data.tiemposPromedio.total} min</div>
           </Card>
         </div>
@@ -680,25 +679,25 @@ function ReporteMetricas({
         <h3 className="text-lg font-semibold mb-4">Distribución por Estado</h3>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <Card>
-            <div className="text-sm text-gray-600 mb-1">En Cola</div>
+            <div className="text-sm text-muted mb-1">En Cola</div>
             <div className="text-lg font-bold">{data.resumen.porEstado.EN_COLA}</div>
           </Card>
           <Card>
-            <div className="text-sm text-gray-600 mb-1">En Proceso</div>
+            <div className="text-sm text-muted mb-1">En Proceso</div>
             <div className="text-lg font-bold">{data.resumen.porEstado.EN_PROCESO}</div>
           </Card>
           <Card>
-            <div className="text-sm text-gray-600 mb-1">Listo</div>
+            <div className="text-sm text-muted mb-1">Listo</div>
             <div className="text-lg font-bold">{data.resumen.porEstado.LISTO}</div>
           </Card>
           <Card>
-            <div className="text-sm text-gray-600 mb-1">Entregado</div>
+            <div className="text-sm text-muted mb-1">Entregado</div>
             <div className="text-lg font-bold text-green-600">
               {data.resumen.porEstado.ENTREGADO}
             </div>
           </Card>
           <Card>
-            <div className="text-sm text-gray-600 mb-1">Cancelado</div>
+            <div className="text-sm text-muted mb-1">Cancelado</div>
             <div className="text-lg font-bold text-red-600">
               {data.resumen.porEstado.CANCELADO}
             </div>
