@@ -117,7 +117,7 @@ export default function EditarExtraPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Editar Extra</h1>
+        <h1 className="text-2xl font-bold text-ink">Editar Extra</h1>
       </div>
 
       <Card>
@@ -189,9 +189,9 @@ export default function EditarExtraPage() {
               id="activo"
               checked={formData.activo}
               onChange={(e) => setFormData({ ...formData, activo: e.target.checked })}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-aqua-line rounded"
             />
-            <label htmlFor="activo" className="ml-2 block text-sm text-gray-900">
+            <label htmlFor="activo" className="ml-2 block text-sm text-ink">
               Activo
             </label>
           </div>

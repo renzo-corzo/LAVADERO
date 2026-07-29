@@ -151,8 +151,8 @@ export default function NuevoUsuarioPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Nuevo Usuario</h1>
-        <p className="text-gray-600 mt-1">Complete los datos para crear un nuevo usuario</p>
+        <h1 className="text-2xl font-bold text-ink">Nuevo Usuario</h1>
+        <p className="text-muted mt-1">Complete los datos para crear un nuevo usuario</p>
       </div>
 
       <Card>
@@ -251,9 +251,9 @@ export default function NuevoUsuarioPage() {
                 id="activo"
                 checked={formData.activo}
                 onChange={(e) => setFormData({ ...formData, activo: e.target.checked })}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-aqua-line rounded"
               />
-              <label htmlFor="activo" className="text-sm font-medium text-gray-700">
+              <label htmlFor="activo" className="text-sm font-medium text-ink">
                 Usuario activo
               </label>
             </div>

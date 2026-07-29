@@ -333,7 +333,7 @@ export default function EditarOTPage() {
                 {/* Horario */}
                 {!esExterna && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-ink mb-2">
                       Horario Deseado *
                       {horaOriginal && (
                         <span className="ml-2 text-xs text-muted font-normal">
@@ -342,8 +342,8 @@ export default function EditarOTPage() {
                       )}
                     </label>
                     {bloques ? (
-                      <div className="border-2 border-gray-300 rounded-lg p-4 bg-white shadow-sm">
-                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 max-h-96 overflow-y-auto p-2 bg-gray-50 rounded">
+                      <div className="border-2 border-aqua-line rounded-lg p-4 bg-white shadow-sm">
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 max-h-96 overflow-y-auto p-2 bg-aqua-bg rounded">
                           {bloques
                             .filter((b) => b.ocupadoPor?.patente !== 'Horario pasado' || b.hora === formData.horarioDeseado)
                             .map((b) => {
@@ -384,7 +384,7 @@ export default function EditarOTPage() {
                         </div>
                       </div>
                     ) : (
-                      <p className="text-sm text-gray-500">Cargando horarios...</p>
+                      <p className="text-sm text-muted">Cargando horarios...</p>
                     )}
                     {errors.horarioDeseado && (
                       <p className="text-sm text-red-600 mt-1">{errors.horarioDeseado}</p>
@@ -410,23 +410,23 @@ export default function EditarOTPage() {
 
             <Card title="Extras (opcional)">
               {extras.length === 0 ? (
-                <p className="text-gray-500">No hay extras disponibles</p>
+                <p className="text-muted">No hay extras disponibles</p>
               ) : (
                 <div className="space-y-2">
                   {extras.map((extra) => (
                     <label
                       key={extra.id}
-                      className="flex items-center p-3 border rounded hover:bg-gray-50 cursor-pointer"
+                      className="flex items-center p-3 border rounded hover:bg-aqua-bg cursor-pointer"
                     >
                       <input
                         type="checkbox"
                         checked={formData.extrasIds.includes(extra.id)}
                         onChange={() => toggleExtra(extra.id)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-aqua-line rounded"
                       />
                       <span className="ml-3 flex-1">
                         <span className="font-medium">{extra.nombre}</span>
-                        <span className="ml-2 text-gray-600">{formatCurrency(Number(extra.precio))}</span>
+                        <span className="ml-2 text-muted">{formatCurrency(Number(extra.precio))}</span>
                       </span>
                     </label>
                   ))}
@@ -447,12 +447,12 @@ export default function EditarOTPage() {
             <Card title="Resumen">
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-700">Nuevo total:</span>
-                  <span className="text-xl font-bold text-gray-900">{formatCurrency(total)}</span>
+                  <span className="text-sm font-medium text-ink">Nuevo total:</span>
+                  <span className="text-xl font-bold text-ink">{formatCurrency(total)}</span>
                 </div>
                 <div className="border-t pt-4">
                   <details className="text-sm" open={!!formData.precioAjustado}>
-                    <summary className="cursor-pointer text-gray-600 hover:text-gray-900">
+                    <summary className="cursor-pointer text-muted hover:text-ink">
                       Ajustar precio manualmente
                     </summary>
                     <div className="mt-2 space-y-2">

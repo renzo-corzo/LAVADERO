@@ -579,7 +579,7 @@ export default function NuevaOTPage() {
       {loading && (
         <div className="fixed inset-0 bg-black bg-opacity-20 z-50 flex items-center justify-center">
           <div className="bg-white rounded-lg p-6 shadow-xl">
-            <p className="text-gray-700 font-medium">Creando orden de trabajo...</p>
+            <p className="text-ink font-medium">Creando orden de trabajo...</p>
           </div>
         </div>
       )}
@@ -590,8 +590,8 @@ export default function NuevaOTPage() {
         </div>
       )}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Nueva Orden de Trabajo</h1>
-        <p className="text-gray-600 mt-1">Complete los datos del vehículo y seleccione el servicio</p>
+        <h1 className="text-2xl font-bold text-ink">Nueva Orden de Trabajo</h1>
+        <p className="text-muted mt-1">Complete los datos del vehículo y seleccione el servicio</p>
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -735,7 +735,7 @@ export default function NuevaOTPage() {
                       disabled={loadingClientes}
                     />
                     {loadingClienteSeleccionado ? (
-                      <p className="text-sm text-gray-500 mt-1">Cargando configuración del cliente...</p>
+                      <p className="text-sm text-muted mt-1">Cargando configuración del cliente...</p>
                     ) : clienteSeleccionado?.usaMontosFijos ? (
                       <p className="text-sm text-blue-700 mt-1">
                         ✓ Se aplicará la tarifa fija configurada para este cliente (sin descuentos)
@@ -776,7 +776,7 @@ export default function NuevaOTPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-ink mb-2">
                     Horario Deseado *
                   </label>
                   
@@ -788,8 +788,8 @@ export default function NuevaOTPage() {
                   ) : formData.servicioId ? (
                     <>
                       {horariosDelDia ? (
-                        <div className="border-2 border-gray-300 rounded-lg p-4 bg-white shadow-sm">
-                          <h4 className="text-sm font-semibold mb-3 text-gray-800 flex items-center gap-2">
+                        <div className="border-2 border-aqua-line rounded-lg p-4 bg-white shadow-sm">
+                          <h4 className="text-sm font-semibold mb-3 text-ink flex items-center gap-2">
                             <span className="text-lg">📅</span>
                             {horariosDelDia.fecha && horariosDelDia.fecha !== new Date().toISOString().split('T')[0] ? (
                               <span>
@@ -803,7 +803,7 @@ export default function NuevaOTPage() {
                               <span>Selecciona un horario disponible</span>
                             )}
                           </h4>
-                          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-2 max-h-96 overflow-y-auto p-2 bg-gray-50 rounded">
+                          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-2 max-h-96 overflow-y-auto p-2 bg-aqua-bg rounded">
                             {horariosDelDia.bloques
                               .filter((bloque) => {
                                 // Ocultar horarios pasados (marcados como "Horario pasado")
@@ -857,24 +857,24 @@ export default function NuevaOTPage() {
                               )
                             })}
                           </div>
-                          <div className="flex flex-wrap gap-4 mt-4 pt-3 border-t border-gray-200 text-xs">
+                          <div className="flex flex-wrap gap-4 mt-4 pt-3 border-t border-aqua-line text-xs">
                             <div className="flex items-center gap-2">
                               <div className="w-5 h-5 bg-green-100 border-2 border-green-400 rounded"></div>
-                              <span className="text-gray-700">Disponible</span>
+                              <span className="text-ink">Disponible</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <div className="w-5 h-5 bg-red-100 border-2 border-red-400 rounded"></div>
-                              <span className="text-gray-700">Ocupado</span>
+                              <span className="text-ink">Ocupado</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <div className="w-5 h-5 bg-blue-600 border-2 border-blue-700 rounded ring-2 ring-blue-300"></div>
-                              <span className="text-gray-700 font-medium">Seleccionado</span>
+                              <span className="text-ink font-medium">Seleccionado</span>
                             </div>
                           </div>
                         </div>
                       ) : (
-                        <div className="p-4 border rounded bg-gray-50">
-                          <p className="text-sm text-gray-600">Cargando horarios disponibles...</p>
+                        <div className="p-4 border rounded bg-aqua-bg">
+                          <p className="text-sm text-muted">Cargando horarios disponibles...</p>
                         </div>
                       )}
                       
@@ -886,7 +886,7 @@ export default function NuevaOTPage() {
                       />
                     </>
                   ) : (
-                    <p className="text-sm text-gray-500">Selecciona un servicio para ver los horarios disponibles</p>
+                    <p className="text-sm text-muted">Selecciona un servicio para ver los horarios disponibles</p>
                   )}
                   
                   {errors.horarioDeseado && (
@@ -967,23 +967,23 @@ export default function NuevaOTPage() {
               {loadingCatalogos ? (
                 <p>Cargando extras...</p>
               ) : extras.length === 0 ? (
-                <p className="text-gray-500">No hay extras disponibles</p>
+                <p className="text-muted">No hay extras disponibles</p>
               ) : (
                 <div className="space-y-2">
                   {extras.map((extra) => (
                     <label
                       key={extra.id}
-                      className="flex items-center p-3 border rounded hover:bg-gray-50 cursor-pointer"
+                      className="flex items-center p-3 border rounded hover:bg-aqua-bg cursor-pointer"
                     >
                       <input
                         type="checkbox"
                         checked={formData.extrasIds.includes(extra.id)}
                         onChange={() => toggleExtra(extra.id)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-aqua-line rounded"
                       />
                       <span className="ml-3 flex-1">
                         <span className="font-medium">{extra.nombre}</span>
-                        <span className="ml-2 text-gray-600">
+                        <span className="ml-2 text-muted">
                           {formatCurrency(getPrecioExtraParaCliente(extra))}
                         </span>
                       </span>
@@ -1005,16 +1005,16 @@ export default function NuevaOTPage() {
                   {lavadores.map((lav) => (
                     <label
                       key={lav.id}
-                      className="flex items-center p-3 border rounded hover:bg-gray-50 cursor-pointer"
+                      className="flex items-center p-3 border rounded hover:bg-aqua-bg cursor-pointer"
                     >
                       <input
                         type="checkbox"
                         checked={formData.empleadosIds.includes(lav.id)}
                         onChange={() => toggleLavador(lav.id)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-aqua-line rounded"
                       />
                       <span className="ml-3 font-medium">{lav.nombre}</span>
-                      <span className="ml-2 text-gray-500 text-sm">({lav.usuario})</span>
+                      <span className="ml-2 text-muted text-sm">({lav.usuario})</span>
                     </label>
                   ))}
                   {errors.empleadosIds && (
@@ -1042,8 +1042,8 @@ export default function NuevaOTPage() {
 
                 <div className="border-t pt-4">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-700">Total:</span>
-                    <span className="text-xl font-bold text-gray-900">
+                    <span className="text-sm font-medium text-ink">Total:</span>
+                    <span className="text-xl font-bold text-ink">
                       {formatCurrency(total)}
                     </span>
                   </div>
@@ -1051,7 +1051,7 @@ export default function NuevaOTPage() {
 
                 <div className="border-t pt-4">
                   <details className="text-sm">
-                    <summary className="cursor-pointer text-gray-600 hover:text-gray-900">
+                    <summary className="cursor-pointer text-muted hover:text-ink">
                       Ajustar precio manualmente
                     </summary>
                     <div className="mt-2 space-y-2">

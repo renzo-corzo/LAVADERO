@@ -140,8 +140,8 @@ export default function CerrarCajaPage() {
         <Link href="/caja" className="text-blue-600 hover:underline mb-2 inline-block">
           ← Volver a Caja
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900">Cerrar Caja</h1>
-        <p className="text-gray-600 mt-1">Seleccione el período a cerrar</p>
+        <h1 className="text-2xl font-bold text-ink">Cerrar Caja</h1>
+        <p className="text-muted mt-1">Seleccione el período a cerrar</p>
       </div>
 
       {/* Formulario de fechas */}
@@ -170,7 +170,7 @@ export default function CerrarCajaPage() {
         )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-ink mb-1">
               Fecha Desde *
             </label>
             <Input
@@ -181,7 +181,7 @@ export default function CerrarCajaPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-ink mb-1">
               Fecha Hasta *
             </label>
             <Input
@@ -206,19 +206,19 @@ export default function CerrarCajaPage() {
             <h2 className="text-lg font-bold mb-4">Resumen del Período</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div className="bg-green-50 p-4 rounded">
-                <div className="text-sm text-gray-600 mb-1">Total Efectivo</div>
+                <div className="text-sm text-muted mb-1">Total Efectivo</div>
                 <div className="text-2xl font-bold text-green-700">
                   {formatCurrency(resumen.resumen.totalEfectivo)}
                 </div>
               </div>
               <div className="bg-blue-50 p-4 rounded">
-                <div className="text-sm text-gray-600 mb-1">Total Transferencia</div>
+                <div className="text-sm text-muted mb-1">Total Transferencia</div>
                 <div className="text-2xl font-bold text-blue-700">
                   {formatCurrency(resumen.resumen.totalTransferencia)}
                 </div>
               </div>
               <div className="bg-purple-50 p-4 rounded">
-                <div className="text-sm text-gray-600 mb-1">Total General</div>
+                <div className="text-sm text-muted mb-1">Total General</div>
                 <div className="text-2xl font-bold text-purple-700">
                   {formatCurrency(resumen.resumen.totalGeneral)}
                 </div>
@@ -226,11 +226,11 @@ export default function CerrarCajaPage() {
             </div>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-gray-600">Pagos registrados:</span>{' '}
+                <span className="text-muted">Pagos registrados:</span>{' '}
                 <span className="font-medium">{resumen.resumen.cantidadPagos}</span>
               </div>
               <div>
-                <span className="text-gray-600">OTs cobradas:</span>{' '}
+                <span className="text-muted">OTs cobradas:</span>{' '}
                 <span className="font-medium">{resumen.resumen.cantidadOTs}</span>
               </div>
             </div>
@@ -261,21 +261,21 @@ export default function CerrarCajaPage() {
           <Card className="mb-6">
             <h2 className="text-lg font-bold mb-4">Órdenes de Trabajo Cobradas</h2>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-aqua-line">
+                <thead className="bg-aqua-bg">
                   <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-muted uppercase">
                       Identificación
                     </th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-4 py-2 text-right text-xs font-medium text-muted uppercase">
                       Total
                     </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-muted uppercase">
                       Estado
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-aqua-line">
                   {resumen.otsCobradas.map((ot: any) => (
                     <tr key={ot.id}>
                       <td className="px-4 py-2 text-sm">
@@ -300,7 +300,7 @@ export default function CerrarCajaPage() {
           <Card>
             <h2 className="text-lg font-bold mb-4">Confirmar Cierre</h2>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-ink mb-1">
                 Observaciones (opcional)
               </label>
               <Textarea
