@@ -8,6 +8,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -25,7 +26,6 @@ export default function NuevaOTPage() {
 
   // Solo DUEÑO/ENCARGADO llegan aquí (middleware redirige LAVADOR)
   const [loading, setLoading] = useState(false)
-  const [loadingCatalogos, setLoadingCatalogos] = useState(true)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [validandoHorario, setValidandoHorario] = useState(false)
   const [disponibilidad, setDisponibilidad] = useState<{
@@ -42,14 +42,34 @@ export default function NuevaOTPage() {
     }>
   } | null>(null)
 
-  const [servicios, setServicios] = useState<Servicio[]>([])
-  const [extras, setExtras] = useState<Extra[]>([])
-  const [lavadores, setLavadores] = useState<Usuario[]>([])
-  const [loadingLavadores, setLoadingLavadores] = useState(false)
-  const [clientes, setClientes] = useState<Cliente[]>([])
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null)
-  const [loadingClientes, setLoadingClientes] = useState(false)
   const [loadingClienteSeleccionado, setLoadingClienteSeleccionado] = useState(false)
+
+  const rol = session?.user.role
+  const puedeGestionarOT = rol === 'DUENO' || rol === 'ENCARGADO'
+
+  // Clientes concesionaria (server state con React Query, como el resto de la app)
+  const { data: clientes = [], isLoading: loadingClientes } = useQuery<Cliente[]>({
+    queryKey: ['ot-clientes-concesionaria'],
+    enabled: puedeGestionarOT || rol === 'ADMIN',
+    queryFn: async () => {
+      const res = await fetch('/api/clientes?tipo=CONCESIONARIA&activo=true')
+      if (!res.ok) return []
+      const data = await res.json()
+      return (data.clientes || []) as Cliente[]
+    },
+  })
+
+  // Lavadores activos (opcionales al asignar la OT)
+  const { data: lavadores = [], isLoading: loadingLavadores } = useQuery<Usuario[]>({
+    queryKey: ['ot-lavadores'],
+    enabled: puedeGestionarOT,
+    queryFn: async () => {
+      const res = await fetch('/api/usuarios?rol=LAVADOR')
+      if (!res.ok) return []
+      return (await res.json()) as Usuario[]
+    },
+  })
 
   const [formData, setFormData] = useState({
     tipoCliente: 'WALK_IN' as 'FIJO' | 'WALK_IN',
@@ -84,6 +104,39 @@ export default function NuevaOTPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sucursalPropia, sucursales])
 
+  // Catálogo activo de la sucursal (propio + compartido), con React Query.
+  const { data: catalogo, isLoading: loadingCatalogos } = useQuery<{
+    servicios: Servicio[]
+    extras: Extra[]
+  }>({
+    queryKey: ['ot-catalogo', sucursalId],
+    queryFn: async () => {
+      const qs = sucursalId ? `?sucursalId=${sucursalId}` : ''
+      const res = await fetch(`/api/catalogos/activos${qs}`)
+      if (!res.ok) return { servicios: [], extras: [] }
+      return res.json()
+    },
+  })
+  const servicios = catalogo?.servicios ?? []
+  const extras = catalogo?.extras ?? []
+
+  // Al cambiar el catálogo (p. ej. por sucursal), limpiar el servicio/extras
+  // elegidos si ya no se ofrecen en esta sede.
+  useEffect(() => {
+    if (!catalogo) return
+    const idsServicios = new Set(catalogo.servicios.map((s) => s.id))
+    const idsExtras = new Set(catalogo.extras.map((e) => e.id))
+    setFormData((prev) => {
+      const servicioId =
+        prev.servicioId && idsServicios.has(prev.servicioId) ? prev.servicioId : ''
+      const extrasIds = prev.extrasIds.filter((id) => idsExtras.has(id))
+      if (servicioId === prev.servicioId && extrasIds.length === prev.extrasIds.length) {
+        return prev // sin cambios: evita re-render innecesario
+      }
+      return { ...prev, servicioId, extrasIds }
+    })
+  }, [catalogo])
+
   // Foto del vehículo
   const [fotoUrl, setFotoUrl] = useState<string>('')
   const [subiendoFoto, setSubiendoFoto] = useState(false)
@@ -112,13 +165,6 @@ export default function NuevaOTPage() {
       e.target.value = ''
     }
   }
-
-  // El catálogo depende de la sucursal: al cambiarla se recarga y se limpia
-  // el servicio elegido (podría no ofrecerse en la nueva sede).
-  useEffect(() => {
-    cargarCatalogos()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sucursalId])
 
   // Cargar datos del cliente cuando se selecciona
   useEffect(() => {
@@ -182,33 +228,6 @@ export default function NuevaOTPage() {
     }
   }, [formData.tipoCliente])
 
-  useEffect(() => {
-    if (session && (session.user.role === 'DUENO' || session.user.role === 'ENCARGADO' || session.user.role === 'ADMIN')) {
-      cargarClientes()
-    }
-  }, [session])
-
-  useEffect(() => {
-    const cargarLavadores = async () => {
-      if (!session || (session.user.role !== 'DUENO' && session.user.role !== 'ENCARGADO')) {
-        return
-      }
-      try {
-        setLoadingLavadores(true)
-        const response = await fetch('/api/usuarios?rol=LAVADOR')
-        if (response.ok) {
-          const data = (await response.json()) as Usuario[]
-          setLavadores(data)
-        }
-      } catch (e) {
-        console.error('Error al cargar lavadores:', e)
-      } finally {
-        setLoadingLavadores(false)
-      }
-    }
-    cargarLavadores()
-  }, [session])
-
   const clienteUsaMontosFijos =
     formData.tipoCliente === 'FIJO' && Boolean(clienteSeleccionado?.usaMontosFijos)
 
@@ -225,48 +244,6 @@ export default function NuevaOTPage() {
     if (!clienteUsaMontosFijos) return Number(extra.precio)
     const fijo = (clienteSeleccionado?.montosFijosExtras as any)?.[extra.id]
     return fijo !== undefined && fijo !== null && !isNaN(Number(fijo)) ? Number(fijo) : Number(extra.precio)
-  }
-
-  const cargarClientes = async () => {
-    try {
-      setLoadingClientes(true)
-      const response = await fetch('/api/clientes?tipo=CONCESIONARIA&activo=true')
-      if (response.ok) {
-        const data = await response.json()
-        setClientes(data.clientes || [])
-      }
-    } catch (error) {
-      console.error('Error al cargar clientes:', error)
-    } finally {
-      setLoadingClientes(false)
-    }
-  }
-
-  const cargarCatalogos = async () => {
-    try {
-      setLoadingCatalogos(true)
-      // Solo lo que se ofrece en esta sucursal (propio + compartido)
-      const qs = sucursalId ? `?sucursalId=${sucursalId}` : ''
-      const response = await fetch(`/api/catalogos/activos${qs}`)
-      if (response.ok) {
-        const data = await response.json()
-        setServicios(data.servicios)
-        setExtras(data.extras)
-
-        // Si el servicio/extras elegidos ya no se ofrecen acá, se limpian
-        const idsServicios = new Set((data.servicios as Servicio[]).map((s) => s.id))
-        const idsExtras = new Set((data.extras as Extra[]).map((e) => e.id))
-        setFormData((prev) => ({
-          ...prev,
-          servicioId: prev.servicioId && idsServicios.has(prev.servicioId) ? prev.servicioId : '',
-          extrasIds: prev.extrasIds.filter((id) => idsExtras.has(id)),
-        }))
-      }
-    } catch (error) {
-      console.error('Error al cargar catálogos:', error)
-    } finally {
-      setLoadingCatalogos(false)
-    }
   }
 
 
