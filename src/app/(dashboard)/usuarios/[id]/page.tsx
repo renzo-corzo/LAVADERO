@@ -197,7 +197,7 @@ export default function EditarUsuarioPage() {
   if (loading) {
     return (
       <div className="text-center py-8">
-        <div className="text-gray-500">Cargando usuario...</div>
+        <div className="text-muted">Cargando usuario...</div>
       </div>
     )
   }
@@ -205,8 +205,8 @@ export default function EditarUsuarioPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Editar Usuario</h1>
-        <p className="text-gray-600 mt-1">Modifique los datos del usuario</p>
+        <h1 className="text-2xl font-bold text-ink">Editar Usuario</h1>
+        <p className="text-muted mt-1">Modifique los datos del usuario</p>
       </div>
 
       <div className="space-y-6">
@@ -262,9 +262,9 @@ export default function EditarUsuarioPage() {
                   id="activo"
                   checked={formData.activo}
                   onChange={(e) => setFormData({ ...formData, activo: e.target.checked })}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-aqua-line rounded"
                 />
-                <label htmlFor="activo" className="text-sm font-medium text-gray-700">
+                <label htmlFor="activo" className="text-sm font-medium text-ink">
                   Usuario activo
                 </label>
               </div>
@@ -289,8 +289,8 @@ export default function EditarUsuarioPage() {
         <Card>
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Cambiar Contraseña</h2>
-              <p className="text-sm text-gray-600 mt-1">Establecer una nueva contraseña para este usuario</p>
+              <h2 className="text-lg font-semibold text-ink">Cambiar Contraseña</h2>
+              <p className="text-sm text-muted mt-1">Establecer una nueva contraseña para este usuario</p>
             </div>
             <Button
               variant="secondary"

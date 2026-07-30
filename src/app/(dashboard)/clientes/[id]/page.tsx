@@ -271,7 +271,7 @@ export default function EditarClientePage() {
   if (loading) {
     return (
       <div>
-        <div className="text-center py-8 text-gray-500">Cargando cliente...</div>
+        <div className="text-center py-8 text-muted">Cargando cliente...</div>
       </div>
     )
   }
@@ -287,8 +287,8 @@ export default function EditarClientePage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Editar Cliente</h1>
-        <p className="text-gray-600 mt-1">Modifique los datos del cliente</p>
+        <h1 className="text-2xl font-bold text-ink">Editar Cliente</h1>
+        <p className="text-muted mt-1">Modifique los datos del cliente</p>
       </div>
 
       <Card>
@@ -362,9 +362,9 @@ export default function EditarClientePage() {
                   descuentoPorcentaje: e.target.checked ? '' : prev.descuentoPorcentaje,
                 }))
               }
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-aqua-line rounded"
             />
-            <label htmlFor="usaMontosFijos" className="ml-2 block text-sm text-gray-900">
+            <label htmlFor="usaMontosFijos" className="ml-2 block text-sm text-ink">
               Usar montos fijos por cliente (sin descuentos)
             </label>
           </div>
@@ -381,9 +381,9 @@ export default function EditarClientePage() {
                     trabajoExterno: e.target.checked,
                   }))
                 }
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-aqua-line rounded"
               />
-              <label htmlFor="trabajoExterno" className="ml-2 block text-sm text-gray-900">
+              <label htmlFor="trabajoExterno" className="ml-2 block text-sm text-ink">
                 Trabajo externo (sin turnos, OTs en paralelo)
               </label>
             </div>
@@ -393,7 +393,7 @@ export default function EditarClientePage() {
             <div className="space-y-6 border-t pt-6">
               <div>
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-                  <h3 className="text-sm font-semibold text-gray-900">Tarifa fija por servicio (opcional)</h3>
+                  <h3 className="text-sm font-semibold text-ink">Tarifa fija por servicio (opcional)</h3>
                   <div className="flex flex-wrap gap-2">
                     <Link href="/catalogos/servicios/nuevo">
                       <Button type="button" variant="secondary" size="sm">
@@ -411,11 +411,11 @@ export default function EditarClientePage() {
                     </Button>
                   </div>
                 </div>
-                <p className="text-xs text-gray-600 mb-4">
+                <p className="text-xs text-muted mb-4">
                   Si dejás un precio vacío, se usará el precio del catálogo. El valor que cargues acá aplica solo a este cliente.
                 </p>
                 {loadingCatalogos ? (
-                  <p className="text-sm text-gray-500">Cargando servicios...</p>
+                  <p className="text-sm text-muted">Cargando servicios...</p>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {servicios.map((s) => (
@@ -448,7 +448,7 @@ export default function EditarClientePage() {
 
               <div>
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-                  <h3 className="text-sm font-semibold text-gray-900">Tarifa fija por extra (opcional)</h3>
+                  <h3 className="text-sm font-semibold text-ink">Tarifa fija por extra (opcional)</h3>
                   <div className="flex flex-wrap gap-2">
                     <Link href="/catalogos/extras/nuevo">
                       <Button type="button" variant="secondary" size="sm">
@@ -466,13 +466,13 @@ export default function EditarClientePage() {
                     </Button>
                   </div>
                 </div>
-                <p className="text-xs text-gray-600 mb-4">
+                <p className="text-xs text-muted mb-4">
                   Nota: “Crear extra” crea el extra para todos los clientes. El precio fijo de este cliente se define acá abajo.
                 </p>
                 {loadingCatalogos ? (
-                  <p className="text-sm text-gray-500">Cargando extras...</p>
+                  <p className="text-sm text-muted">Cargando extras...</p>
                 ) : extras.length === 0 ? (
-                  <p className="text-sm text-gray-500">No hay extras en el catálogo.</p>
+                  <p className="text-sm text-muted">No hay extras en el catálogo.</p>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {extras.map((ex) => (
@@ -506,8 +506,8 @@ export default function EditarClientePage() {
           )}
 
           <div className="border-t pt-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Acceso Portal (para el cliente)</h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <h3 className="text-lg font-semibold text-ink mb-2">Acceso Portal (para el cliente)</h3>
+            <p className="text-sm text-muted mb-4">
               Esto crea (o actualiza) un usuario para que la concesionaria entre al portal y vea su reporte.
             </p>
 
@@ -541,15 +541,15 @@ export default function EditarClientePage() {
                 id="portalResetPassword"
                 checked={portalForm.resetPassword}
                 onChange={(e) => setPortalForm((prev) => ({ ...prev, resetPassword: e.target.checked }))}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-aqua-line rounded"
               />
-              <label htmlFor="portalResetPassword" className="ml-2 block text-sm text-gray-900">
+              <label htmlFor="portalResetPassword" className="ml-2 block text-sm text-ink">
                 Resetear contraseña (si el usuario ya existe)
               </label>
             </div>
 
             {(portalInfo?.portalUser?.usuario || portalCreds?.usuario) && (
-              <p className="text-xs text-gray-600 mb-4">
+              <p className="text-xs text-muted mb-4">
                 Usuario actual: <strong>{portalInfo?.portalUser?.usuario || portalCreds?.usuario}</strong>
               </p>
             )}
@@ -600,9 +600,9 @@ export default function EditarClientePage() {
               id="activo"
               checked={formData.activo}
               onChange={(e) => setFormData({ ...formData, activo: e.target.checked })}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-aqua-line rounded"
             />
-            <label htmlFor="activo" className="ml-2 block text-sm text-gray-900">
+            <label htmlFor="activo" className="ml-2 block text-sm text-ink">
               Cliente activo
             </label>
           </div>

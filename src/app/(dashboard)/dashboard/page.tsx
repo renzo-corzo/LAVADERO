@@ -85,7 +85,7 @@ export default function DashboardPage() {
   if (esMovil) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">Redirigiendo...</p>
+        <p className="text-muted">Redirigiendo...</p>
       </div>
     )
   }
@@ -93,7 +93,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">Cargando...</p>
+        <p className="text-muted">Cargando...</p>
       </div>
     )
   }

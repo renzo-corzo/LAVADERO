@@ -56,6 +56,10 @@ export async function GET(
             },
           },
         },
+        gastos: {
+          select: { id: true, descripcion: true, monto: true },
+          orderBy: { createdAt: 'asc' },
+        },
       },
     })
 
@@ -105,6 +109,9 @@ export async function GET(
       totalEfectivo: Number(cierre.totalEfectivo),
       totalTransferencia: Number(cierre.totalTransferencia),
       totalGeneral: Number(cierre.totalGeneral),
+      totalGastos: Number(cierre.totalGastos),
+      neto: Number(cierre.totalGeneral) - Number(cierre.totalGastos),
+      gastos: cierre.gastos.map((g) => ({ id: g.id, descripcion: g.descripcion, monto: Number(g.monto) })),
       observaciones: cierre.observaciones,
       usuarioId: cierre.usuarioId,
       usuario: {

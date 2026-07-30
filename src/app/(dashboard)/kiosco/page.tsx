@@ -141,7 +141,7 @@ export default function KioscoPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="text-6xl mb-4">⏳</div>
-          <p className="text-xl text-gray-600">Cargando trabajos...</p>
+          <p className="text-xl text-muted">Cargando trabajos...</p>
         </div>
       </div>
     )
@@ -153,14 +153,14 @@ export default function KioscoPage() {
       <div className="mb-6 text-center">
         <div className="flex items-center justify-center gap-3 mb-2">
           <span className="text-5xl">🖥️</span>
-          <h1 className="text-4xl font-bold text-gray-900">Modo Kiosco</h1>
+          <h1 className="text-4xl font-bold text-ink">Modo Kiosco</h1>
         </div>
-        <p className="text-lg text-gray-600 mb-1">
+        <p className="text-lg text-muted mb-1">
           {ots.length === 0
             ? 'No hay trabajos pendientes'
             : `${ots.length} trabajo${ots.length > 1 ? 's' : ''} pendiente${ots.length > 1 ? 's' : ''}`}
         </p>
-        <p className="text-sm text-gray-500">Actualización automática cada 10 segundos</p>
+        <p className="text-sm text-muted">Actualización automática cada 10 segundos</p>
       </div>
 
       {/* Lista de OTs */}
@@ -173,10 +173,10 @@ export default function KioscoPage() {
               className="text-center py-16"
             >
               <div className="text-8xl mb-4">✅</div>
-              <p className="text-2xl text-gray-600 font-medium">
+              <p className="text-2xl text-muted font-medium">
                 ¡Todo al día!
               </p>
-              <p className="text-gray-500 mt-2">
+              <p className="text-muted mt-2">
                 No hay trabajos pendientes en este momento
               </p>
             </motion.div>
@@ -188,17 +188,17 @@ export default function KioscoPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: -100 }}
                 transition={{ duration: 0.3, delay: index * 0.1 }}
-                className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-200/50"
+                className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-aqua-line/50"
               >
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                   {/* Información de la OT */}
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="text-5xl font-bold text-gray-900">
+                      <div className="text-5xl font-bold text-ink">
                         {ot.patente}
                       </div>
                       {ot.estado === 'EN_COLA' && (
-                        <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
+                        <span className="px-3 py-1 bg-aqua-bg text-ink rounded-full text-sm font-medium">
                           En Cola
                         </span>
                       )}
@@ -210,11 +210,11 @@ export default function KioscoPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <div className="text-xl font-semibold text-gray-700">
+                      <div className="text-xl font-semibold text-ink">
                         {ot.servicio.nombre}
                       </div>
                       {ot.nombreCliente && (
-                        <div className="text-lg text-gray-600">
+                        <div className="text-lg text-muted">
                           👤 {ot.nombreCliente}
                         </div>
                       )}
@@ -222,12 +222,12 @@ export default function KioscoPage() {
                         {formatCurrency(ot.precio)}
                       </div>
                       {ot.horarioDeseado && (
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-muted">
                           ⏰ Deseado: {formatTime(ot.horarioDeseado)}
                         </div>
                       )}
                       {ot.estado === 'EN_PROCESO' && (
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-muted">
                           ⏱️ {getTimeElapsed(ot.fechaIngreso)}
                         </div>
                       )}
@@ -302,7 +302,7 @@ export default function KioscoPage() {
         <Button
           variant="ghost"
           onClick={() => router.push('/tablero')}
-          className="text-gray-600"
+          className="text-muted"
         >
           ← Volver al Tablero
         </Button>

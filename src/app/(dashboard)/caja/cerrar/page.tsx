@@ -39,6 +39,17 @@ export default function CerrarCajaPage() {
   const [resumen, setResumen] = useState<any>(null)
   const [cargandoResumen, setCargandoResumen] = useState(false)
 
+  // Gastos de caja del período (salen del efectivo). Neto = ingresos − gastos.
+  const [gastos, setGastos] = useState<{ descripcion: string; monto: string }[]>([])
+  const agregarGasto = () => setGastos((g) => [...g, { descripcion: '', monto: '' }])
+  const quitarGasto = (i: number) => setGastos((g) => g.filter((_, j) => j !== i))
+  const actualizarGasto = (i: number, campo: 'descripcion' | 'monto', valor: string) =>
+    setGastos((g) => g.map((row, j) => (j === i ? { ...row, [campo]: valor } : row)))
+
+  const totalGastos = Math.round(gastos.reduce((s, g) => s + (parseFloat(g.monto) || 0), 0) * 100) / 100
+  const totalIngresos = resumen ? Number(resumen.resumen.totalGeneral) : 0
+  const neto = Math.round((totalIngresos - totalGastos) * 100) / 100
+
   // El cierre es POR SUCURSAL: la propia del empleado o la elegida por dueño/admin
   const { sucursales, sucursalPropia, puedeElegir } = useSucursales()
   const [sucursalId, setSucursalId] = useState<string>('')
@@ -105,6 +116,9 @@ export default function CerrarCajaPage() {
 
     try {
       setLoading(true)
+      const gastosValidos = gastos
+        .map((g) => ({ descripcion: g.descripcion.trim(), monto: parseFloat(g.monto) }))
+        .filter((g) => g.descripcion && g.monto > 0)
       const response = await fetch('/api/cierres', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -113,13 +127,17 @@ export default function CerrarCajaPage() {
           fechaHasta,
           sucursalId,
           observaciones: observaciones.trim() || null,
+          gastos: gastosValidos,
         }),
       })
 
       if (response.ok) {
         const data = await response.json()
         toast.success('Cierre de caja creado', {
-          description: `Total: ${formatCurrency(data.totalGeneral)}`,
+          description:
+            data.totalGastos > 0
+              ? `Ingresos ${formatCurrency(data.totalGeneral)} − gastos ${formatCurrency(data.totalGastos)} = neto ${formatCurrency(data.neto)}`
+              : `Total: ${formatCurrency(data.totalGeneral)}`,
         })
         router.push(`/caja/cierres/${data.id}`)
       } else {
@@ -140,8 +158,8 @@ export default function CerrarCajaPage() {
         <Link href="/caja" className="text-blue-600 hover:underline mb-2 inline-block">
           ← Volver a Caja
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900">Cerrar Caja</h1>
-        <p className="text-gray-600 mt-1">Seleccione el período a cerrar</p>
+        <h1 className="text-2xl font-bold text-ink">Cerrar Caja</h1>
+        <p className="text-muted mt-1">Seleccione el período a cerrar</p>
       </div>
 
       {/* Formulario de fechas */}
@@ -170,7 +188,7 @@ export default function CerrarCajaPage() {
         )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-ink mb-1">
               Fecha Desde *
             </label>
             <Input
@@ -181,7 +199,7 @@ export default function CerrarCajaPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-ink mb-1">
               Fecha Hasta *
             </label>
             <Input
@@ -206,19 +224,19 @@ export default function CerrarCajaPage() {
             <h2 className="text-lg font-bold mb-4">Resumen del Período</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div className="bg-green-50 p-4 rounded">
-                <div className="text-sm text-gray-600 mb-1">Total Efectivo</div>
+                <div className="text-sm text-muted mb-1">Total Efectivo</div>
                 <div className="text-2xl font-bold text-green-700">
                   {formatCurrency(resumen.resumen.totalEfectivo)}
                 </div>
               </div>
               <div className="bg-blue-50 p-4 rounded">
-                <div className="text-sm text-gray-600 mb-1">Total Transferencia</div>
+                <div className="text-sm text-muted mb-1">Total Transferencia</div>
                 <div className="text-2xl font-bold text-blue-700">
                   {formatCurrency(resumen.resumen.totalTransferencia)}
                 </div>
               </div>
               <div className="bg-purple-50 p-4 rounded">
-                <div className="text-sm text-gray-600 mb-1">Total General</div>
+                <div className="text-sm text-muted mb-1">Total General</div>
                 <div className="text-2xl font-bold text-purple-700">
                   {formatCurrency(resumen.resumen.totalGeneral)}
                 </div>
@@ -226,11 +244,11 @@ export default function CerrarCajaPage() {
             </div>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-gray-600">Pagos registrados:</span>{' '}
+                <span className="text-muted">Pagos registrados:</span>{' '}
                 <span className="font-medium">{resumen.resumen.cantidadPagos}</span>
               </div>
               <div>
-                <span className="text-gray-600">OTs cobradas:</span>{' '}
+                <span className="text-muted">OTs cobradas:</span>{' '}
                 <span className="font-medium">{resumen.resumen.cantidadOTs}</span>
               </div>
             </div>
@@ -261,21 +279,21 @@ export default function CerrarCajaPage() {
           <Card className="mb-6">
             <h2 className="text-lg font-bold mb-4">Órdenes de Trabajo Cobradas</h2>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-aqua-line">
+                <thead className="bg-aqua-bg">
                   <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-muted uppercase">
                       Identificación
                     </th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-4 py-2 text-right text-xs font-medium text-muted uppercase">
                       Total
                     </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-muted uppercase">
                       Estado
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-aqua-line">
                   {resumen.otsCobradas.map((ot: any) => (
                     <tr key={ot.id}>
                       <td className="px-4 py-2 text-sm">
@@ -296,11 +314,82 @@ export default function CerrarCajaPage() {
             </div>
           </Card>
 
+          {/* Gastos de caja */}
+          <Card className="mb-6">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-lg font-bold">Gastos de la caja (opcional)</h2>
+              <Button type="button" variant="secondary" size="sm" onClick={agregarGasto}>
+                + Agregar gasto
+              </Button>
+            </div>
+            <p className="text-sm text-muted mb-4">
+              Salidas de efectivo del período: insumos, adelantos, retiros, etc. Se restan del total.
+            </p>
+
+            {gastos.length === 0 ? (
+              <p className="text-sm text-muted text-center py-3">
+                Sin gastos. Si tuviste alguno, agregalo para que la caja cierre con el neto real.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {gastos.map((g, i) => (
+                  <div key={i} className="flex gap-2 items-start">
+                    <div className="flex-1">
+                      <Input
+                        value={g.descripcion}
+                        onChange={(e) => actualizarGasto(i, 'descripcion', e.target.value)}
+                        placeholder="Ej: Shampoo y trapos / Adelanto Juan"
+                      />
+                    </div>
+                    <div className="w-36">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={g.monto}
+                        onChange={(e) => actualizarGasto(i, 'monto', e.target.value)}
+                        placeholder="$ monto"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => quitarGasto(i)}
+                      className="mt-2.5 text-danger text-sm font-semibold px-1"
+                      aria-label="Quitar gasto"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Neto */}
+            <div className="mt-4 pt-4 border-t border-aqua-line space-y-1.5">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted">Ingresos del período</span>
+                <span className="font-medium">{formatCurrency(totalIngresos)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted">Gastos</span>
+                <span className="font-medium text-danger">
+                  {totalGastos > 0 ? `− ${formatCurrency(totalGastos)}` : formatCurrency(0)}
+                </span>
+              </div>
+              <div className="flex justify-between pt-1.5 border-t border-aqua-line">
+                <span className="font-bold">Neto en caja</span>
+                <span className={`font-bold text-lg ${neto >= 0 ? 'text-ok' : 'text-danger'}`}>
+                  {formatCurrency(neto)}
+                </span>
+              </div>
+            </div>
+          </Card>
+
           {/* Observaciones y confirmación */}
           <Card>
             <h2 className="text-lg font-bold mb-4">Confirmar Cierre</h2>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-ink mb-1">
                 Observaciones (opcional)
               </label>
               <Textarea

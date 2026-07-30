@@ -128,8 +128,8 @@ export default function NuevoClientePage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Nuevo Cliente</h1>
-        <p className="text-gray-600 mt-1">Complete los datos para crear un nuevo cliente</p>
+        <h1 className="text-2xl font-bold text-ink">Nuevo Cliente</h1>
+        <p className="text-muted mt-1">Complete los datos para crear un nuevo cliente</p>
       </div>
 
       <Card>
@@ -204,9 +204,9 @@ export default function NuevoClientePage() {
                   descuentoPorcentaje: e.target.checked ? '' : prev.descuentoPorcentaje,
                 }))
               }
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-aqua-line rounded"
             />
-            <label htmlFor="usaMontosFijos" className="ml-2 block text-sm text-gray-900">
+            <label htmlFor="usaMontosFijos" className="ml-2 block text-sm text-ink">
               Usar montos fijos por cliente (sin descuentos)
             </label>
           </div>
@@ -218,9 +218,9 @@ export default function NuevoClientePage() {
                 id="trabajoExterno"
                 checked={formData.trabajoExterno}
                 onChange={(e) => setFormData((prev) => ({ ...prev, trabajoExterno: e.target.checked }))}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-aqua-line rounded"
               />
-              <label htmlFor="trabajoExterno" className="ml-2 block text-sm text-gray-900">
+              <label htmlFor="trabajoExterno" className="ml-2 block text-sm text-ink">
                 Trabajo externo (sin turnos, OTs en paralelo)
               </label>
             </div>
@@ -230,7 +230,7 @@ export default function NuevoClientePage() {
             <div className="space-y-6 border-t pt-6">
               <div>
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-                  <h3 className="text-sm font-semibold text-gray-900">Tarifa fija por servicio (opcional)</h3>
+                  <h3 className="text-sm font-semibold text-ink">Tarifa fija por servicio (opcional)</h3>
                   <div className="flex flex-wrap gap-2">
                     <Link href="/catalogos/servicios/nuevo">
                       <Button type="button" variant="secondary" size="sm">
@@ -248,11 +248,11 @@ export default function NuevoClientePage() {
                     </Button>
                   </div>
                 </div>
-                <p className="text-xs text-gray-600 mb-4">
+                <p className="text-xs text-muted mb-4">
                   Si dejás un precio vacío, se usará el precio del catálogo. El valor que cargues acá aplica solo a este cliente.
                 </p>
                 {loadingCatalogos ? (
-                  <p className="text-sm text-gray-500">Cargando servicios...</p>
+                  <p className="text-sm text-muted">Cargando servicios...</p>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {servicios.map((s) => (
@@ -285,7 +285,7 @@ export default function NuevoClientePage() {
 
               <div>
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-                  <h3 className="text-sm font-semibold text-gray-900">Tarifa fija por extra (opcional)</h3>
+                  <h3 className="text-sm font-semibold text-ink">Tarifa fija por extra (opcional)</h3>
                   <div className="flex flex-wrap gap-2">
                     <Link href="/catalogos/extras/nuevo">
                       <Button type="button" variant="secondary" size="sm">
@@ -303,13 +303,13 @@ export default function NuevoClientePage() {
                     </Button>
                   </div>
                 </div>
-                <p className="text-xs text-gray-600 mb-4">
+                <p className="text-xs text-muted mb-4">
                   Nota: “Crear extra” crea el extra para todos los clientes. El precio fijo de este cliente se define acá abajo.
                 </p>
                 {loadingCatalogos ? (
-                  <p className="text-sm text-gray-500">Cargando extras...</p>
+                  <p className="text-sm text-muted">Cargando extras...</p>
                 ) : extras.length === 0 ? (
-                  <p className="text-sm text-gray-500">No hay extras en el catálogo.</p>
+                  <p className="text-sm text-muted">No hay extras en el catálogo.</p>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {extras.map((ex) => (

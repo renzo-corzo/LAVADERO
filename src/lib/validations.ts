@@ -11,6 +11,12 @@ export const crearSucursalSchema = z.object({
   direccion: z.string().max(200).nullish().transform((v) => (v === '' ? undefined : v)),
 })
 
+// Gasto/salida de caja al cerrar (descripción libre + monto)
+export const gastoCierreSchema = z.object({
+  descripcion: z.string().min(1, 'La descripción es obligatoria').max(200).trim(),
+  monto: z.number().positive('El monto debe ser mayor a cero'),
+})
+
 // ---------- Stock de insumos ----------
 
 const UNIDADES_STOCK = ['unidad', 'L', 'ml', 'kg', 'g'] as const
