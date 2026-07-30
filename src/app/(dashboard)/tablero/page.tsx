@@ -83,6 +83,32 @@ export default function TableroPage() {
     },
   })
 
+  // OTs de días anteriores que quedaron sin cerrar (EN_COLA/EN_PROCESO/LISTO).
+  // El filtro de "hoy" las esconde, así que las traemos aparte para avisar.
+  const { data: pendientes } = useQuery<{
+    total: number
+    ots: Array<{
+      id: string
+      patente: string | null
+      nombreCliente: string | null
+      estado: string
+      fechaIngreso: string
+      total: number
+    }>
+  }>({
+    queryKey: ['ots-pendientes', filtroSucursal],
+    enabled: consultaHabilitada,
+    refetchInterval: consultaHabilitada ? 60_000 : false,
+    queryFn: async () => {
+      const params = new URLSearchParams()
+      if (filtroSucursal) params.append('sucursalId', filtroSucursal)
+      const res = await fetch(`/api/ots/pendientes?${params.toString()}`, { cache: 'no-store' })
+      if (!res.ok) return { total: 0, ots: [] }
+      return res.json()
+    },
+  })
+  const [mostrarPendientes, setMostrarPendientes] = useState(false)
+
   // Agrupar las OTs por estado para el kanban (memoizado sobre los datos crudos)
   const ots = useMemo<OTsPorEstado>(() => {
     const agrupadas: OTsPorEstado = { EN_COLA: [], EN_PROCESO: [], LISTO: [], ENTREGADO: [] }
@@ -416,6 +442,65 @@ export default function TableroPage() {
           )}
         </div>
       </div>
+
+      {/* Alerta: OTs de días anteriores sin cerrar (el filtro de hoy las oculta) */}
+      {pendientes && pendientes.total > 0 && (
+        <div
+          role="alert"
+          className="mb-6 rounded-xl border border-warn/40 bg-warn/10 px-4 py-3"
+        >
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-2 text-[#b9791a]">
+              <span className="text-xl">⚠️</span>
+              <span className="font-semibold">
+                Tenés {pendientes.total} orden{pendientes.total > 1 ? 'es' : ''} de días anteriores
+                sin cerrar
+              </span>
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setMostrarPendientes((v) => !v)}
+              aria-expanded={mostrarPendientes}
+            >
+              {mostrarPendientes ? 'Ocultar' : 'Ver cuáles'}
+            </Button>
+          </div>
+
+          {mostrarPendientes && (
+            <ul className="mt-3 divide-y divide-warn/20 border-t border-warn/20">
+              {pendientes.ots.map((ot) => {
+                const dias = Math.max(
+                  1,
+                  Math.floor((Date.now() - new Date(ot.fechaIngreso).getTime()) / 86_400_000)
+                )
+                const estadoLabel =
+                  ot.estado === 'LISTO'
+                    ? 'Listo, sin entregar'
+                    : ot.estado === 'EN_PROCESO'
+                      ? 'En proceso'
+                      : 'En cola'
+                return (
+                  <li key={ot.id} className="py-2">
+                    <Link
+                      href={`/tablero/${ot.id}`}
+                      className="flex items-center justify-between gap-3 text-sm hover:underline"
+                    >
+                      <span className="font-medium text-ink">
+                        {ot.patente || 'Sin patente'}
+                        {ot.nombreCliente ? ` · ${ot.nombreCliente}` : ''}
+                      </span>
+                      <span className="text-muted whitespace-nowrap">
+                        {estadoLabel} · hace {dias} día{dias > 1 ? 's' : ''}
+                      </span>
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
+      )}
 
       <Card className="mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
