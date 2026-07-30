@@ -21,6 +21,9 @@ interface CierreDetalle {
   totalEfectivo: number
   totalTransferencia: number
   totalGeneral: number
+  totalGastos: number
+  neto: number
+  gastos: Array<{ id: string; descripcion: string; monto: number }>
   observaciones?: string
   usuario: {
     id: string
@@ -132,12 +135,33 @@ export default function CierreDetallePage() {
                 </div>
               </div>
               <div className="text-center p-4 bg-purple-50 rounded">
-                <div className="text-sm text-muted mb-1">Total</div>
+                <div className="text-sm text-muted mb-1">Ingresos</div>
                 <div className="text-2xl font-bold text-purple-700">
                   {formatCurrency(cierre.totalGeneral)}
                 </div>
               </div>
             </div>
+
+            {/* Gastos y neto (solo si hubo gastos) */}
+            {cierre.totalGastos > 0 && (
+              <div className="mt-4 pt-4 border-t border-aqua-line">
+                <h3 className="text-sm font-semibold text-ink mb-2">Gastos de la caja</h3>
+                <ul className="divide-y divide-aqua-line mb-3">
+                  {cierre.gastos.map((g) => (
+                    <li key={g.id} className="flex justify-between py-1.5 text-sm">
+                      <span className="text-muted">{g.descripcion}</span>
+                      <span className="font-medium text-danger">− {formatCurrency(g.monto)}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex justify-between border-t border-aqua-line pt-2">
+                  <span className="font-bold">Neto en caja</span>
+                  <span className={`font-bold text-lg ${cierre.neto >= 0 ? 'text-ok' : 'text-danger'}`}>
+                    {formatCurrency(cierre.neto)}
+                  </span>
+                </div>
+              </div>
+            )}
           </Card>
 
           {/* Información del Cierre */}

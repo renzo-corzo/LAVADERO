@@ -11,6 +11,8 @@ import { prisma } from '@/lib/db/client'
 import { hasPermission } from '@/lib/auth'
 import { empresaScope } from '@/lib/empresa'
 import { inicioDelDiaLocal, finDelDiaLocal } from '@/lib/utils-fechas'
+import { z } from 'zod'
+import { gastoCierreSchema } from '@/lib/validations'
 
 export async function GET(request: NextRequest) {
   try {
@@ -76,6 +78,10 @@ export async function GET(request: NextRequest) {
             },
           },
         },
+        gastos: {
+          select: { id: true, descripcion: true, monto: true },
+          orderBy: { createdAt: 'asc' },
+        },
       },
       orderBy: {
         fechaCierre: 'desc',
@@ -91,6 +97,9 @@ export async function GET(request: NextRequest) {
       totalEfectivo: Number(cierre.totalEfectivo),
       totalTransferencia: Number(cierre.totalTransferencia),
       totalGeneral: Number(cierre.totalGeneral),
+      totalGastos: Number(cierre.totalGastos),
+      neto: Number(cierre.totalGeneral) - Number(cierre.totalGastos),
+      gastos: cierre.gastos.map((g) => ({ id: g.id, descripcion: g.descripcion, monto: Number(g.monto) })),
       observaciones: cierre.observaciones,
       usuarioId: cierre.usuarioId,
       usuario: {
@@ -137,6 +146,20 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // Gastos de caja (opcional): salidas de efectivo del período
+    const gastosParse = z.array(gastoCierreSchema).max(50).safeParse(body.gastos ?? [])
+    if (!gastosParse.success) {
+      return NextResponse.json(
+        {
+          error: 'Gastos inválidos',
+          details: gastosParse.error.errors.map((e) => ({ field: e.path.join('.'), message: e.message })),
+        },
+        { status: 400 }
+      )
+    }
+    const gastos = gastosParse.data
+    const totalGastos = Math.round(gastos.reduce((s, g) => s + g.monto, 0) * 100) / 100
 
     // El cierre de caja es POR SUCURSAL: usuarios con sucursal usan la suya;
     // DUEÑO/ADMIN deben indicarla en el body.
@@ -224,6 +247,7 @@ export async function POST(request: NextRequest) {
           totalEfectivo,
           totalTransferencia,
           totalGeneral,
+          totalGastos,
           observaciones: observaciones || null,
           empresaId,
           sucursalId,
@@ -231,6 +255,12 @@ export async function POST(request: NextRequest) {
           ots: {
             create: otsCobradas.map((otId) => ({
               ordenTrabajoId: otId,
+            })),
+          },
+          gastos: {
+            create: gastos.map((g) => ({
+              descripcion: g.descripcion,
+              monto: g.monto,
             })),
           },
         },
@@ -269,7 +299,9 @@ export async function POST(request: NextRequest) {
             totalEfectivo,
             totalTransferencia,
             totalGeneral,
+            totalGastos,
             cantidadOTs: otsCobradas.length,
+            cantidadGastos: gastos.length,
           }),
         },
       })
@@ -286,6 +318,8 @@ export async function POST(request: NextRequest) {
       totalEfectivo: Number(cierre.totalEfectivo),
       totalTransferencia: Number(cierre.totalTransferencia),
       totalGeneral: Number(cierre.totalGeneral),
+      totalGastos: Number(cierre.totalGastos),
+      neto: Number(cierre.totalGeneral) - Number(cierre.totalGastos),
       observaciones: cierre.observaciones,
       usuarioId: cierre.usuarioId,
       usuario: {
