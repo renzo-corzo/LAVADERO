@@ -58,21 +58,19 @@ export default function RegistrarPagoPage() {
     }
   }, [error, router])
 
-  // Establecer monto automáticamente cuando se cargan los datos
+  // Totales redondeados a centavos: evita que errores de coma flotante
+  // (p. ej. 9999.9999…) hagan rechazar un monto válido. Igual criterio que el backend.
+  const EPSILON = 0.01
+  const totalPagado = Math.round(pagos.reduce((sum, p) => sum + p.monto, 0) * 100) / 100
+  const pendiente = ot ? Math.round((ot.precio - totalPagado) * 100) / 100 : 0
+
+  // Prefijar el monto con el pendiente al cargar (si no se ingresó nada)
   useEffect(() => {
-    if (ot) {
-      const totalPagado = pagos.reduce((sum, p) => sum + p.monto, 0)
-      const pendiente = ot.precio - totalPagado
-      // Solo establecer el monto si no hay uno ingresado y hay pendiente
-      if (pendiente > 0 && monto === '') {
-        setMonto(pendiente.toFixed(2))
-      }
+    if (pendiente > 0 && monto === '') {
+      setMonto(pendiente.toFixed(2))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ot, pagos])
-
-  const totalPagado = pagos.reduce((sum, p) => sum + p.monto, 0)
-  const pendiente = ot ? ot.precio - totalPagado : 0
+  }, [pendiente])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -82,7 +80,7 @@ export default function RegistrarPagoPage() {
       return
     }
 
-    if (Number(monto) > pendiente) {
+    if (Number(monto) > pendiente + EPSILON) {
       toast.error(`El monto no puede ser mayor al pendiente (${formatCurrency(pendiente)})`)
       return
     }
@@ -233,9 +231,9 @@ export default function RegistrarPagoPage() {
               placeholder={`Máximo: ${formatCurrency(pendiente)}`}
               required
             />
-            {Number(monto) > 0 && Number(monto) <= pendiente && (
+            {Number(monto) > 0 && Number(monto) <= pendiente + EPSILON && (
               <p className="text-xs text-muted mt-1">
-                Nuevo pendiente: {formatCurrency(pendiente - Number(monto))}
+                Nuevo pendiente: {formatCurrency(Math.max(0, pendiente - Number(monto)))}
               </p>
             )}
           </div>
@@ -282,7 +280,7 @@ export default function RegistrarPagoPage() {
                 guardando ||
                 !monto ||
                 Number(monto) <= 0 ||
-                Number(monto) > pendiente ||
+                Number(monto) > pendiente + EPSILON ||
                 (medioPago === 'TRANSFERENCIA' && !referencia.trim())
               }
             >
