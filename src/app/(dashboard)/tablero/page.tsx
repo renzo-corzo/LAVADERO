@@ -142,6 +142,10 @@ export default function TableroPage() {
       })
 
       if (response.ok) {
+        // Refrescar el tablero SIEMPRE que el cambio fue exitoso, incluso si el
+        // operador se va a cobrar (así al volver no ve la OT en la columna vieja).
+        queryClient.invalidateQueries({ queryKey: ['ots'] })
+
         if (nuevoEstado === 'ENTREGADO') {
           const quierePagar = await confirm({
             title: 'Registrar pago',
@@ -153,7 +157,6 @@ export default function TableroPage() {
             return
           }
         }
-        queryClient.invalidateQueries({ queryKey: ['ots'] })
 
         // Avisar al cliente por WhatsApp cuando la OT queda LISTA para retirar
         if (nuevoEstado === 'LISTO') {
