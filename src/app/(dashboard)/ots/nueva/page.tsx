@@ -18,6 +18,7 @@ import { Card } from '@/components/ui/Card'
 import { formatCurrency } from '@/lib/utils'
 import { linksWhatsAppOT } from '@/lib/whatsapp'
 import { useSucursales } from '@/lib/hooks/useSucursales'
+import { useDisponibilidadHorarios } from '@/lib/hooks/useDisponibilidadHorarios'
 import type { Servicio, Extra, Usuario, Cliente } from '@/types'
 
 export default function NuevaOTPage() {
@@ -27,20 +28,6 @@ export default function NuevaOTPage() {
   // Solo DUEÑO/ENCARGADO llegan aquí (middleware redirige LAVADOR)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [validandoHorario, setValidandoHorario] = useState(false)
-  const [disponibilidad, setDisponibilidad] = useState<{
-    disponible: boolean
-    conflicto?: string
-    horariosDisponibles?: string[]
-  } | null>(null)
-  const [horariosDelDia, setHorariosDelDia] = useState<{
-    fecha?: string
-    bloques: Array<{
-      hora: string
-      disponible: boolean
-      ocupadoPor?: { patente: string; cliente: string; fin: string }
-    }>
-  } | null>(null)
 
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null)
   const [loadingClienteSeleccionado, setLoadingClienteSeleccionado] = useState(false)
@@ -277,154 +264,28 @@ export default function NuevaOTPage() {
     return total
   }
 
-  // Validar disponibilidad de horario
-  const validarDisponibilidadHorario = async () => {
-    if (clienteTrabajoExterno) {
-      setDisponibilidad(null)
-      return
-    }
-    if (!formData.servicioId || !formData.horarioDeseado) {
-      setDisponibilidad(null)
-      return
-    }
+  // Grilla de horarios del día + validación del horario deseado (custom hook)
+  const { horariosDelDia, disponibilidad, validandoHorario } = useDisponibilidadHorarios({
+    servicioId: formData.servicioId,
+    extrasIds: formData.extrasIds,
+    horarioDeseado: formData.horarioDeseado,
+    sucursalId,
+    clienteTrabajoExterno,
+    clienteId: formData.tipoCliente === 'FIJO' && formData.clienteId ? formData.clienteId : null,
+    onAutoSelectHorario: (hora) => setFormData((prev) => ({ ...prev, horarioDeseado: hora })),
+  })
 
-    try {
-      setValidandoHorario(true)
-      const hoy = new Date()
-      const [horas, minutos] = formData.horarioDeseado.split(':')
-      hoy.setHours(parseInt(horas), parseInt(minutos), 0, 0)
-
-      const response = await fetch('/api/ots/disponibilidad', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          servicioId: formData.servicioId,
-          extrasIds: formData.extrasIds,
-          horarioDeseado: hoy.toISOString(),
-          fechaIngreso: new Date().toISOString(),
-          clienteId: formData.tipoCliente === 'FIJO' && formData.clienteId ? formData.clienteId : null,
-          sucursalId: sucursalId || null,
-        }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setDisponibilidad(data)
-        
-        // Solo mostrar advertencia, NO bloquear (el usuario puede decidir manualmente)
-        // No agregar error, solo mostrar información
-        if (!data.disponible) {
-          // No agregar error, solo informar visualmente
-        } else {
-          // Limpiar error si está disponible
-          setErrors((prev) => {
-            const newErrors = { ...prev }
-            delete newErrors.horarioDeseado
-            return newErrors
-          })
-        }
-      }
-    } catch (error) {
-      console.error('Error al validar disponibilidad:', error)
-    } finally {
-      setValidandoHorario(false)
-    }
-  }
-
-  // Cargar horarios disponibles del día cuando cambia servicio o se abre el selector
-  const cargarHorariosDisponibles = async () => {
-    if (clienteTrabajoExterno) {
-      setHorariosDelDia(null)
-      return
-    }
-    if (!formData.servicioId) {
-      setHorariosDelDia(null)
-      return
-    }
-
-    try {
-      // SIEMPRE mostrar primero los horarios de HOY (aunque estén todos ocupados)
-      // Esto permite al usuario ver qué horarios ya pasaron
-      // IMPORTANTE: Usar fecha local (no UTC) para que coincida con la hora del negocio
-      const ahora = new Date()
-      const año = ahora.getFullYear()
-      const mes = String(ahora.getMonth() + 1).padStart(2, '0')
-      const dia = String(ahora.getDate()).padStart(2, '0')
-      const fechaHoy = `${año}-${mes}-${dia}`
-
-      // IMPORTANTE: Enviar hora actual del cliente en formato que incluya zona horaria local
-      // Enviar como objeto con componentes locales para evitar problemas de zona horaria
-      const ahoraCliente = new Date()
-      const horaLocalCliente = {
-        año: ahoraCliente.getFullYear(),
-        mes: ahoraCliente.getMonth(),
-        dia: ahoraCliente.getDate(),
-        hora: ahoraCliente.getHours(),
-        minuto: ahoraCliente.getMinutes(),
-        segundo: ahoraCliente.getSeconds(),
-        // También enviar ISO para referencia
-        iso: ahoraCliente.toISOString()
-      }
-      
-      const params = new URLSearchParams({
-        fecha: fechaHoy,
-        servicioId: formData.servicioId,
-        extrasIds: formData.extrasIds.join(','),
-        horaActual: JSON.stringify(horaLocalCliente), // Enviar hora local como JSON
-        ...(sucursalId ? { sucursalId } : {}), // capacidad por sucursal
-      })
-
-      const response = await fetch(`/api/ots/horarios-disponibles?${params}`)
-
-      if (response.ok) {
-        const data = await response.json()
-
-        // Agregar la fecha a los datos para mostrarla en el UI
-        const dataConFecha = { ...data, fecha: fechaHoy }
-        setHorariosDelDia(dataConFecha)
-
-        // Seleccionar automáticamente el primer horario disponible si no hay uno elegido
-        if (!formData.horarioDeseado && data.bloques?.some((b: any) => b.disponible)) {
-          const firstAvailable = data.bloques.find((b: any) => b.disponible)
-          if (firstAvailable) {
-            setFormData((prev) => ({ ...prev, horarioDeseado: firstAvailable.hora }))
-          }
-        }
-      } else {
-        const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }))
-        console.error('[nueva-ot] Error al cargar horarios:', response.status, errorData)
-        setHorariosDelDia(null)
-        toast.error(`Error al cargar horarios: ${errorData.error || 'Error desconocido'}`)
-      }
-    } catch (error) {
-      console.error('[nueva-ot] Error al cargar horarios disponibles:', error)
-      setHorariosDelDia(null)
-      toast.error('Error al cargar horarios disponibles. Por favor, recargá la página.')
-    }
-  }
-
-  // Cargar horarios cuando se selecciona un servicio (o cambia la sucursal)
+  // Al quedar disponible el horario, limpiar el error del campo
   useEffect(() => {
-    if (formData.servicioId) {
-      cargarHorariosDisponibles()
-    } else {
-      setHorariosDelDia(null)
+    if (disponibilidad?.disponible) {
+      setErrors((prev) => {
+        if (!prev.horarioDeseado) return prev
+        const next = { ...prev }
+        delete next.horarioDeseado
+        return next
+      })
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.servicioId, formData.extrasIds.join(','), sucursalId])
-
-  // Validar disponibilidad cuando cambia servicio, extras o horario
-  useEffect(() => {
-    if (formData.servicioId && formData.horarioDeseado) {
-      const timeoutId = setTimeout(() => {
-        validarDisponibilidadHorario()
-      }, 500) // Debounce de 500ms
-
-      return () => clearTimeout(timeoutId)
-    } else {
-      setDisponibilidad(null)
-    }
-  }, [formData.servicioId, formData.extrasIds.join(','), formData.horarioDeseado])
+  }, [disponibilidad])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
