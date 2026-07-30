@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -14,6 +14,7 @@ import { toast } from 'sonner'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { Textarea } from '@/components/ui/Textarea'
 import { formatCurrency, formatDateTime, formatHorarioDeseado } from '@/lib/utils'
 import { linksWhatsAppOT, abrirWhatsApp } from '@/lib/whatsapp'
 import type { OrdenTrabajo, Pago } from '@/types'
@@ -128,6 +129,49 @@ export default function OTDetallePage() {
     ? Number((ot as OTDetalle & { totalPagado?: number })?.totalPagado ?? 0)
     : pagos.reduce((sum, p) => sum + p.monto, 0)
   const pendiente = ot ? ot.precio - totalPagado : 0
+
+  // Anular (cancelar) la OT. Reglas: EN_COLA/EN_PROCESO = encargado o dueño;
+  // LISTO = solo dueño. Una OT cancelada no suma en reportes ni caja.
+  const rol = session?.user?.role
+  const puedeAnular =
+    !!ot &&
+    (((ot.estado === 'EN_COLA' || ot.estado === 'EN_PROCESO') &&
+      (rol === 'ENCARGADO' || rol === 'DUENO')) ||
+      (ot.estado === 'LISTO' && rol === 'DUENO'))
+
+  const [modoAnular, setModoAnular] = useState(false)
+  const [motivoAnulacion, setMotivoAnulacion] = useState('')
+  const [anulando, setAnulando] = useState(false)
+
+  const handleAnular = async () => {
+    if (!motivoAnulacion.trim()) {
+      toast.error('Indicá el motivo de la anulación')
+      return
+    }
+    try {
+      setAnulando(true)
+      const response = await fetch(`/api/ots/${otId}/estado`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nuevoEstado: 'CANCELADO', motivo: motivoAnulacion.trim() }),
+      })
+      if (response.ok) {
+        queryClient.invalidateQueries({ queryKey: ['ot', otId] })
+        queryClient.invalidateQueries({ queryKey: ['ots'] })
+        queryClient.invalidateQueries({ queryKey: ['ots-pendientes'] })
+        toast.success('OT anulada. No suma en reportes ni caja.')
+        router.push('/tablero')
+      } else {
+        const data = await response.json()
+        toast.error(data.error || 'No se pudo anular la OT')
+      }
+    } catch (error) {
+      console.error('Error al anular OT:', error)
+      toast.error('Error al anular la OT')
+    } finally {
+      setAnulando(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -343,6 +387,60 @@ export default function OTDetallePage() {
                 >
                   Marcar como Entregado
                 </Button>
+              )}
+
+              {/* Anular (cancelar) la OT */}
+              {puedeAnular && !modoAnular && (
+                <Button
+                  type="button"
+                  variant="danger"
+                  className="w-full"
+                  onClick={() => setModoAnular(true)}
+                >
+                  Anular OT
+                </Button>
+              )}
+
+              {puedeAnular && modoAnular && (
+                <div className="rounded-xl border border-danger/30 bg-danger/5 p-3 space-y-2">
+                  <p className="text-sm font-semibold text-danger">Anular esta OT</p>
+                  <p className="text-xs text-muted">
+                    Queda cancelada y no suma en reportes ni caja. No se puede deshacer.
+                  </p>
+                  {totalPagado > 0 && (
+                    <p className="text-xs font-medium text-[#b9791a] bg-warn/10 rounded px-2 py-1">
+                      ⚠️ Esta OT ya tiene {formatCurrency(totalPagado)} cobrados. Revisá antes de anular.
+                    </p>
+                  )}
+                  <Textarea
+                    rows={2}
+                    value={motivoAnulacion}
+                    onChange={(e) => setMotivoAnulacion(e.target.value)}
+                    placeholder="Motivo (ej: carga de prueba, cliente no vino…)"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="danger"
+                      className="flex-1"
+                      onClick={handleAnular}
+                      disabled={anulando}
+                    >
+                      {anulando ? 'Anulando…' : 'Confirmar anulación'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => {
+                        setModoAnular(false)
+                        setMotivoAnulacion('')
+                      }}
+                      disabled={anulando}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
           </Card>
