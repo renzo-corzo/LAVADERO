@@ -60,9 +60,12 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="max-w-md w-full">
         <div className="flex flex-col items-center mb-7">
-          <span className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-teal to-brand-blue text-white grid place-items-center text-2xl shadow-brand mb-4">
-            ≈
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/lavadero-icon.svg"
+            alt="Lavadero"
+            className="w-14 h-14 rounded-2xl shadow-brand mb-4"
+          />
           <h1 className="text-2xl font-extrabold text-ink tracking-tight">Lavadero</h1>
           <p className="mt-1 text-muted text-sm">Iniciá sesión para continuar</p>
         </div>
