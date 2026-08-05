@@ -73,9 +73,8 @@ export function Header() {
               </Link>
             )}
             <Link href={homeHref} className="flex items-center gap-2.5 font-extrabold text-ink">
-              <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-teal to-brand-blue text-white grid place-items-center text-lg shadow-brand">
-                ≈
-              </span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/lavadero-icon.svg" alt="Lavadero" className="w-9 h-9 rounded-xl shadow-brand" />
               <span className="text-lg">Lavadero</span>
             </Link>
           </div>
