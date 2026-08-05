@@ -11,6 +11,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { useSucursales } from '@/lib/hooks/useSucursales'
+import { InstallPWAButton } from '@/components/InstallPWAButton'
 
 interface Destino {
   href: string
@@ -123,6 +124,8 @@ export function BottomNav() {
                   <span className="text-[11px] font-semibold text-ink">{d.label}</span>
                 </Link>
               ))}
+
+              <InstallPWAButton onDone={() => setMasAbierto(false)} />
 
               <button
                 type="button"
