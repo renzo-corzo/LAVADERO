@@ -146,11 +146,27 @@ model Usuario {
   estadosCambiados    EstadoHistorial[]
   auditoriaLogs       AuditoriaLog[]
   movimientosStock    MovimientoStock[]
+  pushSubscriptions   PushSubscription[]
 
   @@index([clienteId])
   @@index([sucursalId])
   @@index([empresaId])
   @@map("usuarios")
+}
+
+// Suscripción a notificaciones push (Web Push) de un usuario/dispositivo.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  usuarioId String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@map("push_subscriptions")
 }
 
 model Servicio {
