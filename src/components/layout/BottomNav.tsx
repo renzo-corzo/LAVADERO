@@ -12,6 +12,7 @@ import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { useSucursales } from '@/lib/hooks/useSucursales'
 import { InstallPWAButton } from '@/components/InstallPWAButton'
+import { PushAvisosTile } from '@/components/PushAvisosTile'
 
 interface Destino {
   href: string
@@ -126,6 +127,7 @@ export function BottomNav() {
               ))}
 
               <InstallPWAButton onDone={() => setMasAbierto(false)} />
+              <PushAvisosTile onDone={() => setMasAbierto(false)} />
 
               <button
                 type="button"

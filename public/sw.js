@@ -6,7 +6,7 @@
  *  Nunca se cachea /api de forma que muestre datos viejos cuando hay conexión.
  */
 
-const VERSION = 'v1'
+const VERSION = 'v2'
 const STATIC_CACHE = `lavadero-static-${VERSION}`
 const PAGES_CACHE = `lavadero-pages-${VERSION}`
 const OFFLINE_URL = '/offline.html'
@@ -87,4 +87,43 @@ self.addEventListener('fetch', (event) => {
         })
     )
   }
+})
+
+// ---------- Notificaciones push ----------
+
+self.addEventListener('push', (event) => {
+  let data = { title: 'Lavadero', body: '', url: '/tablero', tag: 'lavadero' }
+  try {
+    if (event.data) data = { ...data, ...event.data.json() }
+  } catch (_) {
+    if (event.data) data.body = event.data.text()
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: data.tag,
+      renotify: true,
+      data: { url: data.url || '/tablero' },
+    })
+  )
+})
+
+// Al tocar la notificación: enfocar una ventana existente o abrir la app
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const destino = (event.notification.data && event.notification.data.url) || '/tablero'
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientes) => {
+      for (const c of clientes) {
+        if ('focus' in c) {
+          c.navigate(destino)
+          return c.focus()
+        }
+      }
+      return self.clients.openWindow(destino)
+    })
+  )
 })
